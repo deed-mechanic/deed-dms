@@ -1,0 +1,2623 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DEED MOTORS DMS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#11151b;
+    --panel:#1a2027;
+    --panel2:#212932;
+    --line:#2b3542;
+    --line-soft:#232b34;
+    --text:#eef1f4;
+    --text-dim:#8b98a8;
+    --text-dim2:#5f6b7a;
+    --amber:#f5a623;
+    --amber-soft:#f5a62322;
+    --teal:#48c2d6;
+    --teal-soft:#48c2d622;
+    --red:#e5595e;
+    --red-soft:#e5595e22;
+    --green:#4fbf7f;
+    --green-soft:#4fbf7f22;
+    --violet:#9c7bea;
+    --violet-soft:#9c7bea22;
+    --blue:#5b9bf5;
+    --blue-soft:#5b9bf522;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Noto Sans JP','Zen Kaku Gothic New',sans-serif;
+    font-size:14px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  #app{display:flex; min-height:100vh;}
+
+  /* ===== Sidebar ===== */
+  .sidebar{
+    width:220px; flex-shrink:0;
+    background:linear-gradient(180deg,#171d24,#12161c 80%);
+    border-right:1px solid var(--line);
+    display:flex; flex-direction:column;
+    position:sticky; top:0; height:100vh;
+  }
+  .brand{
+    padding:14px 4px 14px 4px;
+    border-bottom:1px solid var(--line);
+  }
+  .brand-logo{
+    width:100%; height:auto; display:block; background:#fff; border-radius:6px; padding:2px;
+  }
+  .brand-sub{color:var(--text-dim); font-size:11px; margin-top:8px; letter-spacing:0.5px;}
+
+  nav.navlist{flex:1; padding:14px 10px; overflow-y:auto;}
+  .navitem{
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px; border-radius:8px; cursor:pointer;
+    color:var(--text-dim); margin-bottom:2px;
+    transition:background .15s, color .15s;
+    border:1px solid transparent;
+  }
+  .navitem:hover{background:var(--panel2); color:var(--text);}
+  .navitem.active{
+    background:var(--amber-soft); color:var(--amber);
+    border-color:#f5a62344;
+  }
+  .navitem .ic{width:18px; text-align:center; font-size:15px;}
+  .navitem .lbl{display:flex; flex-direction:column; line-height:1.25;}
+  .navitem .lbl b{font-weight:700; font-size:13px;}
+  .navitem .lbl small{font-size:10px; color:var(--text-dim2); font-weight:400;}
+  .navitem.active .lbl small{color:#c98b2e;}
+
+  .sidebar-foot{padding:14px 18px; border-top:1px solid var(--line); color:var(--text-dim2); font-size:10.5px; line-height:1.6;}
+
+  /* ===== Main ===== */
+  main{flex:1; min-width:0; padding:26px 32px 60px; max-width:1400px;}
+  .topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; flex-wrap:wrap; gap:12px;}
+  .pagetitle{font-family:'Zen Kaku Gothic New',sans-serif; font-weight:900; font-size:24px; display:flex; align-items:center; gap:10px;}
+  .pagetitle .sub{font-size:12px; font-weight:500; color:var(--text-dim); margin-left:2px;}
+  .btn{
+    background:var(--amber); color:#171106; border:none; font-weight:700;
+    padding:9px 16px; border-radius:8px; cursor:pointer; font-size:13px;
+    display:inline-flex; align-items:center; gap:6px;
+    transition:filter .15s, transform .1s;
+  }
+  .btn:hover{filter:brightness(1.08);}
+  .btn:active{transform:scale(.97);}
+  .btn.ghost{background:transparent; color:var(--text); border:1px solid var(--line); font-weight:500;}
+  .btn.ghost:hover{background:var(--panel2);}
+  .btn.danger{background:var(--red-soft); color:var(--red); border:1px solid #e5595e44;}
+  .btn.sm{padding:6px 11px; font-size:12px;}
+
+  /* stat cards */
+  .stats-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:26px;}
+  .stat-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px 16px 14px; position:relative; overflow:hidden;
+  }
+  .stat-card::before{
+    content:''; position:absolute; top:0; left:0; width:3px; height:100%;
+    background:var(--accent,var(--amber));
+  }
+  .stat-card .k{color:var(--text-dim); font-size:11.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px;}
+  .stat-card .v{font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:700; color:var(--text);}
+  .stat-card .v span{font-size:13px; color:var(--text-dim); font-weight:400; margin-left:4px;}
+
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px;}
+  .panel + .panel{margin-top:16px;}
+  .panel h3{margin:0 0 12px; font-size:14px; font-weight:700; display:flex; align-items:center; gap:8px;}
+
+  /* timeline */
+  .timeline{list-style:none; margin:0; padding:0;}
+  .timeline li{
+    display:flex; gap:12px; padding:8px 0; border-bottom:1px dashed var(--line-soft); font-size:13px;
+  }
+  .timeline li:last-child{border-bottom:none;}
+  .timeline .dot{width:8px;height:8px;border-radius:50%; background:var(--teal); margin-top:5px; flex-shrink:0;}
+  .timeline b{color:var(--text-dim); font-family:'JetBrains Mono',monospace; font-size:11px; min-width:70px; display:inline-block;}
+
+  /* toolbar / search */
+  .toolbar{display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:center;}
+  .toolbar input[type=text], .toolbar select{
+    background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    padding:9px 12px; border-radius:8px; font-size:13px; font-family:inherit;
+  }
+  .toolbar input[type=text]{flex:1; min-width:180px;}
+  .toolbar input:focus, .toolbar select:focus{outline:1px solid var(--amber);}
+  .chip{
+    padding:5px 11px; border-radius:20px; border:1px solid var(--line); color:var(--text-dim);
+    font-size:12px; cursor:pointer; background:var(--panel2); user-select:none;
+  }
+  .chip.on{background:var(--amber-soft); color:var(--amber); border-color:#f5a62355;}
+
+  /* grid of cards */
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:14px;}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:14px; cursor:pointer; transition:border-color .15s, transform .1s;
+    position:relative;
+  }
+  .card:hover{border-color:#f5a62366; transform:translateY(-1px);}
+  .card .badge{
+    position:absolute; top:12px; right:12px; font-size:10px; font-weight:700;
+    padding:3px 8px; border-radius:20px; letter-spacing:.3px;
+  }
+  .b-stock{background:var(--blue-soft); color:var(--blue);}
+  .b-nego{background:var(--amber-soft); color:var(--amber);}
+  .b-sold{background:var(--red-soft); color:var(--red);}
+  .b-delivered{background:var(--green-soft); color:var(--green);}
+  .b-tradein{background:var(--violet-soft); color:var(--violet);}
+  .mini-tag{font-size:9.5px; padding:2px 6px; border-radius:10px; font-weight:600; display:inline-block;}
+  .mini-tag-img{background:var(--teal-soft); color:var(--teal);}
+  .mini-tag-appr{background:var(--green-soft); color:var(--green);}
+
+  .card .name{font-weight:700; font-size:15.5px; margin:2px 0 3px; padding-right:70px;}
+  .card .meta{color:var(--text-dim); font-size:12px; margin-bottom:10px;}
+  .card .price{font-family:'JetBrains Mono',monospace; font-weight:700; color:var(--amber); font-size:16px;}
+  .card .row2{display:flex; justify-content:space-between; align-items:flex-end; margin-top:8px;}
+  .card .score{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-dim);}
+
+  .empty{
+    text-align:center; color:var(--text-dim); padding:60px 20px; border:1px dashed var(--line);
+    border-radius:var(--radius); font-size:13px;
+  }
+  .empty b{display:block; color:var(--text); font-size:15px; margin-bottom:6px;}
+
+  /* Modal */
+  .overlay{
+    position:fixed; inset:0; background:#0a0d11cc; backdrop-filter:blur(2px);
+    display:flex; align-items:flex-start; justify-content:center; padding:40px 16px;
+    z-index:50; overflow-y:auto;
+  }
+  .modal{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    width:100%; max-width:640px; padding:0; overflow:hidden; margin-bottom:40px;
+  }
+  .modal-head{
+    padding:18px 22px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center;
+    background:var(--panel2);
+  }
+  .modal-head h3{margin:0; font-size:16px; font-weight:700;}
+  .modal-body{padding:20px 22px;}
+  .modal-foot{padding:16px 22px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:10px;}
+  .close-x{background:none; border:none; color:var(--text-dim); font-size:20px; cursor:pointer; line-height:1;}
+  .close-x:hover{color:var(--text);}
+
+  .field{margin-bottom:13px;}
+  .field label{display:block; font-size:11.5px; color:var(--text-dim); margin-bottom:5px; font-weight:500;}
+  .field input, .field select, .field textarea{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    padding:9px 11px; border-radius:8px; font-size:13.5px; font-family:inherit;
+  }
+  .field textarea{resize:vertical; min-height:60px;}
+  .field input:focus, .field select:focus, .field textarea:focus{outline:1px solid var(--amber);}
+  .field-row{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .field-row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;}
+
+  /* detail view */
+  .detail-head{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:18px; flex-wrap:wrap;}
+  .detail-title{font-family:'Zen Kaku Gothic New',sans-serif; font-weight:900; font-size:22px;}
+  .detail-id{font-family:'JetBrains Mono',monospace; color:var(--text-dim); font-size:12px; margin-top:3px;}
+  .kv-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px 18px; margin-bottom:6px;}
+  .kv{display:flex; flex-direction:column; gap:3px;}
+  .kv .k{font-size:10.5px; color:var(--text-dim2); letter-spacing:.3px;}
+  .kv .v{font-size:13.5px; font-weight:600;}
+  .kv .v.mono{font-family:'JetBrains Mono',monospace;}
+
+  /* Gauge / appraisal */
+  .gauge-wrap{display:flex; align-items:center; gap:22px; flex-wrap:wrap;}
+  .dial{
+    width:112px; height:112px; border-radius:50%;
+    background:conic-gradient(var(--amber) calc(var(--pct,0)*1%), var(--line) 0);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .dial-inner{
+    width:88px; height:88px; border-radius:50%; background:var(--panel);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+  .dial-inner .n{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:22px;}
+  .dial-inner .r{font-size:10px; color:var(--text-dim);}
+  .segbars{display:flex; flex-direction:column; gap:8px; flex:1; min-width:220px;}
+  .segrow{display:flex; align-items:center; gap:10px; font-size:12.5px;}
+  .segrow .lbl{width:78px; color:var(--text-dim); flex-shrink:0;}
+  .segrow .segs{display:flex; gap:3px; flex:1;}
+  .seg{height:9px; flex:1; border-radius:2px; background:var(--line);}
+  .seg.on{background:var(--amber);}
+  .segrow .num{width:16px; text-align:right; font-family:'JetBrains Mono',monospace; color:var(--text-dim); font-size:11px;}
+
+  .defect-list{display:flex; flex-wrap:wrap; gap:7px; margin-top:6px;}
+  .defect-tag{
+    font-size:11.5px; background:var(--red-soft); color:var(--red); border:1px solid #e5595e33;
+    padding:4px 10px; border-radius:20px;
+  }
+  .defect-empty{color:var(--text-dim2); font-size:12px;}
+
+  /* Kanban */
+  .kanban{display:grid; grid-template-columns:repeat(9,minmax(0,1fr)); gap:6px; padding-bottom:14px;}
+  .kcol{
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    min-width:0; display:flex; flex-direction:column; max-height:calc(100vh - 200px);
+  }
+  .kcol-head{
+    padding:7px 6px; border-bottom:1px solid var(--line); font-weight:700; font-size:10.5px;
+    display:flex; flex-direction:column; align-items:center; gap:2px; position:sticky; top:0; background:var(--panel);
+    text-align:center;
+  }
+  .kcol-head span:first-child{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;}
+  .kcol-head .cnt{
+    font-family:'JetBrains Mono',monospace; color:var(--text-dim); background:var(--panel2);
+    padding:0px 6px; border-radius:10px; font-size:10px;
+  }
+  .kcol-body{padding:5px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:5px;}
+  .kcard{
+    background:var(--panel2); border:1px solid var(--line); border-radius:6px; padding:6px;
+    cursor:pointer; font-size:10.5px;
+  }
+  .kcard:hover{border-color:#f5a62366;}
+  .kcard .cust{font-weight:700; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .kcard .veh{color:var(--text-dim); margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:10px;}
+  .kcard .mvbtns{display:flex; justify-content:space-between; gap:3px;}
+  .mv{
+    font-size:10px; background:var(--panel); border:1px solid var(--line); color:var(--text-dim);
+    padding:3px 7px; border-radius:6px; cursor:pointer;
+  }
+  .mv:hover{color:var(--amber); border-color:var(--amber);}
+  .kcard .mv{padding:2px 6px; font-size:11px;}
+  @media (max-width:1100px){
+    .kanban{overflow-x:auto; grid-auto-flow:column; grid-template-columns:repeat(9,140px);}
+  }
+
+  .staff-tag{
+    font-size:10.5px; background:var(--teal-soft); color:var(--teal); padding:2px 7px; border-radius:6px; display:inline-block; margin-top:2px;
+  }
+
+  ::-webkit-scrollbar{width:9px; height:9px;}
+  ::-webkit-scrollbar-thumb{background:#2c3540; border-radius:6px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+
+  .savebar{font-size:11px; color:var(--text-dim2); display:flex; align-items:center; gap:6px;}
+  .savebar .dotpulse{width:6px;height:6px;border-radius:50%; background:var(--green);}
+
+  @media (max-width:820px){
+    .sidebar{position:fixed; z-index:40; transform:translateX(-100%); transition:transform .2s;}
+    .sidebar.open{transform:translateX(0);}
+    main{padding:18px;}
+    #menuBtn{display:inline-flex !important;}
+  }
+  #menuBtn{display:none; background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:8px 10px; cursor:pointer;}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <img class="brand-logo" alt="DEED MOTORS" src="data:image/jpeg;base64,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kYqsYju4q1RQAgGBS0UUAFISB1paidcmgBjuW4FEcfc09YwOTUtABRRRQAUyQZQin0daAKsZ2nmp/MWmmLnik8r3oAd5iClVwxpnle9OVNtAElFFFABRRRQAUUUUAFHSig0AMMiiozL6UeWc04RDvQBAdznmpUixyalCgdKdQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABSEZGKWigCgAY3zV1XDCkdA1QmJh0rRu5KVixxRxVfa1G1qVh3LGRVUyMG9qdtamEU0rCbLKuGp9VVBzxVoVLQ0wpjg4wopWyBxUW5qhspIjwVOSKk8zjpSYdqcIvWpS7Ft9yIDc3NWgBiojF6Uz5lprQT1LNVZRlqsLkjmmFPmzTYouzIXX5hSuPmBp7D5qkKA4NFiuYd2pgjUHd3p+MDioCz0yEQyDL1aHSo1Qk5NWMdqByZHTWRW+9Um2o5FOOKBIhKRr7mmIm5s1IIyeamChelBTYtFFFBAUwjaOKfRTTAqrGWPJpTHtPBqQoaNrVdx3BX+Xmowu5s1IIz34qQKBSuIWiilwagBKKdtpcAUANwTS7adRQAUUUUAFFFFAH//S/fyiiigAooooAKKKKACiiigAooooAKKKKACiiigBMCloooAKMCiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKi8vJzUtFO4WEAApaKKQBRgUUUAFFFFABRjNFFABRRRQAmBS0UUAFGBRRQAUUUUAFFFFABSYFLRQAm0Um0U6igBu2jbTqKAG7aNtOooATaKMClooAKKKKACiiigAooooAKKKKACiiigD/0/38ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9T9/KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//V/fyiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP/1v38ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKTIoAWimlhTfMHSgdiSio/MFG+gLElFR76TzRQFiWio94pwYUBYdRRRQIKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/1/38ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKYXArM1HWdO0mE3GpXKW0Y6tIdopN23LhTlJ2irs1qTIr5t8Z/tRfC/wAIb42vxfyL/DbkPz+da3wf+K2s/FMXGrx6W1ho68QvKpV3IOD6jHSuWOOpSn7OMrs+gq8J5hTwzxlWk4011el/S+577UbyKilmOAOpNBY45r5U/aY+OFp8N/Dcmj6ZKH1nUFKooPKI2VLcdwavFYmFGDqTeiOPIskr5hioYTDq8pP+n6HUeNf2l/hf4Iu5tO1O+eW6hJBSFPMAI7Eqa8K1b9unwnASNI0+S5x08xHSvzEvLqe/u5b69Yy3E7F5HPVmPUmq+418BiOKsRJvkskf1llfgdk9KC9vzTl11sr+i/zPvvU/27vEE5I03QoUHYmRx/SuGvv20Pibc5+zW8VuD6OTj8xXx5nNJkV5089xcvts+sw3hjkVL4cKvnd/mz6hl/a4+MUhJS/2D2I/wqk37V/xoJyNXcf98/4V81bqTcax/tXE/wDPx/eenHgbJ1thIf8AgKPptP2s/jKvXU2b64/wrYs/2w/izbEGeRbj/ebH8hXyZuNLuprNsUv+XjIqcB5NJWeEh9x9zaZ+3H41tmX7fpEE6jr+8b+gr03SP27tGmKjWtINv6mMO9fmbkU7Jrqp8RYuP2r+p4eM8Jchrb4fl9G0fs94b/ay+EviBUjF9LbTN1EkWwD8WNe6aP418Ma5Esul6pbThugEyFvyBzX89RRG+8ua2tI8Qa5oM63GiX8tjIvIMTYr1cPxfUX8SKfofC5r4A4OabwddxfaSuvwsf0RLKGAIOQalBzX4yeCP2tPif4VljXUrj+17dcAi4ZmOPbGK+3Phz+134C8XGKz1lzpV43BMmFjz7Emvo8HxBhq2l7PzPyDiLwkzfL058nPBdY6/hufYFFZlhqllqdsl3p86XELjKuhyCPrWiGzXtJ3PzGcHF2ktR1FFFMkKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/0P38ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACkJxUbyqgLMQoHcmvCviX+0F4D+G8Drf3i3N4M7YIzkk/UZArK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KACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAIzTdi06igBpUHrSbFp9FAXEKg0gUDpTqKAGlQetJsWn0UBcbsWgIAc06igLhSEA9aWigBuwU6iigAxmmbFp9FADdi0hRafRQO54h8fPD3iTxP8N77RfC0ay307pgM2wbed3P0r4//Zs/Zz8ceE/H0Wv+LrSOC1toXVSsgc7zgjiv0uIzSBcd815uIyunVrRry3R9rlHHeLwWW1stoxXLUvd631VhqoKXYtPor0j4q4gAHSkKg9adRQIZsWl2LTqKB3ECgUtFFAgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA/9P9/KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//U/fyiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP/1f38ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9b9/KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//X/fyiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP/0P38ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9H9/KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//S/fyiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP/2Q==">
+      <div class="brand-sub">DMS — Dealer Management</div>
+    </div>
+    <nav class="navlist" id="navlist"></nav>
+    <div class="sidebar-foot">
+      日本車中古車販売・査定<br>
+      Улаанбаатар хот · Japan Used Cars
+      <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px">
+        <button class="btn ghost sm" style="width:100%" onclick="downloadBackup(this)">💾 バックアップをダウンロード</button>
+        <button class="btn ghost sm" style="width:100%" onclick="openChangePasswordForm()">🔑 パスワードを変更</button>
+        <button class="btn ghost sm" style="width:100%" onclick="showVersionInfo()">ℹ️ Version 1.0</button>
+        <button class="btn ghost sm" style="width:100%" onclick="doLogout()">🔒 ログアウト</button>
+      </div>
+    </div>
+  </aside>
+  <main>
+    <button id="menuBtn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰ メニュー</button>
+    <div id="view"></div>
+  </main>
+</div>
+<div id="modalRoot"></div>
+<div id="loginScreen" style="display:none; position:fixed; inset:0; background:var(--bg); z-index:100; align-items:center; justify-content:center;">
+  <div class="panel" style="width:100%; max-width:340px; margin:16px;">
+    <img class="brand-logo" alt="DEED MOTORS" src="" id="loginLogo" style="margin-bottom:16px;">
+    <h3 style="text-align:center; margin-bottom:16px;">🔒 スタッフ用パスワード</h3>
+    <div class="field" style="position:relative">
+      <input id="f_loginpw" type="password" placeholder="パスワードを入力" style="padding-right:40px" onkeydown="if(event.key==='Enter')doLogin()">
+      <span onclick="togglePwVisibility('f_loginpw', this)" style="position:absolute; right:10px; top:9px; cursor:pointer; font-size:15px; color:var(--text-dim);">👁</span>
+    </div>
+    <div id="loginError" style="color:var(--red); font-size:12px; margin-bottom:10px; display:none;">パスワードが違います</div>
+    <button class="btn" style="width:100%" onclick="doLogin()">ログイン</button>
+  </div>
+</div>
+
+<div id="mnKeyboardBar" style="position:fixed; left:0; right:0; bottom:0; background:var(--panel); border-top:1px solid var(--line); z-index:60; padding:8px 12px; display:none; box-shadow:0 -4px 14px rgba(0,0,0,.3);">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+    <span style="font-size:11.5px; color:var(--text-dim); font-weight:600;">🇲🇳 モンゴル語キーボード / Монгол гар</span>
+    <button class="btn ghost sm" onclick="toggleMnKeyboard()">閉じる ✕</button>
+  </div>
+  <div id="mnKeyboardKeys"></div>
+</div>
+<button id="mnKeyboardToggleBtn" class="btn" style="position:fixed; right:16px; bottom:16px; z-index:59;" onclick="toggleMnKeyboard()">🇲🇳 ⌨ モンゴル語キーボード</button>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+/* ============================================================
+   DEED MOTORS DMS — prototype
+   Data persists via window.storage (shared across all staff)
+============================================================ */
+
+let customers = [];
+let vehicles = [];
+let deals = [];
+let staffList = [];
+let currentView = 'dashboard';
+let saving = false;
+
+const STAGES = ['問い合わせ','来店','査定','試乗','見積','交渉','契約','納車','キャンセル'];
+const VSTATUS = {stock:'在庫', nego:'商談中', sold:'売約済', delivered:'納車済'};
+const DEFECT_OPTIONS = ['バンパー傷','フェンダー凹み','飛び石','シート汚れ','タイヤ摩耗','オイル漏れ','異音','修復歴あり','ガラス傷','塗装剥がれ'];
+
+const NAV = [
+  {id:'dashboard', ic:'🏠', ja:'ダッシュボード', mn:'Хяналтын самбар'},
+  {id:'customers', ic:'👤', ja:'顧客管理', mn:'Үйлчлүүлэгч'},
+  {id:'vehicles', ic:'🚗', ja:'車両・査定', mn:'Тээвэр · Үнэлгээ'},
+  {id:'deals', ic:'💬', ja:'商談パイプライン', mn:'Худалдааны явц'},
+  {id:'staff', ic:'👥', ja:'スタッフ管理', mn:'Ажилтан'},
+  {id:'trash', ic:'🗑', ja:'ゴミ箱', mn:'Хогийн сав'},
+];
+
+/* ---------------- Mongolian on-screen keyboard ---------------- */
+const MN_KEYBOARD_ROWS = [
+  ['Е','Щ'],
+  ['Ф','Ц','У','Ж','Э','Н','Г','Ш','Ү','З','К','Ъ'],
+  ['Й','Ы','Б','Ө','А','Х','Р','О','Л','Д','П'],
+  ['Я','Ч','Ё','С','М','И','Т','Ь','В','Ю']
+];
+let mnShift = false;
+let mnLastFocusedInput = null;
+document.addEventListener('focusin', function(e){
+  const t = e.target;
+  if(t && (t.tagName==='INPUT' || t.tagName==='TEXTAREA') && !['file','date','month','number'].includes(t.type)){
+    mnLastFocusedInput = t;
+  }
+});
+function mnKeyInsert(ch){
+  const el = mnLastFocusedInput;
+  if(!el || !document.body.contains(el)) return;
+  const start = el.selectionStart ?? el.value.length;
+  const end = el.selectionEnd ?? el.value.length;
+  el.value = el.value.slice(0,start) + ch + el.value.slice(end);
+  const newPos = start + ch.length;
+  el.focus();
+  el.setSelectionRange(newPos, newPos);
+  el.dispatchEvent(new Event('input', {bubbles:true}));
+}
+function mnKeyBackspace(){
+  const el = mnLastFocusedInput;
+  if(!el || !document.body.contains(el)) return;
+  let start = el.selectionStart ?? el.value.length;
+  const end = el.selectionEnd ?? el.value.length;
+  if(start===end && start>0) start -= 1;
+  el.value = el.value.slice(0,start) + el.value.slice(end);
+  el.focus();
+  el.setSelectionRange(start,start);
+  el.dispatchEvent(new Event('input', {bubbles:true}));
+}
+function mnToggleShift(){ mnShift = !mnShift; renderMnKeyboardKeys(); }
+function renderMnKeyboardKeys(){
+  const el = document.getElementById('mnKeyboardKeys');
+  if(!el) return;
+  el.innerHTML = MN_KEYBOARD_ROWS.map(row=>`
+    <div style="display:flex; gap:4px; margin-bottom:4px; flex-wrap:wrap;">
+      ${row.map(ch=>{
+        const disp = mnShift ? ch : ch.toLowerCase();
+        return `<span class="mv" style="font-size:14px; padding:8px 10px; min-width:32px; text-align:center;" onclick="mnKeyInsert('${disp}')">${disp}</span>`;
+      }).join('')}
+    </div>
+  `).join('') + `
+    <div style="display:flex; gap:4px; margin-top:4px;">
+      <span class="mv" style="padding:8px 14px; ${mnShift?'background:var(--amber-soft); color:var(--amber);':''}" onclick="mnToggleShift()">⇧ 大文字</span>
+      <span class="mv" style="padding:8px 30px;" onclick="mnKeyInsert(' ')">スペース</span>
+      <span class="mv" style="padding:8px 14px;" onclick="mnKeyBackspace()">⌫ 削除</span>
+    </div>
+  `;
+}
+function toggleMnKeyboard(){
+  const bar = document.getElementById('mnKeyboardBar');
+  const btn = document.getElementById('mnKeyboardToggleBtn');
+  const showing = bar.style.display !== 'none';
+  bar.style.display = showing ? 'none' : 'block';
+  btn.style.display = showing ? '' : 'none';
+}
+
+function uid(prefix){
+  return prefix + '-' + Date.now().toString(36).slice(-6) + Math.floor(Math.random()*900+100);
+}
+function esc(s){
+  return (s===undefined||s===null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmtMoney(n){
+  n = Number(n)||0;
+  return n.toLocaleString('en-US') + '₮';
+}
+function fmtDate(d){
+  if(!d) return '—';
+  const dt = new Date(d);
+  return `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`;
+}
+
+/* ---------------- storage (per-row tables; each customer/vehicle/deal is its own row) ---------------- */
+const SUPABASE_URL = 'https://uwetsyxrbekcaaesyvkw.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_lysZ9cloHhu1h7WH6aa-rg_FjDULrvL';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ---------------- auth (shared staff login) ---------------- */
+const DMS_SHARED_EMAIL = 'dms@deedmotors.mn';
+async function doLogin(){
+  const password = document.getElementById('f_loginpw').value;
+  const errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+  if(!password) return;
+  const { error } = await sb.auth.signInWithPassword({ email: DMS_SHARED_EMAIL, password });
+  if(error){
+    errEl.textContent = 'パスワードが違います';
+    errEl.style.display = 'block';
+    return;
+  }
+  document.getElementById('f_loginpw').value = '';
+  await startApp();
+}
+function togglePwVisibility(inputId, iconEl){
+  const el = document.getElementById(inputId);
+  const showing = el.type === 'text';
+  el.type = showing ? 'password' : 'text';
+  iconEl.textContent = showing ? '👁' : '🙈';
+}
+function openChangePasswordForm(){
+  showModal(`
+    <div class="modal-head"><h3>🔑 共通パスワードを変更</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div style="font-size:11.5px; color:var(--text-dim); margin-bottom:14px; line-height:1.6">
+        全スタッフで共有しているログインパスワードを変更します。変更後は、他のスタッフにも新しいパスワードを伝えてください（6文字以上）。
+      </div>
+      <div class="field" style="position:relative">
+        <label>新しいパスワード</label>
+        <input id="f_newpw1" type="password" style="padding-right:40px">
+        <span onclick="togglePwVisibility('f_newpw1', this)" style="position:absolute; right:10px; top:30px; cursor:pointer; font-size:15px; color:var(--text-dim);">👁</span>
+      </div>
+      <div class="field" style="position:relative">
+        <label>新しいパスワード（確認）</label>
+        <input id="f_newpw2" type="password" style="padding-right:40px">
+        <span onclick="togglePwVisibility('f_newpw2', this)" style="position:absolute; right:10px; top:30px; cursor:pointer; font-size:15px; color:var(--text-dim);">👁</span>
+      </div>
+      <div id="changePwError" style="color:var(--red); font-size:12px; display:none;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">キャンセル</button>
+      <button class="btn" onclick="changePassword()">変更する</button>
+    </div>
+  `);
+}
+async function changePassword(){
+  const pw1 = document.getElementById('f_newpw1').value;
+  const pw2 = document.getElementById('f_newpw2').value;
+  const errEl = document.getElementById('changePwError');
+  errEl.style.display = 'none';
+  if(pw1.length<6){ errEl.textContent='6文字以上で入力してください'; errEl.style.display='block'; return; }
+  if(pw1!==pw2){ errEl.textContent='パスワードが一致しません'; errEl.style.display='block'; return; }
+  const { error } = await sb.auth.updateUser({ password: pw1 });
+  if(error){ errEl.textContent = '変更に失敗しました: '+error.message; errEl.style.display='block'; return; }
+  closeModal();
+  alert('パスワードを変更しました。次回ログインから新しいパスワードを使用してください。');
+}
+async function doLogout(){
+  if(!confirm('ログアウトしますか？')) return;
+  await sb.auth.signOut();
+  location.reload();
+}
+async function requireAuth(){
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user){
+    const logoSrc = document.querySelector('.brand-logo')?.src;
+    if(logoSrc) document.getElementById('loginLogo').src = logoSrc;
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    return false;
+  }
+  return true;
+}
+
+function customerToRow(c){
+  return {
+    id: c.id, name: c.name||'', name_mn: c.nameMn||'', phone: c.phone||'', fb: c.fb||'',
+    address: c.address||'', birthday: c.birthday||'', job: c.job||'', referrer: c.referrer||'',
+    note: c.note||'', next_service_date: c.nextServiceDate||'', sales_staff: c.salesStaff||'',
+    sort_order: c.sortOrder||0, deleted_at: c.deletedAt||null, created_at: c.createdAt||Date.now()
+  };
+}
+function rowToCustomer(r){
+  return {
+    id: r.id, name: r.name, nameMn: r.name_mn, phone: r.phone, fb: r.fb, address: r.address,
+    birthday: r.birthday, job: r.job, referrer: r.referrer, note: r.note,
+    nextServiceDate: r.next_service_date, salesStaff: r.sales_staff, sortOrder: r.sort_order,
+    deletedAt: r.deleted_at, createdAt: r.created_at
+  };
+}
+function vehicleToRow(v){
+  return {
+    id: v.id, kind: v.kind||'stock', maker: v.maker||'', model: v.model||'', year: v.year||null,
+    color: v.color||'', mileage: v.mileage||0, vin: v.vin||'', reg_num: v.regNum||'', price_cost: v.priceCost||0, price_sale: v.priceSale||0,
+    status: v.status||'', notes: v.notes||'', external_grade: v.externalGrade||'', external_appraisal_price: v.externalAppraisalPrice||'',
+    external_report_text: v.externalReportText||'', appraisal: v.appraisal||{}, defects: v.defects||[], files: v.files||[],
+    service_history: v.serviceHistory||[], owner_customer_id: v.ownerCustomerId||null,
+    deleted_at: v.deletedAt||null, created_at: v.createdAt||Date.now()
+  };
+}
+function rowToVehicle(r){
+  return {
+    id: r.id, kind: r.kind, maker: r.maker, model: r.model, year: r.year, color: r.color, mileage: r.mileage,
+    vin: r.vin, regNum: r.reg_num, priceCost: r.price_cost, priceSale: r.price_sale, status: r.status, notes: r.notes,
+    externalGrade: r.external_grade, externalAppraisalPrice: r.external_appraisal_price, externalReportText: r.external_report_text,
+    appraisal: r.appraisal||{}, defects: r.defects||[], files: r.files||[], serviceHistory: r.service_history||[],
+    ownerCustomerId: r.owner_customer_id, deletedAt: r.deleted_at, createdAt: r.created_at
+  };
+}
+function dealToRow(d){
+  return {
+    id: d.id, customer_id: d.customerId||null, vehicle_id: d.vehicleId||null, trade_in_vehicle_id: d.tradeInVehicleId||null,
+    stage: d.stage||'', staff: d.staff||'', history: d.history||[], deleted_at: d.deletedAt||null, created_at: d.createdAt||Date.now()
+  };
+}
+function rowToDeal(r){
+  return {
+    id: r.id, customerId: r.customer_id, vehicleId: r.vehicle_id, tradeInVehicleId: r.trade_in_vehicle_id,
+    stage: r.stage, staff: r.staff, history: r.history||[], deletedAt: r.deleted_at, createdAt: r.created_at
+  };
+}
+async function upsertCustomerRow(c){
+  saving = true; renderSaveBar();
+  const { error } = await sb.from('customers').upsert(customerToRow(c));
+  if(error) console.error('save customer error', error);
+  saving = false; renderSaveBar();
+}
+async function deleteCustomerRow(id){
+  saving = true; renderSaveBar();
+  const { error } = await sb.from('customers').delete().eq('id', id);
+  if(error) console.error('delete customer error', error);
+  saving = false; renderSaveBar();
+}
+async function upsertVehicleRow(v){
+  saving = true; renderSaveBar();
+  const { error } = await sb.from('vehicles').upsert(vehicleToRow(v));
+  if(error) console.error('save vehicle error', error);
+  saving = false; renderSaveBar();
+}
+async function deleteVehicleRow(id){
+  saving = true; renderSaveBar();
+  const { error } = await sb.from('vehicles').delete().eq('id', id);
+  if(error) console.error('delete vehicle error', error);
+  saving = false; renderSaveBar();
+}
+async function upsertDealRow(d){
+  saving = true; renderSaveBar();
+  const { error } = await sb.from('deals').upsert(dealToRow(d));
+  if(error) console.error('save deal error', error);
+  saving = false; renderSaveBar();
+}
+async function deleteDealRow(id){
+  saving = true; renderSaveBar();
+  const { error } = await sb.from('deals').delete().eq('id', id);
+  if(error) console.error('delete deal error', error);
+  saving = false; renderSaveBar();
+}
+function staffToRow(s){
+  return { id: s.id, name: s.name||'', role: s.role||'', active: s.active!==false, sort_order: s.sortOrder||0, created_at: s.createdAt||Date.now() };
+}
+function rowToStaff(r){
+  return { id: r.id, name: r.name, role: r.role, active: r.active, sortOrder: r.sort_order, createdAt: r.created_at };
+}
+function sortedStaff(){ return [...staffList].sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0)); }
+async function upsertStaffRow(s){
+  saving = true; renderSaveBar();
+  const { error } = await sb.from('staff').upsert(staffToRow(s));
+  if(error) console.error('save staff error', error);
+  saving = false; renderSaveBar();
+}
+async function deleteStaffRow(id){
+  saving = true; renderSaveBar();
+  const { error } = await sb.from('staff').delete().eq('id', id);
+  if(error) console.error('delete staff error', error);
+  saving = false; renderSaveBar();
+}
+async function migrateFromLegacyKv(){
+  try{
+    const { data, error } = await sb.from('dms_kv').select('key,value').in('key', ['dm_customers','dm_vehicles','dm_deals']);
+    if(error || !data || data.length===0) return false;
+    const byKey = Object.fromEntries(data.map(r=>[r.key, r.value]));
+    const legacyCustomers = byKey.dm_customers || [];
+    const legacyVehicles = byKey.dm_vehicles || [];
+    const legacyDeals = byKey.dm_deals || [];
+    if(legacyCustomers.length===0 && legacyVehicles.length===0 && legacyDeals.length===0) return false;
+    customers = legacyCustomers;
+    vehicles = legacyVehicles;
+    deals = legacyDeals;
+    await Promise.all(customers.map(upsertCustomerRow));
+    await Promise.all(vehicles.map(upsertVehicleRow));
+    await Promise.all(deals.map(upsertDealRow));
+    return true;
+  }catch(e){
+    console.error('legacy migration error', e);
+    return false;
+  }
+}
+async function loadAll(){
+  const [custRes, vehRes, dealRes, staffRes] = await Promise.all([
+    sb.from('customers').select('*').is('deleted_at', null),
+    sb.from('vehicles').select('*').is('deleted_at', null),
+    sb.from('deals').select('*').is('deleted_at', null),
+    sb.from('staff').select('*'),
+  ]);
+  if(custRes.error) console.error('load customers error', custRes.error);
+  if(vehRes.error) console.error('load vehicles error', vehRes.error);
+  if(dealRes.error) console.error('load deals error', dealRes.error);
+  if(staffRes.error) console.error('load staff error', staffRes.error);
+  customers = (custRes.data||[]).map(rowToCustomer);
+  vehicles = (vehRes.data||[]).map(rowToVehicle);
+  deals = (dealRes.data||[]).map(rowToDeal);
+  staffList = (staffRes.data||[]).map(rowToStaff);
+
+  if(customers.length===0 && vehicles.length===0 && deals.length===0){
+    const migrated = await migrateFromLegacyKv();
+    if(!migrated){
+      seedDemoData();
+      await Promise.all(customers.map(upsertCustomerRow));
+      await Promise.all(vehicles.map(upsertVehicleRow));
+      await Promise.all(deals.map(upsertDealRow));
+    }
+  }
+  if(staffList.length===0){
+    staffList = [
+      {id:uid('ST'), name:'ドリギオン', role:'社長', sortOrder:0, createdAt:Date.now()},
+      {id:uid('ST'), name:'マエダ', role:'査定・整備担当', sortOrder:1, createdAt:Date.now()},
+      {id:uid('ST'), name:'バルダ', role:'営業担当', sortOrder:2, createdAt:Date.now()},
+      {id:uid('ST'), name:'テムカ', role:'営業担当', sortOrder:3, createdAt:Date.now()},
+    ];
+    await Promise.all(staffList.map(upsertStaffRow));
+  }
+}
+function renderSaveBar(){
+  const el = document.getElementById('saveIndicator');
+  if(el) el.innerHTML = saving ? `<span class="savebar"><span class="dotpulse" style="background:var(--amber)"></span>保存中…</span>` : `<span class="savebar"><span class="dotpulse"></span>保存済み・全スタッフ共有</span>`;
+}
+
+function seedDemoData(){
+  const c1 = {id:uid('C'), name:'Bat Erdene', nameMn:'Бат Эрдэнэ', phone:'9911-2233', fb:'facebook.com/bat.erdene', address:'Баянзүрх дүүрэг', referrer:'—', note:'プリウス希望、白色', createdAt:Date.now()-86400000*6};
+  const c2 = {id:uid('C'), name:'Oyunchimeg', nameMn:'Оюунчимэг', phone:'8877-4455', fb:'', address:'Сүхбаатар дүүрэг', referrer:'Bat Erdene紹介', note:'下取り車あり(Nissan Note)', createdAt:Date.now()-86400000*3};
+  customers = [c1,c2];
+
+  const v1 = {id:uid('V'), maker:'Toyota', model:'Prius', grade4b:'4B', year:2019, vin:'JTDKB3FU*012345**', color:'パールホワイト', mileage:82000, priceCost:32000000, priceSale:43000000, status:'stock',
+    appraisal:{exterior:4, interior:4, engine:5, undercarriage:4, electrical:5}, defects:['フェンダー凹み'], notes:'ハイブリッドバッテリー良好', createdAt:Date.now()-86400000*20};
+  const v2 = {id:uid('V'), maker:'Toyota', model:'Harrier', grade4b:'4.5B', year:2021, vin:'ZSU60W-00998**', color:'ブラック', mileage:41000, priceCost:58000000, priceSale:72000000, status:'nego',
+    appraisal:{exterior:5, interior:5, engine:5, undercarriage:4, electrical:5}, defects:[], notes:'ワンオーナー・禁煙車', createdAt:Date.now()-86400000*11};
+  const v3 = {id:uid('V'), maker:'Nissan', model:'Note e-Power', grade4b:'3.5B', year:2018, vin:'HE12-118876**', color:'シルバー', mileage:95000, priceCost:14000000, priceSale:19500000, status:'stock',
+    appraisal:{exterior:3, interior:3, engine:4, undercarriage:3, electrical:4}, defects:['タイヤ摩耗','オイル漏れ'], notes:'次回車検までに整備推奨', createdAt:Date.now()-86400000*2};
+  vehicles = [v1,v2,v3];
+
+  deals = [
+    {id:uid('D'), customerId:c1.id, vehicleId:v1.id, stage:'試乗', staff:'Bat（営業）', createdAt:Date.now()-86400000*5,
+      history:[{date:Date.now()-86400000*5,note:'Facebookから問い合わせ'},{date:Date.now()-86400000*3,note:'来店・査定車の状態確認'},{date:Date.now()-86400000*1,note:'試乗実施、好感触'}]},
+    {id:uid('D'), customerId:c2.id, vehicleId:v2.id, stage:'見積', staff:'Munkh（営業）', createdAt:Date.now()-86400000*4,
+      history:[{date:Date.now()-86400000*4,note:'来店、Harrier内覧'},{date:Date.now()-86400000*2,note:'下取り車(Note)査定実施'},{date:Date.now(),note:'見積書提出'}]},
+  ];
+}
+
+/* ---------------- derived stats ---------------- */
+function stats(){
+  const stock = vehicles.filter(v=>v.status==='stock').length;
+  const nego = deals.filter(d=>!['契約','納車','キャンセル'].includes(d.stage)).length;
+  const appraisalPending = vehicles.filter(v=>!v.appraisal || Object.values(v.appraisal).every(x=>!x)).length;
+  const deliveredThisMonth = vehicles.filter(v=>v.status==='delivered' && sameMonth(v.createdAt)).length;
+  const totalProfit = vehicles.filter(v=>v.status==='sold'||v.status==='delivered').reduce((s,v)=>s+((v.priceSale||0)-(v.priceCost||0)),0);
+  return {stock, nego, appraisalPending, deliveredThisMonth, totalProfit, totalVehicles:vehicles.length};
+}
+function sameMonth(ts){
+  const d=new Date(ts), n=new Date();
+  return d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth();
+}
+function custName(id){ const c=customers.find(x=>x.id===id); return c?c.name:'（顧客不明）'; }
+function vehName(id){ const v=vehicles.find(x=>x.id===id); return v? `${v.maker} ${v.model} (${v.year})`:'（車両不明）'; }
+
+/* ============================================================
+   RENDER: NAV
+============================================================ */
+function renderNav(){
+  const nav = document.getElementById('navlist');
+  nav.innerHTML = NAV.map(n=>`
+    <div class="navitem ${currentView===n.id?'active':''}" onclick="go('${n.id}')">
+      <span class="ic">${n.ic}</span>
+      <span class="lbl"><b>${n.ja}</b><small>${n.mn}</small></span>
+    </div>
+  `).join('');
+}
+function go(view){
+  currentView = view;
+  document.getElementById('sidebar').classList.remove('open');
+  renderNav();
+  renderView();
+}
+
+/* ============================================================
+   RENDER: DASHBOARD
+============================================================ */
+function renderDashboard(){
+  const s = stats();
+  const recentDeals = [...deals].sort((a,b)=>latestDealTime(b)-latestDealTime(a)).slice(0,6);
+  const dueCustomers = customers.filter(c=>serviceDue(c.nextServiceDate)).sort((a,b)=>new Date(a.nextServiceDate)-new Date(b.nextServiceDate));
+  return `
+    <div class="topbar">
+      <div>
+        <div class="pagetitle">🏠 ダッシュボード <span class="sub">本日 ${fmtDate(Date.now())}</span></div>
+      </div>
+      <span id="saveIndicator"></span>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card" style="--accent:var(--teal)">
+        <div class="k">🚗 在庫台数</div><div class="v">${s.stock}<span>台</span></div>
+      </div>
+      <div class="stat-card" style="--accent:var(--amber)">
+        <div class="k">💬 商談中</div><div class="v">${s.nego}<span>件</span></div>
+      </div>
+      <div class="stat-card" style="--accent:var(--red)">
+        <div class="k">📋 査定未実施</div><div class="v">${s.appraisalPending}<span>台</span></div>
+      </div>
+      <div class="stat-card" style="--accent:var(--green)">
+        <div class="k">💰 累計粗利益</div><div class="v" style="font-size:20px">${fmtMoney(s.totalProfit)}</div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>🔔 車検・点検リマインド（AI21スタイル）</h3>
+      ${dueCustomers.length===0 ? `<div class="empty" style="padding:20px">30日以内に予定されている車検・点検はありません</div>` : `
+      <div class="grid">
+        ${dueCustomers.map(c=>`
+          <div class="card" onclick="openCustomerDetail('${c.id}')">
+            <span class="badge b-sold">🔔 ${fmtDate(c.nextServiceDate)}</span>
+            <div class="name">${esc(c.name)} 様</div>
+            <div class="meta">${esc(c.phone||'電話未登録')}</div>
+          </div>
+        `).join('')}
+      </div>`}
+    </div>
+    <div class="panel">
+      <h3>📅 最近の商談動向</h3>
+      ${recentDeals.length===0 ? `<div class="empty">まだ商談データがありません</div>` : `
+      <ul class="timeline">
+        ${recentDeals.map(d=>{
+          const last = d.history[d.history.length-1];
+          return `<li onclick="openDealDetail('${d.id}')" style="cursor:pointer">
+            <span class="dot"></span>
+            <div>
+              <b>${fmtDate(last?last.date:d.createdAt)}</b>
+              <strong>${esc(custName(d.customerId))}</strong> 様 — ${esc(vehName(d.vehicleId))}
+              <span class="staff-tag">${esc(d.stage)}</span>
+            </div>
+          </li>`;
+        }).join('')}
+      </ul>`}
+    </div>
+    <div class="panel">
+      <h3>🔧 査定が必要な在庫車両</h3>
+      ${vehicles.filter(v=>v.status==='stock' && lowAppraisal(v)).length===0 ? `<div class="empty" style="padding:20px">対象車両はありません</div>` : `
+      <div class="grid">
+        ${vehicles.filter(v=>v.status==='stock' && lowAppraisal(v)).map(v=>vehicleCardHtml(v)).join('')}
+      </div>`}
+    </div>
+  `;
+}
+function latestDealTime(d){ return d.history && d.history.length ? d.history[d.history.length-1].date : d.createdAt; }
+function lowAppraisal(v){
+  if(!v.appraisal) return true;
+  const vals = Object.values(v.appraisal);
+  return vals.reduce((a,b)=>a+b,0) === 0;
+}
+
+/* ============================================================
+   RENDER: CUSTOMERS
+============================================================ */
+let custFilter = '';
+let custSort = 'new';
+const CUST_SORT_OPTIONS = {
+  custom:'カスタム（手動で並び替え）',
+  new:'登録が新しい順', old:'登録が古い順', name:'氏名順',
+  deals:'商談件数が多い順', service_due:'次回車検・点検が近い順'
+};
+function sortCustomerList(list){
+  const sorted = [...list];
+  switch(custSort){
+    case 'custom': sorted.sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0)); break;
+    case 'old': sorted.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)); break;
+    case 'name': sorted.sort((a,b)=>(a.name||'').localeCompare(b.name||'','ja')); break;
+    case 'deals': sorted.sort((a,b)=>deals.filter(d=>d.customerId===b.id).length-deals.filter(d=>d.customerId===a.id).length); break;
+    case 'service_due': sorted.sort((a,b)=>{
+      const da = a.nextServiceDate ? new Date(a.nextServiceDate).getTime() : Infinity;
+      const db = b.nextServiceDate ? new Date(b.nextServiceDate).getTime() : Infinity;
+      return da-db;
+    }); break;
+    default: sorted.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)); // new
+  }
+  return sorted;
+}
+async function moveCustomer(id, neighborId){
+  if(!neighborId) return;
+  const a = customers.find(c=>c.id===id);
+  const b = customers.find(c=>c.id===neighborId);
+  if(!a || !b) return;
+  const tmp = a.sortOrder||0;
+  a.sortOrder = b.sortOrder||0;
+  b.sortOrder = tmp;
+  renderView();
+  await upsertCustomerRow(a);
+  await upsertCustomerRow(b);
+}
+function renderCustomers(){
+  const q = custFilter.trim().toLowerCase();
+  let list = customers.filter(c => !q || (c.name+c.nameMn+c.phone+c.address).toLowerCase().includes(q));
+  list = sortCustomerList(list);
+  return `
+    <div class="topbar">
+      <div class="pagetitle">👤 顧客管理 <span class="sub">${customers.length}名登録</span></div>
+      <button class="btn" onclick="openCustomerForm()">＋ 新規顧客</button>
+    </div>
+    <div class="toolbar">
+      <input type="text" placeholder="🔍 氏名・電話番号・住所で検索…" value="${esc(custFilter)}" oninput="custFilter=this.value; renderView()">
+      <select onchange='custSort=this.value; renderView()'>
+        ${Object.entries(CUST_SORT_OPTIONS).map(([k,l])=>`<option value="${k}" ${custSort===k?'selected':''}>${l}</option>`).join('')}
+      </select>
+    </div>
+    ${list.length===0 ? `<div class="empty"><b>該当する顧客がいません</b>「＋新規顧客」から登録してください</div>` : `
+    <div class="grid">
+      ${list.map((c,i)=>{
+        const dealCount = deals.filter(d=>d.customerId===c.id).length;
+        const due = serviceDue(c.nextServiceDate);
+        return `
+        <div class="card" onclick="openCustomerDetail('${c.id}')">
+          ${due?`<span class="badge b-sold">🔔 点検時期</span>`:''}
+          <div class="name">${esc(c.name)}</div>
+          <div class="meta">${esc(c.nameMn||'')} ${c.nameMn?'・':''}${esc(c.phone||'電話未登録')}</div>
+          <div class="meta" style="margin-top:-6px;">📍 ${esc(c.address||'住所未登録')}</div>
+          ${c.salesStaff?`<span class="staff-tag" style="margin-top:4px">👤 ${esc(c.salesStaff)}</span>`:''}
+          ${custSort==='custom' ? `<div style="display:flex; gap:6px; margin-top:6px;">
+            <span class="mv" style="${i===0?'opacity:.3; pointer-events:none;':''}" onclick="event.stopPropagation(); moveCustomer('${c.id}',${list[i-1]?`'${list[i-1].id}'`:'null'})">↑ 上へ</span>
+            <span class="mv" style="${i===list.length-1?'opacity:.3; pointer-events:none;':''}" onclick="event.stopPropagation(); moveCustomer('${c.id}',${list[i+1]?`'${list[i+1].id}'`:'null'})">↓ 下へ</span>
+          </div>`:''}
+          <div class="row2">
+            <span class="score">商談履歴 ${dealCount}件</span>
+            <span class="score">登録 ${fmtDate(c.createdAt)}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`}
+  `;
+}
+
+let linkedTradeInVehicleId = null;
+function openCustomerForm(existing){
+  const c = existing || {};
+  linkedTradeInVehicleId = null;
+  const alreadyLinked = existing ? vehicles.filter(v=>v.ownerCustomerId===c.id) : [];
+  showModal(`
+    <div class="modal-head"><h3>${existing?'顧客情報を編集':'＋ 新規顧客登録'}</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="panel" style="background:var(--panel2); margin-bottom:16px; border-color:#48c2d644">
+        <h3 style="font-size:12.5px; color:var(--teal)">📋 査定車を検索して紐付け</h3>
+        <div style="font-size:11.5px; color:var(--text-dim); margin-bottom:10px; line-height:1.6">
+          先に「車両・査定」で登録済みの査定車がある場合、登録番号の数字だけで検索して紐付けられます。入力し直す必要はありません。
+        </div>
+        <input id="f_linksearch" type="tel" placeholder="登録番号の数字を入力…（例: 0426）" oninput="searchLinkableVehicle()">
+        <div id="linkSearchResults" style="margin-top:8px"></div>
+        <div id="linkSelected" style="margin-top:8px"></div>
+        ${alreadyLinked.length>0 ? `
+        <div style="margin-top:10px; font-size:11.5px; color:var(--text-dim)">
+          既に紐づいている査定車：${alreadyLinked.map(v=>`<span class="staff-tag" style="margin-right:6px">${esc(v.maker)} ${esc(v.model)}</span>`).join('')}
+        </div>`:''}
+      </div>
+      <div class="field-row">
+        <div class="field"><label>氏名（日本語表記）</label><input id="f_name" value="${esc(c.name)}" placeholder="佐藤 太郎"></div>
+        <div class="field"><label>氏名（モンゴル語）</label><input id="f_nameMn" value="${esc(c.nameMn)}" placeholder="Бат Эрдэнэ"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>電話番号</label><input id="f_phone" value="${esc(c.phone)}" placeholder="9911-2233"></div>
+        <div class="field"><label>Facebook / Messenger</label><input id="f_fb" value="${esc(c.fb)}" placeholder="facebook.com/..."></div>
+      </div>
+      <div class="field"><label>住所</label><input id="f_address" value="${esc(c.address)}" placeholder="バヤンズルフ区..."></div>
+      <div class="field-row">
+        <div class="field"><label>誕生日</label><input id="f_birthday" type="date" value="${esc(c.birthday)}"></div>
+        <div class="field"><label>職業・勤務先</label><input id="f_job" value="${esc(c.job)}" placeholder="会社員 / 自営業など"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>紹介者</label><input id="f_referrer" value="${esc(c.referrer)}" placeholder="紹介者名（あれば）"></div>
+        <div class="field"><label>販売担当者</label>
+          <select id="f_salesstaff">
+            <option value="">未設定</option>
+            ${sortedStaff().map(s=>`<option value="${esc(staffLabel(s))}" ${c.salesStaff===staffLabel(s)?'selected':''}>${esc(staffLabel(s))}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>次回車検・点検予定日 <span style="color:var(--text-dim2)">（ダッシュボードにリマインド表示されます）</span></label><input id="f_nextService" type="date" value="${esc(c.nextServiceDate)}"></div>
+      <div class="field"><label>備考</label><textarea id="f_note" placeholder="希望車種、下取り情報、家族構成など">${esc(c.note)}</textarea></div>
+    </div>
+    <div class="modal-foot">
+      ${existing?`<button class="btn danger" onclick="deleteCustomer('${c.id}')">削除</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">キャンセル</button>
+      <button class="btn" onclick="saveCustomer('${existing?c.id:''}')">保存する</button>
+    </div>
+  `);
+}
+function searchLinkableVehicle(){
+  const qDigits = document.getElementById('f_linksearch').value.replace(/\D/g,'');
+  const resultsEl = document.getElementById('linkSearchResults');
+  if(!qDigits){ resultsEl.innerHTML = ''; return; }
+  const matches = vehicles.filter(v=>{
+    if(v.kind!=='tradein' || v.ownerCustomerId) return false;
+    const regDigits = (v.regNum||'').replace(/\D/g,'');
+    return regDigits && regDigits.includes(qDigits);
+  }).slice(0,5);
+  if(matches.length===0){
+    resultsEl.innerHTML = `<div style="font-size:11.5px; color:var(--text-dim2)">一致する未紐付けの査定車が見つかりません</div>`;
+    return;
+  }
+  resultsEl.innerHTML = matches.map(v=>`
+    <div class="card" style="padding:8px 10px; margin-bottom:6px; cursor:pointer" onclick="selectLinkVehicle('${v.id}')">
+      <div style="font-weight:700; font-size:13px">${esc(v.maker)} ${esc(v.model)} ${v.year?`(${v.year})`:''}</div>
+      <div class="meta" style="font-size:11px">登録番号: ${esc(v.regNum||'—')} ・ VIN: ${esc(v.vin||'—')}</div>
+    </div>
+  `).join('');
+}
+function selectLinkVehicle(vid){
+  const v = vehicles.find(x=>x.id===vid);
+  if(!v) return;
+  linkedTradeInVehicleId = vid;
+  document.getElementById('linkSearchResults').innerHTML = '';
+  document.getElementById('f_linksearch').value = '';
+  document.getElementById('linkSelected').innerHTML = `
+    <div class="staff-tag" style="display:inline-flex; align-items:center; gap:8px; font-size:12.5px;">
+      ✓ リンク予定: ${esc(v.maker)} ${esc(v.model)}（登録番号: ${esc(v.regNum||'—')}）
+      <span style="cursor:pointer; color:var(--red)" onclick="unselectLinkVehicle()">✕ 解除</span>
+    </div>`;
+}
+function unselectLinkVehicle(){
+  linkedTradeInVehicleId = null;
+  document.getElementById('linkSelected').innerHTML = '';
+}
+async function saveCustomer(id){
+  const data = {
+    name: document.getElementById('f_name').value.trim(),
+    nameMn: document.getElementById('f_nameMn').value.trim(),
+    phone: document.getElementById('f_phone').value.trim(),
+    fb: document.getElementById('f_fb').value.trim(),
+    address: document.getElementById('f_address').value.trim(),
+    birthday: document.getElementById('f_birthday').value,
+    job: document.getElementById('f_job').value.trim(),
+    referrer: document.getElementById('f_referrer').value.trim(),
+    salesStaff: document.getElementById('f_salesstaff').value,
+    nextServiceDate: document.getElementById('f_nextService').value,
+    note: document.getElementById('f_note').value.trim(),
+  };
+  if(!data.name){ alert('氏名を入力してください'); return; }
+  let c;
+  if(id){
+    c = customers.find(x=>x.id===id);
+    Object.assign(c, data);
+  }else{
+    const maxOrder = customers.reduce((m,x)=>Math.max(m, x.sortOrder||0), -1);
+    c = {id:uid('C'), ...data, sortOrder: maxOrder+1, createdAt:Date.now()};
+    customers.push(c);
+  }
+  closeModal();
+  renderView();
+  await upsertCustomerRow(c);
+  if(linkedTradeInVehicleId){
+    const v = vehicles.find(x=>x.id===linkedTradeInVehicleId);
+    if(v){
+      v.ownerCustomerId = c.id;
+      await upsertVehicleRow(v);
+    }
+    linkedTradeInVehicleId = null;
+  }
+}
+async function deleteCustomer(id){
+  if(!confirm('この顧客情報をゴミ箱に移動しますか？関連する商談履歴は残ります。「ゴミ箱」からいつでも復元できます。')) return;
+  const c = customers.find(x=>x.id===id);
+  customers = customers.filter(c=>c.id!==id);
+  closeModal();
+  go('customers');
+  if(c){ c.deletedAt = Date.now(); await upsertCustomerRow(c); }
+}
+
+function openCustomerDetail(id){
+  const c = customers.find(x=>x.id===id);
+  if(!c) return;
+  const myDeals = deals.filter(d=>d.customerId===id);
+  const ownedVehicles = myDeals.filter(d=>d.stage==='納車').map(d=>vehicles.find(v=>v.id===d.vehicleId)).filter(Boolean);
+  const touchpoints = myDeals.reduce((s,d)=>s+d.history.length,0);
+  const firstContact = myDeals.length? Math.min(...myDeals.map(d=>d.createdAt)) : c.createdAt;
+  document.getElementById('view').innerHTML = `
+    <div class="topbar">
+      <button class="btn ghost sm" onclick="go('customers')">← 顧客一覧へ</button>
+      <span id="saveIndicator"></span>
+    </div>
+    <div class="panel">
+      <div class="detail-head">
+        <div>
+          <div class="detail-title">${esc(c.name)} 様</div>
+          <div class="detail-id">${esc(c.id)} ・ ${esc(c.nameMn||'')}</div>
+        </div>
+        <button class="btn ghost sm" onclick='openCustomerForm(${JSON.stringify(c).replace(/'/g,"&#39;")})'>✎ 編集</button>
+      </div>
+      <div class="kv-grid">
+        <div class="kv"><span class="k">電話番号</span><span class="v mono">${esc(c.phone||'—')}</span></div>
+        <div class="kv"><span class="k">Facebook/Messenger</span><span class="v">${esc(c.fb||'—')}</span></div>
+        <div class="kv"><span class="k">住所</span><span class="v">${esc(c.address||'—')}</span></div>
+        <div class="kv"><span class="k">誕生日</span><span class="v mono">${c.birthday?fmtDate(c.birthday):'—'}</span></div>
+        <div class="kv"><span class="k">職業・勤務先</span><span class="v">${esc(c.job||'—')}</span></div>
+        <div class="kv"><span class="k">紹介者</span><span class="v">${esc(c.referrer||'—')}</span></div>
+        <div class="kv"><span class="k">販売担当者</span><span class="v" style="color:var(--teal)">${esc(c.salesStaff||'—')}</span></div>
+      </div>
+      ${c.note? `<div class="field" style="margin-top:10px"><label>備考</label><div class="panel" style="padding:10px 12px; background:var(--panel2)">${esc(c.note)}</div></div>`:''}
+      <div class="kv-grid" style="margin-top:14px; padding-top:14px; border-top:1px solid var(--line)">
+        <div class="kv"><span class="k">初回接点</span><span class="v mono">${fmtDate(firstContact)}</span></div>
+        <div class="kv"><span class="k">累計接点数</span><span class="v mono">${touchpoints}回</span></div>
+        <div class="kv"><span class="k">購入台数</span><span class="v mono">${ownedVehicles.length}台</span></div>
+        <div class="kv"><span class="k">次回車検・点検</span><span class="v mono" style="${serviceDue(c.nextServiceDate)?'color:var(--red)':''}">${c.nextServiceDate?fmtDate(c.nextServiceDate):'未設定'}</span></div>
+      </div>
+    </div>
+    ${ownedVehicles.length>0?`
+    <div class="panel">
+      <h3>🚗 所有・購入した車両（${ownedVehicles.length}台）</h3>
+      <div class="grid">${ownedVehicles.map(v=>vehicleCardHtml(v)).join('')}</div>
+    </div>`:''}
+    <div class="panel">
+      <h3>💬 商談・接点履歴（${myDeals.length}件）</h3>
+      ${myDeals.length===0? `<div class="empty" style="padding:24px">まだ商談履歴がありません</div>` : myDeals.map(d=>`
+        <div class="panel" style="background:var(--panel2); margin-bottom:10px; cursor:pointer" onclick="openDealDetail('${d.id}')">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+            <strong>${esc(vehName(d.vehicleId))}</strong>
+            <span class="staff-tag">${esc(d.stage)}</span>
+          </div>
+          <ul class="timeline">
+            ${d.history.map(h=>`<li><span class="dot"></span><div><b>${fmtDate(h.date)}</b>${esc(h.note)}</div></li>`).join('')}
+          </ul>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+function serviceDue(dateStr){
+  if(!dateStr) return false;
+  const diff = (new Date(dateStr) - new Date()) / 86400000;
+  return diff <= 30;
+}
+
+/* ============================================================
+   RENDER: VEHICLES
+============================================================ */
+let vehFilter = {q:'', status:'all', sort:'new'};
+const VEH_SORT_OPTIONS = {
+  new:'登録が新しい順', old:'登録が古い順',
+  price_high:'価格が高い順', price_low:'価格が安い順',
+  year_new:'年式が新しい順', year_old:'年式が古い順',
+  maker:'メーカー名順'
+};
+function sortVehicleList(list){
+  const sorted = [...list];
+  switch(vehFilter.sort){
+    case 'old': sorted.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)); break;
+    case 'price_high': sorted.sort((a,b)=>(b.priceSale||0)-(a.priceSale||0)); break;
+    case 'price_low': sorted.sort((a,b)=>(a.priceSale||0)-(b.priceSale||0)); break;
+    case 'year_new': sorted.sort((a,b)=>(b.year||0)-(a.year||0)); break;
+    case 'year_old': sorted.sort((a,b)=>(a.year||0)-(b.year||0)); break;
+    case 'maker': sorted.sort((a,b)=>(a.maker+a.model).localeCompare(b.maker+b.model,'ja')); break;
+    default: sorted.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)); // new
+  }
+  return sorted;
+}
+function renderVehicles(){
+  const q = vehFilter.q.trim().toLowerCase();
+  let list = vehicles.filter(v => (!q || (v.maker+v.model+v.color+v.vin+(v.regNum||'')).toLowerCase().includes(q)));
+  if(vehFilter.status!=='all') list = list.filter(v => (v.kind==='tradein' ? 'tradein' : v.status) === vehFilter.status);
+  list = sortVehicleList(list);
+  return `
+    <div class="topbar">
+      <div class="pagetitle">🚗 車両・査定管理 <span class="sub">${vehicles.length}台</span></div>
+      <button class="btn" onclick="openVehicleForm()">＋ 新規車両登録</button>
+    </div>
+    <div class="toolbar">
+      <input type="text" placeholder="🔍 メーカー・車名・色・VINで検索…" value="${esc(vehFilter.q)}" oninput="vehFilter.q=this.value; renderView()">
+      <select onchange='vehFilter.sort=this.value; renderView()'>
+        ${Object.entries(VEH_SORT_OPTIONS).map(([k,l])=>`<option value="${k}" ${vehFilter.sort===k?'selected':''}>${l}</option>`).join('')}
+      </select>
+      ${['all','tradein','stock','nego','sold','delivered'].map(s=>`
+        <span class="chip ${vehFilter.status===s?'on':''}" onclick='vehFilter.status="${s}"; renderView()'>${s==='all'?'すべて':(s==='tradein'?'📋 査定車':VSTATUS[s])}</span>
+      `).join('')}
+    </div>
+    ${list.length===0 ? `<div class="empty"><b>該当する車両がありません</b>検索条件を変更するか新規登録してください</div>` : `
+    <div class="grid">${list.map(v=>vehicleCardHtml(v)).join('')}</div>`}
+  `;
+}
+function badgeClass(status){ return {stock:'b-stock', nego:'b-nego', sold:'b-sold', delivered:'b-delivered', tradein:'b-tradein'}[status]||'b-stock'; }
+function vehicleCardHtml(v){
+  const score = appraisalScore(v);
+  const deal = dealForVehicle(v.id);
+  const isTradeIn = v.kind==='tradein';
+  const badgeLabel = isTradeIn ? '📋 査定車' : VSTATUS[v.status];
+  const hasImage = (v.files||[]).some(f=>isImageFile(f.name));
+  const hasAppraisal = !!v.externalGrade || score>0 || (v.serviceHistory||[]).some(h=>h.category==='appraisal');
+  return `
+    <div class="card" onclick="openVehicleDetail('${v.id}')">
+      <span class="badge ${badgeClass(isTradeIn?'tradein':v.status)}">${badgeLabel}</span>
+      <div class="name">${esc(v.maker)} ${esc(v.model)}</div>
+      <div class="meta">${v.year}年式 ・ ${esc(v.color)} ・ ${(v.mileage||0).toLocaleString()}km</div>
+      ${(hasImage||hasAppraisal) ? `<div style="display:flex; gap:5px; margin:4px 0;">
+        ${hasImage?`<span class="mini-tag mini-tag-img">🖼 画像</span>`:''}
+        ${hasAppraisal?`<span class="mini-tag mini-tag-appr">✅ 査定済</span>`:''}
+      </div>`:''}
+      ${deal && deal.stage!=='キャンセル' ? `<div class="meta" style="color:var(--teal); margin-top:-6px">🙋 ${esc(custName(deal.customerId))} 様 ・ ${esc(deal.stage)}</div>`:''}
+      <div class="row2">
+        <span class="price">${fmtMoney(v.priceSale)}</span>
+        <span class="score">評価 ${score}/100</span>
+      </div>
+    </div>
+  `;
+}
+function appraisalScore(v){
+  if(!v.appraisal) return 0;
+  const vals = Object.values(v.appraisal);
+  const sum = vals.reduce((a,b)=>a+(b||0),0);
+  return Math.round(sum/(vals.length*5)*100);
+}
+function parseExternalReport(v){
+  if(!v.externalReportText) return null;
+  try{ return JSON.parse(v.externalReportText); }catch(e){ return null; }
+}
+function diagnosisPanelHtml(v){
+  const rep = parseExternalReport(v);
+  const veh = (rep && rep.vehicle) || {};
+  const dmg = (rep && rep.damageHistory) || {};
+  const mkt = (rep && rep.marketPrice) || {};
+  const fin = (rep && rep.finalAppraisal) || {};
+  const DAMAGE_LABEL = {none:'無', minor:'軽微あり(RA)', major:'重大あり(R)'};
+  return `
+    <div class="panel" style="border-color:#48c2d644">
+      <h3>🔗 査定ツール診断結果（deed-motors-scraper）</h3>
+      <div class="gauge-wrap" style="align-items:center; margin-bottom:14px">
+        <span class="badge" style="position:static; background:var(--teal-soft); color:var(--teal); font-size:20px; padding:8px 18px; font-weight:900">${esc(v.externalGrade||'—')}</span>
+        <div style="font-size:12px; color:var(--text-dim)">査定ツールでの評価グレード<br><span style="font-size:11px; color:var(--text-dim2)">こちらが正式な査定結果です</span></div>
+      </div>
+      <div class="kv-grid">
+        <div class="kv"><span class="k">査定参考価格</span><span class="v mono" style="color:var(--amber)">${v.externalAppraisalPrice?esc(v.externalAppraisalPrice)+' сая ₮':'—'}</span></div>
+        ${fin.formula?`<div class="kv"><span class="k">算出式</span><span class="v mono" style="font-size:12px">${esc(fin.formula)}</span></div>`:''}
+        ${(fin.rangeLowManMnt!=null||fin.rangeHighManMnt!=null)?`<div class="kv"><span class="k">参考価格レンジ</span><span class="v mono">${fin.rangeLowManMnt??'—'} 〜 ${fin.rangeHighManMnt??'—'} сая ₮</span></div>`:''}
+        ${dmg.status?`<div class="kv"><span class="k">修復歴</span><span class="v">${DAMAGE_LABEL[dmg.status]||esc(dmg.status)}</span></div>`:''}
+        ${mkt.averagePriceManMnt!=null?`<div class="kv"><span class="k">市場平均価格</span><span class="v mono">${mkt.averagePriceManMnt} сая ₮</span></div>`:''}
+        ${(mkt.minPriceManMnt!=null||mkt.maxPriceManMnt!=null)?`<div class="kv"><span class="k">市場価格帯</span><span class="v mono">${mkt.minPriceManMnt??'—'} 〜 ${mkt.maxPriceManMnt??'—'} сая ₮</span></div>`:''}
+        ${mkt.sampleCount!=null?`<div class="kv"><span class="k">市場データ件数</span><span class="v mono">${mkt.sampleCount}件</span></div>`:''}
+        ${veh.fullModel?`<div class="kv"><span class="k">フル型式</span><span class="v">${esc(veh.fullModel)}</span></div>`:''}
+        ${veh.trimGrade?`<div class="kv"><span class="k">トリムグレード</span><span class="v">${esc(veh.trimGrade)}</span></div>`:''}
+        ${veh.engineModel?`<div class="kv"><span class="k">エンジン型式</span><span class="v">${esc(veh.engineModel)}</span></div>`:''}
+        ${veh.importedYearMonth?`<div class="kv"><span class="k">モンゴル輸入年月</span><span class="v">${esc(veh.importedYearMonth)}</span></div>`:''}
+        ${veh.inspector?`<div class="kv"><span class="k">点検者</span><span class="v">${esc(veh.inspector)}</span></div>`:''}
+        ${veh.appraisalDate?`<div class="kv"><span class="k">査定日</span><span class="v">${esc(veh.appraisalDate)}</span></div>`:''}
+      </div>
+      ${v.externalReportText?`
+      <details style="margin-top:12px">
+        <summary style="cursor:pointer; font-size:11.5px; color:var(--text-dim)">詳細JSONを表示（サポート用）</summary>
+        <div class="panel" style="background:var(--panel2); margin-top:8px; padding:10px 12px; white-space:pre-wrap; font-size:11px; font-family:'JetBrains Mono',monospace">${esc(v.externalReportText)}</div>
+      </details>`:''}
+    </div>
+  `;
+}
+
+function openVehicleForm(existing){
+  const v = existing || {};
+  const vKind = existing ? (v.kind||'stock') : 'tradein';
+  const costDisplay = vKind==='tradein' ? 'display:none' : '';
+  const statusDisplay = vKind==='tradein' ? 'display:none' : '';
+  const saleLabel = vKind==='tradein' ? '査定車 見込み額 (₮)' : '販売価格 (₮)';
+  showModal(`
+    <div class="modal-head"><h3>${existing?'車両情報を編集':'＋ 新規車両登録'}</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <label>登録区分</label>
+        <select id="f_kind" onchange="toggleVehicleKindFields()">
+          <option value="tradein" ${vKind==='tradein'?'selected':''}>📋 査定車（お客様の使用中車両・査定のみ）</option>
+          <option value="stock" ${vKind==='stock'?'selected':''}>🚗 在庫車（販売用ストック）</option>
+        </select>
+      </div>
+      <div class="panel" style="background:var(--panel2); margin-bottom:16px; border-color:#48c2d644">
+        <h3 style="font-size:12.5px; color:var(--teal)">🔗 査定ツール（deed-motors-scraper）の結果を取り込む</h3>
+        <div style="font-size:11.5px; color:var(--text-dim); margin-bottom:10px; line-height:1.6">
+          査定ツールの「📋 結果をコピー」でコピーしたJSONをここに貼り付けてください。
+        </div>
+        <textarea id="f_importjson" placeholder='{"vehicle":{"maker":"Toyota", ...}, "score":{"grade":"4.5"}, "finalAppraisal":{"referencePriceManMnt":48.6}}' style="min-height:70px; font-family:'JetBrains Mono',monospace; font-size:11px"></textarea>
+        <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap">
+          <button type="button" class="btn sm" onclick="importFromClipboard('f_importjson', importAppraisalJSON)">📥 クリップボードから読み込む</button>
+          <button type="button" class="btn ghost sm" onclick="importAppraisalJSON()">📋 貼り付けたJSONを読み込む</button>
+        </div>
+        <div class="field-row" style="margin-top:12px">
+          <div class="field"><label>査定ツールのグレード</label><input id="f_extgrade" value="${esc(v.externalGrade)}" placeholder="4.5 / S / RA など"></div>
+          <div class="field"><label>査定参考価格 (сая ₮)</label><input id="f_extprice" value="${esc(v.externalAppraisalPrice)}" placeholder="48.6"></div>
+        </div>
+        <div class="field" style="margin-top:6px">
+          <label>詳細JSON（自動保存されます・車両ページで確認可）</label>
+          <textarea id="f_importtext" style="min-height:50px; font-family:'JetBrains Mono',monospace; font-size:11px">${esc(v.externalReportText)}</textarea>
+        </div>
+      </div>
+      <div class="field-row3">
+        <div class="field"><label>メーカー</label><input id="f_maker" value="${esc(v.maker)}" placeholder="Toyota"></div>
+        <div class="field"><label>車名</label><input id="f_model" value="${esc(v.model)}" placeholder="Prius"></div>
+        <div class="field"><label>年式</label><input id="f_year" type="number" value="${v.year||''}" placeholder="2019"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>色</label><input id="f_color" value="${esc(v.color)}" placeholder="パールホワイト"></div>
+        <div class="field"><label>走行距離(km)</label><input id="f_mileage" type="number" value="${v.mileage||''}" placeholder="82000"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>登録番号／ナンバープレート</label><input id="f_regnum" value="${esc(v.regNum)}" placeholder="УБ 04 АБВ"></div>
+        <div class="field"><label>VIN／車台番号</label><input id="f_vin" class="mono" value="${esc(v.vin)}" placeholder="JTDKB3FU*012345**"></div>
+      </div>
+      <div class="field-row">
+        <div class="field" id="f_cost_wrap" style="${costDisplay}"><label>仕入価格 (₮)</label><input id="f_cost" type="number" value="${v.priceCost||''}" placeholder="32000000"></div>
+        <div class="field"><label id="f_sale_label">${saleLabel}</label><input id="f_sale" type="number" value="${v.priceSale||''}" placeholder="43000000"></div>
+      </div>
+      <div class="field" id="f_status_wrap" style="${statusDisplay}"><label>ステータス</label>
+        <select id="f_status">
+          ${Object.entries(VSTATUS).map(([k,v2])=>`<option value="${k}" ${v.status===k?'selected':''}>${v2}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>備考</label><textarea id="f_notes" placeholder="整備推奨事項など">${esc(v.notes)}</textarea></div>
+    </div>
+    <div class="modal-foot">
+      ${existing?`<button class="btn danger" onclick="deleteVehicle('${v.id}')">削除</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">キャンセル</button>
+      <button class="btn" onclick="saveVehicle('${existing?v.id:''}')">保存する</button>
+    </div>
+  `);
+}
+function toggleVehicleKindFields(){
+  const isTradeIn = document.getElementById('f_kind').value==='tradein';
+  document.getElementById('f_cost_wrap').style.display = isTradeIn ? 'none' : '';
+  document.getElementById('f_status_wrap').style.display = isTradeIn ? 'none' : '';
+  document.getElementById('f_sale_label').textContent = isTradeIn ? '査定車 見込み額 (₮)' : '販売価格 (₮)';
+}
+// 査定ツールJSONのうち、DMSに専用入力欄が無い項目を備考欄へ整形して追記する。
+// 再読み込みしても同じブロックが積み重ならないよう、マーカーで囲んだ既存ブロックは
+// 差し替え前に必ず取り除く（Даавуу欄の更新バッジ蓄積バグと同種の事故を避けるため）。
+const APPRAISAL_NOTE_START = '――― 査定ツール自動反映 ―――';
+const APPRAISAL_NOTE_END   = '――――――――――――――――';
+function buildAppraisalNoteBlock(data){
+  const veh = data.vehicle || {};
+  const dh  = data.damageHistory || {};
+  const mkt = data.marketPrice || {};
+  const fin = data.finalAppraisal || {};
+  const lines = [];
+  const push = (label, val) => { if(val!==undefined && val!==null && val!==''){ lines.push(`${label}: ${val}`); } };
+  push('フル型式／グレード', [veh.fullModel, veh.trimGrade].filter(Boolean).join(' / '));
+  push('エンジン型式', veh.engineModel);
+  push('排気量', veh.displacementCc!=null ? `${veh.displacementCc}cc` : '');
+  push('輸入年月', veh.importedYearMonth);
+  push('点検者', veh.inspector);
+  push('査定日', veh.appraisalDate);
+  push('修復歴', dh.status==='none' ? '無' : (dh.status||''));
+  if(Array.isArray(dh.affectedParts) && dh.affectedParts.length>0){
+    push('修復歴部位', dh.affectedParts.join('、'));
+  }
+  if(mkt.averagePriceManMnt!=null){
+    push('市場価格（参考）', `平均${mkt.averagePriceManMnt} / ${mkt.minPriceManMnt}〜${mkt.maxPriceManMnt} сая ₮（${mkt.sampleCount}件）`);
+  }
+  push('算出式', fin.formula);
+  if(lines.length===0) return '';
+  return [APPRAISAL_NOTE_START, ...lines, APPRAISAL_NOTE_END].join('\n');
+}
+function mergeAppraisalNote(existingNotes, block){
+  const esc2 = s => s.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+  const re = new RegExp(esc2(APPRAISAL_NOTE_START) + '[\\s\\S]*?' + esc2(APPRAISAL_NOTE_END), 'g');
+  const stripped = (existingNotes||'').replace(re, '').trim();
+  if(!block) return stripped;
+  return stripped ? `${block}\n\n${stripped}` : block;
+}
+// クリップボードから直接読み込む（貼り付け操作そのものを省略する）。
+// 読み取れない場合はテキストエリアへの手動貼り付けにフォールバック。
+async function importFromClipboard(textareaId, importFn){
+  try{
+    const text = await navigator.clipboard.readText();
+    if(!text || !text.trim()){
+      alert('クリップボードが空です。査定ツール側で「📋 結果をコピー」を押してから実行してください。');
+      return;
+    }
+    document.getElementById(textareaId).value = text;
+    importFn();
+  }catch(e){
+    alert('クリップボードを読み取れませんでした（ブラウザの権限設定をご確認ください）。テキストエリアに手動で貼り付けてから「JSONを読み込む」ボタンを押してください。');
+  }
+}
+function importAppraisalJSON(){
+  const raw = document.getElementById('f_importjson').value.trim();
+  if(!raw){ alert('査定ツールでコピーしたJSONを貼り付けてから読み込んでください'); return; }
+  let data;
+  try{ data = JSON.parse(raw); }
+  catch(e){ alert('JSONの形式が正しく読み取れませんでした。査定ツール側で「結果をコピー」をもう一度押してから貼り直してください。'); return; }
+  const veh = data.vehicle || {};
+  const score = data.score || {};
+  const fin = data.finalAppraisal || {};
+  let hit = 0;
+  const setIf = (id, val) => {
+    if(val!==undefined && val!==null && val!==''){ document.getElementById(id).value = val; hit++; }
+  };
+  setIf('f_maker', veh.maker);
+  setIf('f_model', veh.model);
+  setIf('f_year', veh.manufactureYear);
+  setIf('f_color', veh.color);
+  setIf('f_mileage', veh.mileageKm);
+  setIf('f_vin', veh.vin);
+  setIf('f_regnum', veh.registrationNumber);
+  setIf('f_extgrade', score.grade);
+  setIf('f_extprice', fin.referencePriceManMnt);
+  const noteBlock = buildAppraisalNoteBlock(data);
+  const notesEl = document.getElementById('f_notes');
+  notesEl.value = mergeAppraisalNote(notesEl.value, noteBlock);
+  if(noteBlock) hit++;
+  document.getElementById('f_importtext').value = JSON.stringify(data, null, 2);
+  alert(hit>0 ? `${hit}項目を読み込みました。内容を確認してから保存してください。` : 'JSONは読み取れましたが、対応する項目が見つかりませんでした。仕様書の項目名を確認してください。');
+}
+async function saveVehicle(id){
+  const kind = document.getElementById('f_kind').value;
+  const data = {
+    kind,
+    maker: document.getElementById('f_maker').value.trim(),
+    model: document.getElementById('f_model').value.trim(),
+    year: Number(document.getElementById('f_year').value)||null,
+    color: document.getElementById('f_color').value.trim(),
+    mileage: Number(document.getElementById('f_mileage').value)||0,
+    vin: document.getElementById('f_vin').value.trim(),
+    regNum: document.getElementById('f_regnum').value.trim(),
+    priceCost: kind==='tradein' ? 0 : (Number(document.getElementById('f_cost').value)||0),
+    priceSale: Number(document.getElementById('f_sale').value)||0,
+    status: kind==='tradein' ? 'tradein' : document.getElementById('f_status').value,
+    notes: document.getElementById('f_notes').value.trim(),
+    externalGrade: document.getElementById('f_extgrade').value.trim(),
+    externalAppraisalPrice: document.getElementById('f_extprice').value.trim(),
+    externalReportText: document.getElementById('f_importtext').value.trim(),
+  };
+  if(!data.maker || !data.model){ alert('メーカーと車名を入力してください'); return; }
+  let v;
+  if(id){
+    v = vehicles.find(x=>x.id===id);
+    Object.assign(v, data);
+  }else{
+    v = {id:uid('V'), ...data, appraisal:{exterior:0,interior:0,engine:0,undercarriage:0,electrical:0}, defects:[], createdAt:Date.now()};
+    vehicles.push(v);
+  }
+  closeModal();
+  renderView();
+  await upsertVehicleRow(v);
+}
+async function deleteVehicle(id){
+  if(!confirm('この車両をゴミ箱に移動しますか？「ゴミ箱」からいつでも復元できます。')) return;
+  const v = vehicles.find(x=>x.id===id);
+  vehicles = vehicles.filter(v=>v.id!==id);
+  closeModal();
+  go('vehicles');
+  if(v){ v.deletedAt = Date.now(); await upsertVehicleRow(v); }
+}
+
+function openVehicleDetail(id){
+  const v = vehicles.find(x=>x.id===id);
+  if(!v) return;
+  const a = v.appraisal || {exterior:0,interior:0,engine:0,undercarriage:0,electrical:0};
+  const score = appraisalScore(v);
+  const isTradeIn = v.kind==='tradein';
+  document.getElementById('view').innerHTML = `
+    <div class="topbar">
+      <button class="btn ghost sm" onclick="go('vehicles')">← 車両一覧へ</button>
+      <span id="saveIndicator"></span>
+    </div>
+    <div class="panel">
+      <div class="detail-head">
+        <div>
+          <div class="detail-title">${esc(v.maker)} ${esc(v.model)} ${isTradeIn?'<span style="font-size:13px; color:var(--teal); font-weight:500">（査定車）</span>':''}</div>
+          <div class="detail-id">${esc(v.id)} ・ 登録番号: ${esc(v.regNum||'—')} ・ VIN: ${esc(v.vin||'—')}</div>
+        </div>
+        <div style="display:flex; gap:8px">
+          ${isTradeIn?`<span class="badge" style="position:static; background:var(--teal-soft); color:var(--teal)">📋 査定車</span>`:`<span class="badge ${badgeClass(v.status)}" style="position:static">${VSTATUS[v.status]}</span>`}
+          <button class="btn ghost sm" onclick="printQuote('${v.id}')">📄 見積書を印刷</button>
+          <button class="btn ghost sm" onclick='openVehicleForm(${JSON.stringify(v).replace(/'/g,"&#39;")})'>✎ 編集</button>
+        </div>
+      </div>
+      <div class="kv-grid">
+        <div class="kv"><span class="k">年式</span><span class="v">${v.year}年</span></div>
+        <div class="kv"><span class="k">色</span><span class="v">${esc(v.color)}</span></div>
+        <div class="kv"><span class="k">走行距離</span><span class="v mono">${(v.mileage||0).toLocaleString()} km</span></div>
+        ${isTradeIn?`
+        <div class="kv"><span class="k">査定車 見込み額</span><span class="v mono" style="color:var(--amber)">${fmtMoney(v.priceSale)}</span></div>
+        `:`
+        <div class="kv"><span class="k">仕入価格</span><span class="v mono">${fmtMoney(v.priceCost)}</span></div>
+        <div class="kv"><span class="k">販売価格</span><span class="v mono" style="color:var(--amber)">${fmtMoney(v.priceSale)}</span></div>
+        <div class="kv"><span class="k">想定粗利</span><span class="v mono" style="color:var(--green)">${fmtMoney((v.priceSale||0)-(v.priceCost||0))}</span></div>
+        `}
+      </div>
+      ${v.notes?`<div class="panel" style="background:var(--panel2); margin-top:12px; padding:10px 12px">${esc(v.notes)}</div>`:''}
+    </div>
+
+    ${(v.externalGrade || v.externalAppraisalPrice || v.externalReportText) ? diagnosisPanelHtml(v) : ''}
+
+    <div class="panel">
+      <h3>🔧 状態チェック（社内メモ）</h3>
+      <div class="segbars">
+        ${segRow('外装','exterior',a.exterior)}
+        ${segRow('内装','interior',a.interior)}
+        ${segRow('エンジン','engine',a.engine)}
+        ${segRow('足回り','undercarriage',a.undercarriage)}
+        ${segRow('電装品','electrical',a.electrical)}
+      </div>
+      <div style="margin-top:16px">
+        <label style="font-size:11.5px; color:var(--text-dim); font-weight:500; display:block; margin-bottom:8px">⚠ 減点項目（タップで切替）</label>
+        <div class="defect-list">
+          ${DEFECT_OPTIONS.map(d=>`
+            <span class="defect-tag" style="cursor:pointer; ${((v.defects||[]).includes(d))?'':'opacity:.35; background:var(--panel2); color:var(--text-dim); border-color:var(--line)'}" onclick="toggleDefect('${v.id}','${d}')">${d}</span>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+
+    ${vehicleFilesPanel(v)}
+
+    ${serviceHistoryPanel(v)}
+
+    ${isTradeIn ? tradeInInfoPanel(v) : dealPanelHtml(v)}
+  `;
+}
+function printQuote(vehicleId){
+  const v = vehicles.find(x=>x.id===vehicleId);
+  if(!v) return;
+  const deal = dealForVehicle(v.id);
+  const c = deal ? customers.find(x=>x.id===deal.customerId) : null;
+  const logoSrc = document.querySelector('.brand-logo')?.src || '';
+  const today = todayStr();
+  const quoteNo = 'Q-' + v.id.replace('V-','');
+  const priceLabel = v.kind==='tradein' ? 'Тооцоолсон үнэ' : 'Худалдааны үнэ';
+  const rows = [
+    ['Марк', v.maker],
+    ['Загвар', v.model],
+    ['Улсын дугаар', v.regNum],
+    ['VIN', v.vin],
+    ['Зэрэглэл', v.trimGrade],
+    ['Үйлдвэрлэсэн он', v.year],
+    ['Өнгө', v.color],
+    ['Явсан зам', v.mileage ? Number(v.mileage).toLocaleString()+' км' : ''],
+  ].filter(([,val])=>val!==undefined && val!==null && val!=='');
+
+  const html = `<!DOCTYPE html>
+<html lang="mn"><head><meta charset="UTF-8"><title>${quoteNo}</title>
+<style>
+  @page { size: A4; margin: 18mm; }
+  body{ font-family:'Noto Sans','Arial',sans-serif; color:#1a1a1a; font-size:13px; line-height:1.6; }
+  .qhead{ display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #C8102E; padding-bottom:14px; margin-bottom:20px; }
+  .qhead img{ max-width:180px; }
+  .qhead .meta{ text-align:right; font-size:12px; color:#555; }
+  h1{ font-size:22px; letter-spacing:2px; margin:20px 0 4px; }
+  .cust{ margin-bottom:18px; font-size:14px; }
+  table{ width:100%; border-collapse:collapse; margin-bottom:20px; }
+  td{ padding:8px 10px; border:1px solid #ddd; }
+  td.k{ background:#f5f5f5; width:35%; font-weight:700; }
+  .priceBox{ background:#12161c; color:#fff; padding:20px; border-radius:8px; text-align:center; margin-bottom:20px; }
+  .priceBox .lbl{ font-size:13px; color:#ccc; margin-bottom:6px; }
+  .priceBox .val{ font-size:32px; font-weight:900; font-family:monospace; }
+  .note{ font-size:11.5px; color:#666; margin-bottom:30px; }
+  .sigrow{ display:flex; justify-content:space-between; margin-top:60px; }
+  .sigrow div{ width:45%; border-top:1px solid #999; padding-top:6px; font-size:12px; color:#555; text-align:center; }
+  @media print { body{ -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+</style></head>
+<body>
+  <div class="qhead">
+    ${logoSrc?`<img src="${logoSrc}">`:'<div style="font-weight:900; font-size:20px">DEED MOTORS</div>'}
+    <div class="meta">
+      Огноо: ${today}<br>
+      Дугаар: ${esc(quoteNo)}
+    </div>
+  </div>
+  <h1>ҮНИЙН САНАЛ</h1>
+  <div class="cust">
+    Харилцагч: ${c ? esc(c.name) : '＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿'}<br>
+    Утасны дугаар: ${c && c.phone ? esc(c.phone) : '＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿'}
+  </div>
+  <table>
+    ${rows.map(([k,val])=>`<tr><td class="k">${esc(k)}</td><td>${esc(val)}</td></tr>`).join('')}
+  </table>
+  <div class="priceBox">
+    <div class="lbl">${esc(priceLabel)}</div>
+    <div class="val">${fmtMoney(v.priceSale)}</div>
+  </div>
+  ${v.notes?`<div class="note">Тэмдэглэл: ${esc(v.notes)}</div>`:''}
+  <div class="note">Энэхүү үнийн санал баримт бичиг гаргасан өдрөөс хойш 7 хоногийн турш хүчинтэй.</div>
+  <div class="sigrow">
+    <div>Худалдагчийн гарын үсэг</div>
+    <div>Худалдан авагчийн гарын үсэг</div>
+  </div>
+</body></html>`;
+
+  const win = window.open('', '_blank');
+  if(!win){ alert('ポップアップがブロックされました。ブラウザの設定を確認してください。'); return; }
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>win.print(), 400);
+}
+function tradeInInfoPanel(v){
+  const owner = customers.find(c=>c.id===v.ownerCustomerId);
+  const relatedDeal = deals.find(d=>d.tradeInVehicleId===v.id);
+  return `
+    <div class="panel">
+      <h3>📋 査定車について</h3>
+      <div class="empty" style="padding:20px; text-align:left; color:var(--text-dim)">
+        これは店舗の在庫車ではなく、${owner?`<strong style="color:var(--text)">${esc(owner.name)} 様</strong>`:'お客様'}が持ち込まれた査定車の記録です。
+      </div>
+      <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap">
+        ${owner?`<button class="btn ghost sm" onclick="openCustomerDetail('${owner.id}')">👤 ${esc(owner.name)} 様の顧客ページへ</button>`:''}
+        ${relatedDeal?`<button class="btn ghost sm" onclick="openVehicleDetail('${relatedDeal.vehicleId}')">🚗 対象の商談車両を見る</button>`:''}
+      </div>
+    </div>`;
+}
+function dealForVehicle(vid){
+  const ds = deals.filter(d=>d.vehicleId===vid);
+  if(ds.length===0) return null;
+  return ds.slice().sort((a,b)=>latestDealTime(b)-latestDealTime(a))[0];
+}
+function dealPanelHtml(v){
+  const deal = dealForVehicle(v.id);
+  const pastDeals = deals.filter(d=>d.vehicleId===v.id && (!deal || d.id!==deal.id));
+  if(!deal || deal.stage==='キャンセル'){
+    return `
+    <div class="panel">
+      <h3>🙋 商談・顧客情報</h3>
+      <div class="empty" style="padding:26px 20px">
+        <b>まだこの車両の商談は始まっていません</b>
+        査定・展示のみの状態です。お客様が決まったら顧客情報と一緒にここで管理できます。
+        <div style="margin-top:16px"><button class="btn" onclick="openStartDeal('${v.id}')">＋ 商談を開始（顧客を紐付け）</button></div>
+      </div>
+      ${pastDeals.length>0? pastDealsHtml(pastDeals) : ''}
+    </div>`;
+  }
+  const c = customers.find(x=>x.id===deal.customerId) || {};
+  return `
+    <div class="panel">
+      <h3>🙋 商談・顧客情報 <span class="staff-tag">${esc(deal.stage)}</span></h3>
+      <div class="kv-grid">
+        <div class="kv"><span class="k">顧客名</span><span class="v">${esc(c.name||'—')} 様</span></div>
+        <div class="kv"><span class="k">電話番号</span><span class="v mono">${esc(c.phone||'—')}</span></div>
+        <div class="kv"><span class="k">Facebook/Messenger</span><span class="v">${esc(c.fb||'—')}</span></div>
+        <div class="kv"><span class="k">住所</span><span class="v">${esc(c.address||'—')}</span></div>
+        <div class="kv"><span class="k">担当スタッフ</span><span class="v">${esc(deal.staff||'—')}</span></div>
+      </div>
+      ${c.note?`<div class="panel" style="background:var(--panel2); margin-top:10px; padding:10px 12px">📝 ${esc(c.note)}</div>`:''}
+      <div style="display:flex; gap:8px; margin:16px 0; flex-wrap:wrap">
+        ${stagePrev(deal.stage)?`<button class="btn ghost sm" onclick="moveStageAndRefresh('${deal.id}','${v.id}',-1)">← 前のステージへ戻す</button>`:''}
+        ${stageNext(deal.stage)?`<button class="btn sm" onclick="moveStageAndRefresh('${deal.id}','${v.id}',1)">次のステージへ進める →</button>`:''}
+        <button class="btn ghost sm" onclick="openCustomerForm(${JSON.stringify(c).replace(/'/g,"&#39;")})">✎ 顧客情報を編集</button>
+        <button class="btn ghost sm" onclick="openChangeDealVehicleForm('${deal.id}',{type:'vehicle',vehicleId:'${v.id}'})">🚗 対象車種を変更</button>
+        <button class="btn danger sm" onclick="cancelDeal('${deal.id}','${v.id}')">商談を中止</button>
+      </div>
+      <h3 style="font-size:13px; margin-bottom:8px">📅 対応履歴</h3>
+      <ul class="timeline">
+        ${deal.history.map((h,i)=>`<li><span class="dot"></span><div style="flex:1"><b>${fmtDate(h.date)}</b>${esc(h.note)}</div><span class="mv" onclick="openHistoryEditForm('${deal.id}',${i},{type:'vehicle',vehicleId:'${v.id}'})">✎</span></li>`).join('')}
+      </ul>
+      <div class="field" style="margin-top:12px">
+        <label>対応履歴を追加</label>
+        <textarea id="f_vehdealnote" placeholder="来店・見積・交渉内容などを記録…"></textarea>
+        <button class="btn sm" style="margin-top:8px" onclick="addDealNoteInline('${deal.id}','${v.id}')">追加する</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>📋 査定車（お客様がお持ちの車）</h3>
+      ${deal.tradeInVehicleId ? tradeInMiniCard(deal.tradeInVehicleId) : `
+        <div class="empty" style="padding:20px">
+          この商談に紐づく査定車はまだ登録されていません
+          <div style="margin-top:14px"><button class="btn ghost sm" onclick="openTradeInForm('${deal.id}')">＋ 査定車を登録</button></div>
+        </div>
+      `}
+    </div>
+    ${pastDeals.length>0? pastDealsHtml(pastDeals) : ''}
+  `;
+}
+function tradeInMiniCard(vid){
+  const v = vehicles.find(x=>x.id===vid);
+  if(!v) return '';
+  const score = appraisalScore(v);
+  return `
+    <div class="card" style="cursor:pointer" onclick="openVehicleDetail('${v.id}')">
+      <span class="badge" style="background:var(--teal-soft); color:var(--teal)">📋 査定車</span>
+      <div class="name">${esc(v.maker)} ${esc(v.model)}</div>
+      <div class="meta">${v.year||'-'}年式 ・ ${esc(v.color||'')} ・ ${(v.mileage||0).toLocaleString()}km</div>
+      <div class="row2">
+        <span class="price">${fmtMoney(v.priceSale)}</span>
+        <span class="score">査定 ${score}/100</span>
+      </div>
+    </div>`;
+}
+function openTradeInForm(dealId){
+  showModal(`
+    <div class="modal-head"><h3>📋 査定車を登録</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="panel" style="background:var(--panel2); margin-bottom:16px; border-color:#48c2d644">
+        <h3 style="font-size:12.5px; color:var(--teal)">🔗 査定ツール（deed-motors-scraper）の結果を取り込む</h3>
+        <div style="font-size:11.5px; color:var(--text-dim); margin-bottom:10px; line-height:1.6">
+          査定ツールの「📋 結果をコピー」でコピーしたJSONをここに貼り付けてください。下の項目に自動で入ります。
+        </div>
+        <textarea id="ti_importjson" placeholder='{"vehicle":{"maker":"Toyota", ...}, "score":{"grade":"4.5"}, "finalAppraisal":{"referencePriceManMnt":48.6}}' style="min-height:70px; font-family:'JetBrains Mono',monospace; font-size:11px"></textarea>
+        <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap">
+          <button type="button" class="btn sm" onclick="importFromClipboard('ti_importjson', importAppraisalJSONToTradeIn)">📥 クリップボードから読み込む</button>
+          <button type="button" class="btn ghost sm" onclick="importAppraisalJSONToTradeIn()">📋 貼り付けたJSONを読み込む</button>
+        </div>
+        <div class="field-row" style="margin-top:12px">
+          <div class="field"><label>査定ツールのグレード</label><input id="ti_extgrade" placeholder="4.5 / S / RA など"></div>
+          <div class="field"><label>査定参考価格 (сая ₮)</label><input id="ti_extprice" placeholder="48.6"></div>
+        </div>
+      </div>
+      <div class="field-row3">
+        <div class="field"><label>メーカー</label><input id="ti_maker" placeholder="Nissan"></div>
+        <div class="field"><label>車名</label><input id="ti_model" placeholder="Note"></div>
+        <div class="field"><label>年式</label><input id="ti_year" type="number" placeholder="2017"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>色</label><input id="ti_color" placeholder="シルバー"></div>
+        <div class="field"><label>走行距離(km)</label><input id="ti_mileage" type="number" placeholder="95000"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>登録番号／ナンバープレート</label><input id="ti_regnum" placeholder="УБ 04 АБВ"></div>
+        <div class="field"><label>VIN／車台番号</label><input id="ti_vin" class="mono"></div>
+      </div>
+      <div class="field"><label>査定車 見込み額 (₮)</label><input id="ti_price" type="number" placeholder="10000000"></div>
+      <div class="field"><label>備考</label><textarea id="ti_notes" placeholder="状態メモなど"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">キャンセル</button>
+      <button class="btn" onclick="saveTradeIn('${dealId}')">登録して査定へ進む</button>
+    </div>
+  `);
+}
+function importAppraisalJSONToTradeIn(){
+  const raw = document.getElementById('ti_importjson').value.trim();
+  if(!raw){ alert('査定ツールでコピーしたJSONを貼り付けてから読み込んでください'); return; }
+  let data;
+  try{ data = JSON.parse(raw); }
+  catch(e){ alert('JSONの形式が正しく読み取れませんでした。査定ツール側で「結果をコピー」をもう一度押してから貼り直してください。'); return; }
+  const veh = data.vehicle || {};
+  const score = data.score || {};
+  const fin = data.finalAppraisal || {};
+  let hit = 0;
+  const setIf = (id, val) => {
+    if(val!==undefined && val!==null && val!==''){ document.getElementById(id).value = val; hit++; }
+  };
+  setIf('ti_maker', veh.maker);
+  setIf('ti_model', veh.model);
+  setIf('ti_year', veh.manufactureYear);
+  setIf('ti_color', veh.color);
+  setIf('ti_mileage', veh.mileageKm);
+  setIf('ti_vin', veh.vin);
+  setIf('ti_regnum', veh.registrationNumber);
+  setIf('ti_extgrade', score.grade);
+  setIf('ti_extprice', fin.referencePriceManMnt);
+  const noteBlock = buildAppraisalNoteBlock(data);
+  const notesEl = document.getElementById('ti_notes');
+  notesEl.value = mergeAppraisalNote(notesEl.value, noteBlock);
+  if(noteBlock) hit++;
+  document.getElementById('ti_importjson').dataset.raw = JSON.stringify(data, null, 2);
+  alert(hit>0 ? `${hit}項目を読み込みました。内容を確認してから保存してください。` : 'JSONは読み取れましたが、対応する項目が見つかりませんでした。仕様書の項目名を確認してください。');
+}
+async function saveTradeIn(dealId){
+  const deal = deals.find(d=>d.id===dealId);
+  if(!deal) return;
+  const maker = document.getElementById('ti_maker').value.trim();
+  const model = document.getElementById('ti_model').value.trim();
+  if(!maker || !model){ alert('メーカーと車名を入力してください'); return; }
+  const importedRaw = document.getElementById('ti_importjson').dataset.raw || '';
+  const tv = {
+    id:uid('V'), kind:'tradein', status:'tradein', ownerCustomerId:deal.customerId,
+    maker, model,
+    year: Number(document.getElementById('ti_year').value)||null,
+    color: document.getElementById('ti_color').value.trim(),
+    mileage: Number(document.getElementById('ti_mileage').value)||0,
+    vin: document.getElementById('ti_vin').value.trim(),
+    regNum: document.getElementById('ti_regnum').value.trim(),
+    priceSale: Number(document.getElementById('ti_price').value)||0,
+    priceCost: 0,
+    notes: document.getElementById('ti_notes').value.trim(),
+    externalGrade: document.getElementById('ti_extgrade').value.trim(),
+    externalAppraisalPrice: document.getElementById('ti_extprice').value.trim(),
+    externalReportText: importedRaw,
+    appraisal:{exterior:0,interior:0,engine:0,undercarriage:0,electrical:0}, defects:[], createdAt:Date.now(),
+  };
+  vehicles.push(tv);
+  deal.tradeInVehicleId = tv.id;
+  closeModal();
+  openVehicleDetail(tv.id);
+  await upsertVehicleRow(tv);
+  await upsertDealRow(deal);
+}
+function pastDealsHtml(pastDeals){
+  return `
+    <div class="panel" style="margin-top:16px">
+      <h3 style="font-size:13px">🕘 過去の商談（${pastDeals.length}件）</h3>
+      ${pastDeals.map(d=>`
+        <div class="panel" style="background:var(--panel2); margin-bottom:8px; cursor:pointer" onclick="openDealDetail('${d.id}')">
+          <div style="display:flex; justify-content:space-between"><strong>${esc(custName(d.customerId))} 様</strong><span class="staff-tag">${esc(d.stage)}</span></div>
+        </div>
+      `).join('')}
+    </div>`;
+}
+function openStartDeal(vehicleId){
+  showModal(`
+    <div class="modal-head"><h3>＋ 商談を開始</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>顧客を選択</label>
+        <select id="f_dealcust" onchange="document.getElementById('newCustFields').style.display=this.value?'none':'block'">
+          <option value="">-- 新規顧客として登録 --</option>
+          ${customers.map(c=>`<option value="${c.id}">${esc(c.name)}（${esc(c.phone||'電話未登録')}）</option>`).join('')}
+        </select>
+      </div>
+      <div id="newCustFields">
+        <div class="field-row">
+          <div class="field"><label>氏名</label><input id="f_newcust_name" placeholder="佐藤 太郎"></div>
+          <div class="field"><label>電話番号</label><input id="f_newcust_phone" placeholder="9911-2233"></div>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>担当スタッフ</label>
+          <select id="f_dealstaff">${sortedStaff().map(s=>`<option value="${esc(staffLabel(s))}">${esc(staffLabel(s))}</option>`).join('')}</select>
+        </div>
+        <div class="field"><label>初期ステータス</label>
+          <select id="f_dealstage">${STAGES.filter(s=>s!=='キャンセル').map(s=>`<option value="${s}">${s}</option>`).join('')}</select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">キャンセル</button>
+      <button class="btn" onclick="startDealForVehicle('${vehicleId}')">商談を開始する</button>
+    </div>
+  `);
+}
+async function startDealForVehicle(vehicleId){
+  let customerId = document.getElementById('f_dealcust').value;
+  if(!customerId){
+    const name = document.getElementById('f_newcust_name').value.trim();
+    if(!name){ alert('顧客名を入力してください'); return; }
+    const phone = document.getElementById('f_newcust_phone').value.trim();
+    const maxOrder = customers.reduce((m,x)=>Math.max(m, x.sortOrder||0), -1);
+    const newC = {id:uid('C'), name, nameMn:'', phone, fb:'', address:'', referrer:'', note:'', sortOrder: maxOrder+1, createdAt:Date.now()};
+    customers.push(newC);
+    customerId = newC.id;
+    await upsertCustomerRow(newC);
+  }
+  const staff = document.getElementById('f_dealstaff').value.trim();
+  const stage = document.getElementById('f_dealstage').value;
+  const v = vehicles.find(x=>x.id===vehicleId);
+  if(v && v.status==='stock'){ v.status='nego'; await upsertVehicleRow(v); }
+  const deal = {id:uid('D'), customerId, vehicleId, staff, stage, createdAt:Date.now(), history:[{date:Date.now(), note:`商談開始（${stage}）`}]};
+  deals.push(deal);
+  closeModal();
+  openVehicleDetail(vehicleId);
+  await upsertDealRow(deal);
+}
+async function addDealNoteInline(dealId, vehicleId){
+  const note = document.getElementById('f_vehdealnote').value.trim();
+  if(!note) return;
+  const d = deals.find(x=>x.id===dealId);
+  if(!d) return;
+  d.history.push({date:Date.now(), note});
+  openVehicleDetail(vehicleId);
+  await upsertDealRow(d);
+}
+async function cancelDeal(dealId, vehicleId){
+  if(!confirm('この商談を中止しますか？車両は「在庫」に戻ります。')) return;
+  const d = deals.find(x=>x.id===dealId);
+  if(d){
+    d.stage='キャンセル';
+    d.history.push({date:Date.now(), note:'商談を中止'});
+  }
+  const v = vehicles.find(x=>x.id===vehicleId);
+  if(v && v.status==='nego') v.status='stock';
+  openVehicleDetail(vehicleId);
+  if(d) await upsertDealRow(d);
+  if(v) await upsertVehicleRow(v);
+}
+function segRow(label, key, val){
+  val = val||0;
+  let segs='';
+  for(let i=1;i<=5;i++) segs += `<span class="seg ${i<=val?'on':''}" onclick="setAppraisal('${currentVehicleId()}','${key}',${i})"></span>`;
+  return `<div class="segrow"><span class="lbl">${label}</span><span class="segs">${segs}</span><span class="num">${val}/5</span></div>`;
+}
+function currentVehicleId(){
+  // extracted from currently rendered detail via closure workaround
+  return window.__activeVehId;
+}
+async function setAppraisal(vid, key, val){
+  const v = vehicles.find(x=>x.id===vid);
+  if(!v) return;
+  if(!v.appraisal) v.appraisal = {exterior:0,interior:0,engine:0,undercarriage:0,electrical:0};
+  v.appraisal[key] = (v.appraisal[key]===val) ? val-1 : val; // click same to reduce by one (toggle-ish)
+  openVehicleDetail(vid);
+  await upsertVehicleRow(v);
+}
+async function toggleDefect(vid, defect){
+  const v = vehicles.find(x=>x.id===vid);
+  if(!v) return;
+  v.defects = v.defects || [];
+  if(v.defects.includes(defect)) v.defects = v.defects.filter(d=>d!==defect);
+  else v.defects.push(defect);
+  openVehicleDetail(vid);
+  await upsertVehicleRow(v);
+}
+
+/* ---------------- vehicle files (photos / shaken docs) ---------------- */
+const FILE_CATEGORIES = {
+  front:'前面', rear:'後面', left:'左側', right:'右側', interior:'内装',
+  engine:'エンジン', underbody:'下回り', damage:'損傷箇所',
+  registration_document:'車検証', appraisal_document:'査定時資料', obd_screenshot:'OBD診断内容'
+};
+function isImageFile(name){ return /\.(jpe?g|png|gif|webp|heic)$/i.test(name||''); }
+function vehicleFilesPanel(v){
+  const files = v.files || [];
+  return `
+    <div class="panel">
+      <h3>📷 写真・書類</h3>
+      <div class="field-row" style="align-items:flex-end">
+        <div class="field" style="margin-bottom:0">
+          <label>分類</label>
+          <select id="f_filecategory">
+            ${Object.entries(FILE_CATEGORIES).map(([k,l])=>`<option value="${k}">${l}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>ファイルを選択（画像・PDF／複数選択可）</label>
+          <input type="file" id="f_fileupload" accept="image/*,.pdf" capture="environment" multiple onchange="uploadVehicleFile('${v.id}')">
+        </div>
+      </div>
+      <div style="font-size:11px; color:var(--text-dim2); margin-top:6px">選択すると自動でアップロードされます（複数枚まとめて選択可）</div>
+      <div id="fileUploadStatus" style="font-size:11.5px; color:var(--text-dim); margin-top:6px"></div>
+      ${files.length===0 ? `<div class="empty" style="padding:20px; margin-top:14px">まだ写真・書類がアップロードされていません</div>` : `
+      <div class="grid" style="margin-top:14px">
+        ${files.map((f,i)=>`
+          <div class="card" style="cursor:default">
+            <a href="${esc(f.url)}" target="_blank" rel="noopener" style="display:block; text-decoration:none; color:inherit">
+              ${isImageFile(f.name) ? `<img src="${esc(f.url)}" style="width:100%; height:120px; object-fit:cover; border-radius:6px; margin-bottom:8px">` : `<div style="height:120px; display:flex; align-items:center; justify-content:center; font-size:36px; background:var(--panel2); border-radius:6px; margin-bottom:8px">📄</div>`}
+              <div class="meta" style="color:var(--text)">${esc(FILE_CATEGORIES[f.category]||f.category)}</div>
+              <div class="meta" style="font-size:11px">${esc(f.name)}</div>
+            </a>
+            <div style="display:flex; gap:6px; margin-top:8px">
+              <span class="mv" style="${i===0?'opacity:.3; pointer-events:none;':''}" onclick="moveVehicleFile('${v.id}',${i},-1)">↑</span>
+              <span class="mv" style="${i===files.length-1?'opacity:.3; pointer-events:none;':''}" onclick="moveVehicleFile('${v.id}',${i},1)">↓</span>
+              <button class="btn danger sm" style="flex:1" onclick="deleteVehicleFile('${v.id}','${esc(f.path)}')">削除</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>`}
+    </div>
+  `;
+}
+async function uploadVehicleFile(vehicleId){
+  const fileInput = document.getElementById('f_fileupload');
+  const category = document.getElementById('f_filecategory').value;
+  const files = Array.from(fileInput.files || []);
+  const statusEl = document.getElementById('fileUploadStatus');
+  if(files.length===0){ alert('ファイルを選択してください'); return; }
+  const v = vehicles.find(x=>x.id===vehicleId);
+  v.files = v.files || [];
+  let okCount = 0, failCount = 0;
+  for(let i=0;i<files.length;i++){
+    const file = files[i];
+    statusEl.textContent = `アップロード中… (${i+1}/${files.length})`;
+    const safeName = file.name.replace(/[^a-zA-Z0-9_.\-]/g, '_');
+    const path = `${vehicleId}/${category}/${Date.now()}_${i}_${safeName}`;
+    const { error } = await sb.storage.from('vehicle-files').upload(path, file);
+    if(error){ failCount++; continue; }
+    const { data: urlData } = sb.storage.from('vehicle-files').getPublicUrl(path);
+    v.files.push({ path, url: urlData.publicUrl, category, name: file.name, uploadedAt: Date.now() });
+    okCount++;
+  }
+  fileInput.value = '';
+  statusEl.textContent = failCount===0 ? `${okCount}件アップロードしました` : `${okCount}件成功・${failCount}件失敗しました`;
+  openVehicleDetail(vehicleId);
+  await upsertVehicleRow(v);
+}
+async function deleteVehicleFile(vehicleId, path){
+  if(!confirm('このファイルを削除しますか？')) return;
+  await sb.storage.from('vehicle-files').remove([path]);
+  const v = vehicles.find(x=>x.id===vehicleId);
+  v.files = (v.files||[]).filter(f=>f.path!==path);
+  openVehicleDetail(vehicleId);
+  await upsertVehicleRow(v);
+}
+async function moveVehicleFile(vehicleId, index, dir){
+  const v = vehicles.find(x=>x.id===vehicleId);
+  if(!v || !v.files) return;
+  const swapIndex = index+dir;
+  if(swapIndex<0 || swapIndex>=v.files.length) return;
+  [v.files[index], v.files[swapIndex]] = [v.files[swapIndex], v.files[index]];
+  openVehicleDetail(vehicleId);
+  await upsertVehicleRow(v);
+}
+
+/* ---------------- vehicle service history (入庫履歴) ---------------- */
+const SERVICE_CATEGORIES = {
+  appraisal:'査定', diagnosis:'故障診断', oil_change:'オイル交換',
+  tire_pressure:'空気圧調整', inspection:'点検', general_repair:'一般修理'
+};
+function todayStr(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function serviceHistoryPanel(v){
+  const history = (v.serviceHistory||[]).slice().sort((a,b)=>(b.date||0)-(a.date||0));
+  return `
+    <div class="panel">
+      <h3>🔧 入庫履歴</h3>
+      <div class="field-row3">
+        <div class="field" style="margin-bottom:0"><label>種別</label>
+          <select id="f_svctype" onchange="toggleSvcNoteRequired()">
+            ${Object.entries(SERVICE_CATEGORIES).map(([k,l])=>`<option value="${k}">${l}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0"><label>日付</label><input id="f_svcdate" type="date" value="${todayStr()}"></div>
+        <div class="field" style="margin-bottom:0"><label>走行距離(km)</label><input id="f_svcmileage" type="number" placeholder="${v.mileage||''}"></div>
+      </div>
+      <div class="field-row" style="margin-top:10px">
+        <div class="field"><label>担当者</label>
+          <select id="f_svcstaff">
+            <option value="">未設定</option>
+            ${sortedStaff().map(s=>`<option value="${esc(staffLabel(s))}">${esc(staffLabel(s))}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label id="f_svcnote_label">詳細・備考</label><input id="f_svcnote" placeholder="内容を記載"></div>
+      </div>
+      <button class="btn sm" onclick="addServiceHistory('${v.id}')">＋ 記録を追加</button>
+      ${history.length===0 ? `<div class="empty" style="padding:20px; margin-top:14px">まだ入庫履歴がありません</div>` : `
+      <ul class="timeline" style="margin-top:14px">
+        ${history.map(h=>`
+          <li>
+            <span class="dot"></span>
+            <div style="flex:1">
+              <b>${fmtDate(h.date)}</b>
+              <span class="staff-tag" style="margin-right:6px">${esc(SERVICE_CATEGORIES[h.category]||h.category)}</span>
+              ${h.mileageKm?`${Number(h.mileageKm).toLocaleString()}km ・ `:''}${esc(h.staff||'')}${h.notes?` — ${esc(h.notes)}`:''}
+            </div>
+            <span class="mv" onclick="openServiceHistoryEditForm('${v.id}','${h.id}')">✎</span>
+            <span class="mv" onclick="deleteServiceHistory('${v.id}','${h.id}')">🗑</span>
+          </li>
+        `).join('')}
+      </ul>`}
+    </div>
+  `;
+}
+function toggleSvcNoteRequired(){
+  const isGeneral = document.getElementById('f_svctype').value==='general_repair';
+  document.getElementById('f_svcnote_label').textContent = isGeneral ? '詳細・備考（必須）' : '詳細・備考';
+}
+async function addServiceHistory(vehicleId){
+  const category = document.getElementById('f_svctype').value;
+  const dateStr = document.getElementById('f_svcdate').value;
+  const mileage = document.getElementById('f_svcmileage').value;
+  const staff = document.getElementById('f_svcstaff').value;
+  const notes = document.getElementById('f_svcnote').value.trim();
+  if(category==='general_repair' && !notes){ alert('一般修理を選んだ場合は詳細・備考を入力してください'); return; }
+  const v = vehicles.find(x=>x.id===vehicleId);
+  if(!v) return;
+  v.serviceHistory = v.serviceHistory || [];
+  v.serviceHistory.push({
+    id: uid('SH'), category,
+    date: dateStr ? new Date(dateStr+'T00:00:00').getTime() : Date.now(),
+    mileageKm: mileage ? Number(mileage) : null,
+    staff, notes, createdAt: Date.now()
+  });
+  openVehicleDetail(vehicleId);
+  await upsertVehicleRow(v);
+}
+async function deleteServiceHistory(vehicleId, entryId){
+  if(!confirm('この入庫履歴を削除しますか？')) return;
+  const v = vehicles.find(x=>x.id===vehicleId);
+  if(!v) return;
+  v.serviceHistory = (v.serviceHistory||[]).filter(h=>h.id!==entryId);
+  openVehicleDetail(vehicleId);
+  await upsertVehicleRow(v);
+}
+function openServiceHistoryEditForm(vehicleId, entryId){
+  const v = vehicles.find(x=>x.id===vehicleId);
+  if(!v) return;
+  const h = (v.serviceHistory||[]).find(x=>x.id===entryId);
+  if(!h) return;
+  const dt = new Date(h.date);
+  const dateStr = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  showModal(`
+    <div class="modal-head"><h3>入庫履歴を編集</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="field-row3">
+        <div class="field" style="margin-bottom:0"><label>種別</label>
+          <select id="f_svcedittype" onchange="toggleSvcEditNoteRequired()">
+            ${Object.entries(SERVICE_CATEGORIES).map(([k,l])=>`<option value="${k}" ${h.category===k?'selected':''}>${l}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0"><label>日付</label><input id="f_svceditdate" type="date" value="${dateStr}"></div>
+        <div class="field" style="margin-bottom:0"><label>走行距離(km)</label><input id="f_svceditmileage" type="number" value="${h.mileageKm||''}"></div>
+      </div>
+      <div class="field-row" style="margin-top:10px">
+        <div class="field"><label>担当者</label>
+          <select id="f_svceditstaff">
+            <option value="">未設定</option>
+            ${sortedStaff().map(s=>`<option value="${esc(staffLabel(s))}" ${h.staff===staffLabel(s)?'selected':''}>${esc(staffLabel(s))}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label id="f_svceditnote_label">詳細・備考</label><input id="f_svceditnote" value="${esc(h.notes)}"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn danger" onclick="deleteServiceHistory('${vehicleId}','${entryId}')">削除</button>
+      <button class="btn ghost" onclick="openVehicleDetail('${vehicleId}')">キャンセル</button>
+      <button class="btn" onclick="saveServiceHistoryEntry('${vehicleId}','${entryId}')">保存する</button>
+    </div>
+  `);
+  toggleSvcEditNoteRequired();
+}
+function toggleSvcEditNoteRequired(){
+  const isGeneral = document.getElementById('f_svcedittype').value==='general_repair';
+  document.getElementById('f_svceditnote_label').textContent = isGeneral ? '詳細・備考（必須）' : '詳細・備考';
+}
+async function saveServiceHistoryEntry(vehicleId, entryId){
+  const v = vehicles.find(x=>x.id===vehicleId);
+  if(!v) return;
+  const h = (v.serviceHistory||[]).find(x=>x.id===entryId);
+  if(!h) return;
+  const category = document.getElementById('f_svcedittype').value;
+  const dateStr = document.getElementById('f_svceditdate').value;
+  const mileage = document.getElementById('f_svceditmileage').value;
+  const staff = document.getElementById('f_svceditstaff').value;
+  const notes = document.getElementById('f_svceditnote').value.trim();
+  if(category==='general_repair' && !notes){ alert('一般修理を選んだ場合は詳細・備考を入力してください'); return; }
+  h.category = category;
+  if(dateStr) h.date = new Date(dateStr+'T00:00:00').getTime();
+  h.mileageKm = mileage ? Number(mileage) : null;
+  h.staff = staff;
+  h.notes = notes;
+  openVehicleDetail(vehicleId);
+  await upsertVehicleRow(v);
+}
+
+/* ============================================================
+   RENDER: DEALS (kanban)
+============================================================ */
+let dealFilter = {staff:'all'};
+function renderDeals(){
+  const staffOptions = sortedStaff().map(s=>staffLabel(s));
+  const filtered = dealFilter.staff==='all' ? deals : deals.filter(d=>d.staff===dealFilter.staff);
+  return `
+    <div class="topbar">
+      <div class="pagetitle">💬 商談パイプライン <span class="sub">${filtered.length}件</span></div>
+      <button class="btn" onclick="openDealForm()">＋ 新規商談</button>
+    </div>
+    <div class="toolbar">
+      <span style="font-size:11.5px; color:var(--text-dim); margin-right:2px">担当者で絞り込み:</span>
+      <span class="chip ${dealFilter.staff==='all'?'on':''}" onclick='dealFilter.staff="all"; renderView()'>すべて</span>
+      ${staffOptions.map(s=>`<span class="chip ${dealFilter.staff===s?'on':''}" onclick='dealFilter.staff=${JSON.stringify(s)}; renderView()'>${esc(s)}</span>`).join('')}
+    </div>
+    <div class="kanban">
+      ${STAGES.map(stage=>{
+        const items = filtered.filter(d=>d.stage===stage).sort((a,b)=>(a.staff||'').localeCompare(b.staff||'','ja'));
+        return `
+        <div class="kcol">
+          <div class="kcol-head"><span>${stage}</span><span class="cnt">${items.length}</span></div>
+          <div class="kcol-body">
+            ${items.map(d=>`
+              <div class="kcard" onclick="openDealDetail('${d.id}')" title="${esc(custName(d.customerId))} 様 / ${esc(vehName(d.vehicleId))} / ${esc(d.staff||'担当未設定')}">
+                <div class="cust">${esc(custName(d.customerId))}</div>
+                <div class="veh">${esc(vehName(d.vehicleId))}</div>
+                <div class="staff-tag" style="margin-bottom:5px; font-size:9.5px; padding:1px 5px;">${esc(d.staff||'担当未設定')}</div>
+                <div class="mvbtns">
+                  ${stagePrev(stage)?`<span class="mv" onclick="event.stopPropagation(); moveStage('${d.id}',-1)">‹</span>`:'<span></span>'}
+                  ${stageNext(stage)?`<span class="mv" onclick="event.stopPropagation(); moveStage('${d.id}',1)">›</span>`:'<span></span>'}
+                </div>
+              </div>
+            `).join('') || `<div style="text-align:center; color:var(--text-dim2); font-size:10px; padding:12px 2px">なし</div>`}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+function stagePrev(stage){ const i=STAGES.indexOf(stage); return i>0; }
+function stageNext(stage){ const i=STAGES.indexOf(stage); return i<STAGES.length-2; } // exclude moving into キャンセル automatically
+function advanceDealStage(dealId, dir){
+  const d = deals.find(x=>x.id===dealId);
+  if(!d) return null;
+  const i = STAGES.indexOf(d.stage);
+  const ni = Math.min(STAGES.length-1, Math.max(0, i+dir));
+  d.stage = STAGES[ni];
+  d.history.push({date:Date.now(), note:`ステータスを「${STAGES[ni]}」に変更`});
+  const v = vehicles.find(x=>x.id===d.vehicleId);
+  if(v){
+    if(d.stage==='契約') v.status='sold';
+    else if(d.stage==='納車') v.status='delivered';
+    else if(v.status==='stock') v.status='nego';
+  }
+  return d;
+}
+async function moveStage(id, dir){
+  const d = advanceDealStage(id, dir);
+  renderView();
+  if(d) await upsertDealRow(d);
+  const v = d ? vehicles.find(x=>x.id===d.vehicleId) : null;
+  if(v) await upsertVehicleRow(v);
+}
+async function moveStageAndRefresh(dealId, vehicleId, dir){
+  const d = advanceDealStage(dealId, dir);
+  openVehicleDetail(vehicleId);
+  if(d) await upsertDealRow(d);
+  const v = vehicles.find(x=>x.id===vehicleId);
+  if(v) await upsertVehicleRow(v);
+}
+
+function openDealForm(){
+  if(customers.length===0 || vehicles.length===0){
+    alert('先に顧客と車両を1件以上登録してください。');
+    return;
+  }
+  showModal(`
+    <div class="modal-head"><h3>＋ 新規商談登録</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>顧客</label>
+        <select id="f_cust">${customers.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>車両</label>
+        <select id="f_veh">${vehicles.map(v=>`<option value="${v.id}">${esc(v.maker)} ${esc(v.model)} (${v.year})</option>`).join('')}</select>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>担当スタッフ</label>
+          <select id="f_staff">${sortedStaff().map(s=>`<option value="${esc(staffLabel(s))}">${esc(staffLabel(s))}</option>`).join('')}</select>
+        </div>
+        <div class="field"><label>初期ステータス</label>
+          <select id="f_stage">${STAGES.filter(s=>s!=='キャンセル').map(s=>`<option value="${s}">${s}</option>`).join('')}</select>
+        </div>
+      </div>
+      <div class="field"><label>メモ</label><textarea id="f_memo" placeholder="初回対応の内容など"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">キャンセル</button>
+      <button class="btn" onclick="saveDeal()">登録する</button>
+    </div>
+  `);
+}
+async function saveDeal(){
+  const customerId = document.getElementById('f_cust').value;
+  const vehicleId = document.getElementById('f_veh').value;
+  const staff = document.getElementById('f_staff').value.trim();
+  const stage = document.getElementById('f_stage').value;
+  const memo = document.getElementById('f_memo').value.trim();
+  const deal = {id:uid('D'), customerId, vehicleId, staff, stage, createdAt:Date.now(),
+    history:[{date:Date.now(), note: memo || `商談開始（${stage}）`}]};
+  deals.push(deal);
+  closeModal();
+  renderView();
+  await upsertDealRow(deal);
+}
+
+function openDealDetail(id){
+  const d = deals.find(x=>x.id===id);
+  if(!d) return;
+  showModal(`
+    <div class="modal-head"><h3>商談詳細</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="kv-grid" style="margin-bottom:16px">
+        <div class="kv"><span class="k">顧客</span><span class="v">${esc(custName(d.customerId))} 様</span></div>
+        <div class="kv"><span class="k">車両</span><span class="v">${esc(vehName(d.vehicleId))} <span class="mv" onclick="openChangeDealVehicleForm('${d.id}',{type:'deal',dealId:'${d.id}'})">🚗 変更</span></span></div>
+        <div class="kv"><span class="k">担当</span><span class="v">${esc(d.staff||'—')}</span></div>
+        <div class="kv"><span class="k">現在のステータス</span><span class="v" style="color:var(--amber)">${esc(d.stage)}</span></div>
+      </div>
+      <h3 style="margin-bottom:8px">📅 商談履歴</h3>
+      <ul class="timeline">
+        ${d.history.map((h,i)=>`<li><span class="dot"></span><div style="flex:1"><b>${fmtDate(h.date)}</b>${esc(h.note)}</div><span class="mv" onclick="openHistoryEditForm('${d.id}',${i},{type:'deal',dealId:'${d.id}'})">✎</span></li>`).join('')}
+      </ul>
+      <div class="field" style="margin-top:14px"><label>履歴を追加</label><textarea id="f_addnote" placeholder="対応内容を記録…"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn danger" onclick="deleteDeal('${d.id}')">この商談を削除</button>
+      <button class="btn ghost" onclick="closeModal()">閉じる</button>
+      <button class="btn" onclick="addDealNote('${d.id}')">追加する</button>
+    </div>
+  `);
+}
+async function addDealNote(id){
+  const note = document.getElementById('f_addnote').value.trim();
+  if(!note) return;
+  const d = deals.find(x=>x.id===id);
+  d.history.push({date:Date.now(), note});
+  closeModal();
+  renderView();
+  await upsertDealRow(d);
+}
+async function deleteDeal(id){
+  if(!confirm('この商談記録をゴミ箱に移動しますか？「ゴミ箱」からいつでも復元できます。')) return;
+  const d = deals.find(x=>x.id===id);
+  deals = deals.filter(d=>d.id!==id);
+  closeModal();
+  renderView();
+  if(d){ d.deletedAt = Date.now(); await upsertDealRow(d); }
+}
+function returnFromDealEdit(returnTo){
+  if(returnTo && returnTo.type==='vehicle') openVehicleDetail(returnTo.vehicleId);
+  else if(returnTo && returnTo.type==='deal') openDealDetail(returnTo.dealId);
+  else renderView();
+}
+function openHistoryEditForm(dealId, index, returnTo){
+  const d = deals.find(x=>x.id===dealId);
+  if(!d) return;
+  const h = d.history[index];
+  if(!h) return;
+  const dt = new Date(h.date);
+  const dateStr = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  showModal(`
+    <div class="modal-head"><h3>対応履歴を編集</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>日付</label><input id="f_histdate" type="date" value="${dateStr}"></div>
+      <div class="field"><label>内容</label><textarea id="f_histnote">${esc(h.note)}</textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn danger" onclick='deleteHistoryEntry("${dealId}",${index},${JSON.stringify(returnTo||null)})'>削除</button>
+      <button class="btn ghost" onclick='(${JSON.stringify(returnTo||null)}?returnFromDealEdit(${JSON.stringify(returnTo||null)}):closeModal())'>キャンセル</button>
+      <button class="btn" onclick='saveHistoryEntry("${dealId}",${index},${JSON.stringify(returnTo||null)})'>保存する</button>
+    </div>
+  `);
+}
+async function saveHistoryEntry(dealId, index, returnTo){
+  const d = deals.find(x=>x.id===dealId);
+  if(!d) return;
+  const dateStr = document.getElementById('f_histdate').value;
+  const note = document.getElementById('f_histnote').value.trim();
+  if(!note){ alert('内容を入力してください'); return; }
+  const h = d.history[index];
+  if(!h) return;
+  if(dateStr){
+    const old = new Date(h.date);
+    const newDate = new Date(dateStr+'T00:00:00');
+    newDate.setHours(old.getHours(), old.getMinutes(), old.getSeconds());
+    h.date = newDate.getTime();
+  }
+  h.note = note;
+  returnFromDealEdit(returnTo);
+  await upsertDealRow(d);
+}
+async function deleteHistoryEntry(dealId, index, returnTo){
+  if(!confirm('この履歴を削除しますか？')) return;
+  const d = deals.find(x=>x.id===dealId);
+  if(!d) return;
+  d.history.splice(index,1);
+  returnFromDealEdit(returnTo);
+  await upsertDealRow(d);
+}
+function openChangeDealVehicleForm(dealId, returnTo){
+  const d = deals.find(x=>x.id===dealId);
+  if(!d) return;
+  showModal(`
+    <div class="modal-head"><h3>🚗 商談の対象車種を変更</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div style="font-size:11.5px; color:var(--text-dim); margin-bottom:10px; line-height:1.6">
+        商談の対象は在庫車（販売用ストック）のみ選べます。査定車を変更したい場合は、下の「📋 査定車」欄から登録し直してください。
+      </div>
+      <div class="field"><label>車両を選択</label>
+        <select id="f_changeveh">
+          ${vehicles.filter(v=>v.kind!=='tradein').map(v=>`<option value="${v.id}" ${v.id===d.vehicleId?'selected':''}>${esc(v.maker)} ${esc(v.model)} (${v.year||'-'})</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick='(${JSON.stringify(returnTo||null)}?returnFromDealEdit(${JSON.stringify(returnTo||null)}):closeModal())'>キャンセル</button>
+      <button class="btn" onclick='changeDealVehicle("${dealId}",${JSON.stringify(returnTo||null)})'>変更する</button>
+    </div>
+  `);
+}
+async function changeDealVehicle(dealId, returnTo){
+  const d = deals.find(x=>x.id===dealId);
+  if(!d) return;
+  const newVehicleId = document.getElementById('f_changeveh').value;
+  const oldVehicleId = d.vehicleId;
+  if(newVehicleId===oldVehicleId){ returnFromDealEdit(returnTo); return; }
+  d.history.push({date:Date.now(), note:`対象車種を変更（${vehName(oldVehicleId)} → ${vehName(newVehicleId)}）`});
+  d.vehicleId = newVehicleId;
+  const adjustedReturnTo = (returnTo && returnTo.type==='vehicle') ? {type:'vehicle', vehicleId:newVehicleId} : returnTo;
+  returnFromDealEdit(adjustedReturnTo);
+  await upsertDealRow(d);
+}
+
+/* ============================================================
+   RENDER: STAFF
+============================================================ */
+function staffLabel(s){ return s.role ? `${s.name}（${s.role}）` : s.name; }
+function renderStaff(){
+  const sorted = sortedStaff();
+  return `
+    <div class="topbar">
+      <div class="pagetitle">👥 スタッフ管理 <span class="sub">${staffList.length}名登録</span></div>
+      <button class="btn" onclick="openStaffForm()">＋ 新規スタッフ</button>
+    </div>
+    ${sorted.length===0 ? `<div class="empty"><b>スタッフが登録されていません</b>「＋新規スタッフ」から登録してください</div>` : `
+    <div class="grid">
+      ${sorted.map((s,i)=>`
+        <div class="card" style="cursor:default">
+          <div class="name">${esc(s.name)}</div>
+          <div class="meta">${esc(s.role||'役職未設定')}</div>
+          <div class="row2" style="margin-top:10px">
+            <div style="display:flex; gap:6px">
+              <span class="mv" style="${i===0?'opacity:.3; pointer-events:none;':''}" onclick="moveStaff('${s.id}',-1)">↑ 上へ</span>
+              <span class="mv" style="${i===sorted.length-1?'opacity:.3; pointer-events:none;':''}" onclick="moveStaff('${s.id}',1)">↓ 下へ</span>
+            </div>
+            <button class="btn ghost sm" onclick='openStaffForm(${JSON.stringify(s).replace(/'/g,"&#39;")})'>✎ 編集</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>`}
+  `;
+}
+async function moveStaff(id, dir){
+  const sorted = sortedStaff();
+  const idx = sorted.findIndex(s=>s.id===id);
+  const swapIdx = idx+dir;
+  if(idx===-1 || swapIdx<0 || swapIdx>=sorted.length) return;
+  const a = sorted[idx], b = sorted[swapIdx];
+  const tmp = a.sortOrder||0;
+  a.sortOrder = b.sortOrder||0;
+  b.sortOrder = tmp;
+  renderView();
+  await upsertStaffRow(a);
+  await upsertStaffRow(b);
+}
+function openStaffForm(existing){
+  const s = existing || {};
+  showModal(`
+    <div class="modal-head"><h3>${existing?'スタッフ情報を編集':'＋ 新規スタッフ登録'}</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>氏名</label><input id="f_staffname" value="${esc(s.name)}" placeholder="マエダ"></div>
+      <div class="field"><label>役職・担当</label><input id="f_staffrole" value="${esc(s.role)}" placeholder="営業 / 査定・整備 / 社長 など"></div>
+    </div>
+    <div class="modal-foot">
+      ${existing?`<button class="btn danger" onclick="deleteStaff('${s.id}')">削除</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">キャンセル</button>
+      <button class="btn" onclick="saveStaff('${existing?s.id:''}')">保存する</button>
+    </div>
+  `);
+}
+async function saveStaff(id){
+  const name = document.getElementById('f_staffname').value.trim();
+  const role = document.getElementById('f_staffrole').value.trim();
+  if(!name){ alert('氏名を入力してください'); return; }
+  let s;
+  if(id){
+    s = staffList.find(x=>x.id===id);
+    Object.assign(s, {name, role});
+  }else{
+    const maxOrder = staffList.reduce((m,x)=>Math.max(m, x.sortOrder||0), -1);
+    s = {id:uid('ST'), name, role, sortOrder: maxOrder+1, createdAt:Date.now()};
+    staffList.push(s);
+  }
+  closeModal();
+  renderView();
+  await upsertStaffRow(s);
+}
+async function deleteStaff(id){
+  if(!confirm('このスタッフを削除しますか？過去の商談記録に残っている担当者名はそのまま残ります。')) return;
+  staffList = staffList.filter(s=>s.id!==id);
+  closeModal();
+  go('staff');
+  await deleteStaffRow(id);
+}
+
+/* ============================================================
+   RENDER: TRASH (ゴミ箱)
+============================================================ */
+async function downloadBackup(btn){
+  const originalLabel = btn ? btn.textContent : '';
+  if(btn) btn.textContent = '⏳ 準備中…';
+  try{
+    const [custRes, vehRes, dealRes, staffRes] = await Promise.all([
+      sb.from('customers').select('*'),
+      sb.from('vehicles').select('*'),
+      sb.from('deals').select('*'),
+      sb.from('staff').select('*'),
+    ]);
+    if(custRes.error || vehRes.error || dealRes.error || staffRes.error){
+      alert('バックアップの取得に失敗しました。時間をおいて再度お試しください。');
+      return;
+    }
+    const backup = {
+      exportedAt: new Date().toISOString(),
+      note: 'DEED MOTORS DMS バックアップ（削除済み＝ゴミ箱内のデータも含みます）',
+      customers: custRes.data,
+      vehicles: vehRes.data,
+      deals: dealRes.data,
+      staff: staffRes.data,
+    };
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const dateStr = todayStr();
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `deed_motors_dms_backup_${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } finally {
+    if(btn) btn.textContent = originalLabel;
+  }
+}
+async function loadAndRenderTrash(){
+  const [custRes, vehRes, dealRes] = await Promise.all([
+    sb.from('customers').select('*').not('deleted_at','is',null),
+    sb.from('vehicles').select('*').not('deleted_at','is',null),
+    sb.from('deals').select('*').not('deleted_at','is',null),
+  ]);
+  const trashedCustomers = (custRes.data||[]).map(rowToCustomer).sort((a,b)=>(b.deletedAt||0)-(a.deletedAt||0));
+  const trashedVehicles = (vehRes.data||[]).map(rowToVehicle).sort((a,b)=>(b.deletedAt||0)-(a.deletedAt||0));
+  const trashedDeals = (dealRes.data||[]).map(rowToDeal).sort((a,b)=>(b.deletedAt||0)-(a.deletedAt||0));
+  const el = document.getElementById('view');
+  if(!el || currentView!=='trash') return;
+  el.innerHTML = `
+    <div class="topbar">
+      <div class="pagetitle">🗑 ゴミ箱 <span class="sub">削除した顧客・車両・商談を復元できます</span></div>
+    </div>
+    <div class="panel">
+      <h3>👤 顧客（${trashedCustomers.length}件）</h3>
+      ${trashedCustomers.length===0 ? `<div class="empty" style="padding:16px">ゴミ箱は空です</div>` : trashedCustomers.map(c=>`
+        <div class="panel" style="background:var(--panel2); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div><strong>${esc(c.name)}</strong> <span class="meta">削除日時: ${fmtDate(c.deletedAt)}</span></div>
+          <div style="display:flex; gap:6px">
+            <button class="btn ghost sm" onclick="restoreCustomer('${c.id}')">↩ 復元</button>
+            <button class="btn danger sm" onclick="permanentlyDeleteCustomer('${c.id}')">完全に削除</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="panel">
+      <h3>🚗 車両（${trashedVehicles.length}件）</h3>
+      ${trashedVehicles.length===0 ? `<div class="empty" style="padding:16px">ゴミ箱は空です</div>` : trashedVehicles.map(v=>`
+        <div class="panel" style="background:var(--panel2); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div><strong>${esc(v.maker)} ${esc(v.model)}</strong> <span class="meta">削除日時: ${fmtDate(v.deletedAt)}</span></div>
+          <div style="display:flex; gap:6px">
+            <button class="btn ghost sm" onclick="restoreVehicle('${v.id}')">↩ 復元</button>
+            <button class="btn danger sm" onclick="permanentlyDeleteVehicle('${v.id}')">完全に削除</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="panel">
+      <h3>💬 商談（${trashedDeals.length}件）</h3>
+      ${trashedDeals.length===0 ? `<div class="empty" style="padding:16px">ゴミ箱は空です</div>` : trashedDeals.map(d=>`
+        <div class="panel" style="background:var(--panel2); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div><strong>${esc(custName(d.customerId))} 様 ・ ${esc(vehName(d.vehicleId))}</strong> <span class="meta">削除日時: ${fmtDate(d.deletedAt)}</span></div>
+          <div style="display:flex; gap:6px">
+            <button class="btn ghost sm" onclick="restoreDeal('${d.id}')">↩ 復元</button>
+            <button class="btn danger sm" onclick="permanentlyDeleteDeal('${d.id}')">完全に削除</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+async function restoreCustomer(id){
+  const { data } = await sb.from('customers').select('*').eq('id', id).maybeSingle();
+  if(!data) return;
+  const c = rowToCustomer(data);
+  c.deletedAt = null;
+  customers.push(c);
+  await upsertCustomerRow(c);
+  loadAndRenderTrash();
+}
+async function restoreVehicle(id){
+  const { data } = await sb.from('vehicles').select('*').eq('id', id).maybeSingle();
+  if(!data) return;
+  const v = rowToVehicle(data);
+  v.deletedAt = null;
+  vehicles.push(v);
+  await upsertVehicleRow(v);
+  loadAndRenderTrash();
+}
+async function restoreDeal(id){
+  const { data } = await sb.from('deals').select('*').eq('id', id).maybeSingle();
+  if(!data) return;
+  const d = rowToDeal(data);
+  d.deletedAt = null;
+  deals.push(d);
+  await upsertDealRow(d);
+  loadAndRenderTrash();
+}
+async function permanentlyDeleteCustomer(id){
+  if(!confirm('完全に削除します。この操作は取り消せません。よろしいですか？')) return;
+  await deleteCustomerRow(id);
+  loadAndRenderTrash();
+}
+async function permanentlyDeleteVehicle(id){
+  if(!confirm('完全に削除します。この操作は取り消せません。よろしいですか？')) return;
+  await deleteVehicleRow(id);
+  loadAndRenderTrash();
+}
+async function permanentlyDeleteDeal(id){
+  if(!confirm('完全に削除します。この操作は取り消せません。よろしいですか？')) return;
+  await deleteDealRow(id);
+  loadAndRenderTrash();
+}
+
+/* ---------------- modal helpers ---------------- */
+function showModal(html){
+  document.getElementById('modalRoot').innerHTML = `<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`;
+}
+function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
+
+/* ---------------- router ---------------- */
+function renderView(){
+  window.__activeVehId = window.__activeVehId; // no-op, kept for detail re-render calls
+  const el = document.getElementById('view');
+  if(currentView==='dashboard') el.innerHTML = renderDashboard();
+  else if(currentView==='customers') el.innerHTML = renderCustomers();
+  else if(currentView==='vehicles') el.innerHTML = renderVehicles();
+  else if(currentView==='deals') el.innerHTML = renderDeals();
+  else if(currentView==='staff') el.innerHTML = renderStaff();
+  else if(currentView==='trash') { el.innerHTML = `<div class="empty">読み込み中…</div>`; loadAndRenderTrash(); }
+  renderSaveBar();
+}
+
+/* track active vehicle id whenever detail opened, for segRow onclick binding */
+const _origOpenVehicleDetail = openVehicleDetail;
+openVehicleDetail = function(id){ window.__activeVehId = id; _origOpenVehicleDetail(id); };
+
+function showVersionInfo(){
+  showModal(`
+    <div class="modal-head"><h3>🚗 DEED MOTORS DMS — Version 1.0</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div style="font-size:12.5px; color:var(--text-dim); margin-bottom:14px">在庫管理・査定・商談・顧客の一元管理システム（MVP）</div>
+      <h3 style="font-size:13px">✅ 実装済み機能</h3>
+      <ul class="timeline">
+        <li><span class="dot"></span><div><b>在庫</b>展示車両の個別管理（メーカー・年式・価格・ステータス）</div></li>
+        <li><span class="dot"></span><div><b>査定</b>5段階ゲージ査定カルテ・減点タグ・自動スコア計算</div></li>
+        <li><span class="dot"></span><div><b>商談</b>車両ページ内に顧客情報を統合表示、カンバン全体俯瞰も可能</div></li>
+        <li><span class="dot"></span><div><b>査定車</b>来店客の持ち込み車を同じ査定フォームで登録・査定</div></li>
+        <li><span class="dot"></span><div><b>顧客</b>生涯データ（初回接点・接点数・購入台数・所有車履歴）</div></li>
+        <li><span class="dot"></span><div><b>リマインド</b>次回車検・点検日の自動通知（AI21スタイル）</div></li>
+        <li><span class="dot"></span><div><b>外部連携</b>査定ツール（deed-motors-scraper）のJSON結果取り込み</div></li>
+        <li><span class="dot"></span><div><b>共有</b>全データはスタッフ間でリアルタイム共有・自動保存</div></li>
+      </ul>
+      <h3 style="font-size:13px; margin-top:14px">🔜 今後の候補</h3>
+      <ul class="timeline">
+        <li><span class="dot"></span><div>写真・車検証などのファイル管理（外部ストレージ連携が必要）</div></li>
+        <li><span class="dot"></span><div>契約書・査定レポートのPDF出力</div></li>
+        <li><span class="dot"></span><div>Facebook Messenger連携</div></li>
+      </ul>
+    </div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal()">閉じる</button></div>
+  `);
+}
+/* ---------------- init ---------------- */
+async function startApp(){
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('view').innerHTML = `<div class="empty">読み込み中… ачааллаж байна…</div>`;
+  renderMnKeyboardKeys();
+  await loadAll();
+  renderNav();
+  renderView();
+}
+(async function init(){
+  const authed = await requireAuth();
+  if(authed) await startApp();
+})();
+</script>
+</body>
+</html>
