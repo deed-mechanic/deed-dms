@@ -1155,7 +1155,7 @@ function vehicleCardHtml(v){
   const isTradeIn = v.kind==='tradein';
   const badgeLabel = isTradeIn ? '📋 査定車' : VSTATUS[v.status];
   const hasImage = (v.files||[]).some(f=>isImageFile(f.name));
-  const hasAppraisal = !!v.externalGrade || score>0 || (v.serviceHistory||[]).some(h=>h.category==='appraisal');
+  const hasAppraisal = (v.serviceHistory||[]).some(h=>h.category==='appraisal');
   return `
     <div class="card" onclick="openVehicleDetail('${v.id}')">
       <span class="badge ${badgeClass(isTradeIn?'tradein':v.status)}">${badgeLabel}</span>
