@@ -2396,6 +2396,7 @@ function openDealDetail(id){
     </div>
     <div class="modal-foot">
       <button class="btn danger" onclick="deleteDeal('${d.id}')">この商談を削除</button>
+      ${d.stage!=='キャンセル'?`<button class="btn danger" onclick="closeModal(); cancelDeal('${d.id}','${d.vehicleId}')">交渉決裂・中止</button>`:''}
       <button class="btn ghost" onclick="closeModal()">閉じる</button>
       <button class="btn" onclick="addDealNote('${d.id}')">追加する</button>
     </div>
