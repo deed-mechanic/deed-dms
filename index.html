@@ -547,7 +547,7 @@ function customerToRow(c){
     id: c.id, name: c.name||'', name_mn: c.nameMn||'', phone: c.phone||'', fb: c.fb||'',
     address: c.address||'', birthday: c.birthday||'', job: c.job||'', referrer: c.referrer||'',
     note: c.note||'', next_service_date: c.nextServiceDate||'', sales_staff: c.salesStaff||'',
-    customer_type: c.customerType||null,
+    customer_type: c.customerType||null, negotiation_history: c.negotiationHistory||[],
     sort_order: c.sortOrder||0, deleted_at: c.deletedAt||null, created_at: c.createdAt||Date.now()
   };
 }
@@ -555,7 +555,8 @@ function rowToCustomer(r){
   return {
     id: r.id, name: r.name, nameMn: r.name_mn, phone: r.phone, fb: r.fb, address: r.address,
     birthday: r.birthday, job: r.job, referrer: r.referrer, note: r.note,
-    nextServiceDate: r.next_service_date, salesStaff: r.sales_staff, customerType: r.customer_type, sortOrder: r.sort_order,
+    nextServiceDate: r.next_service_date, salesStaff: r.sales_staff, customerType: r.customer_type,
+    negotiationHistory: r.negotiation_history||[], sortOrder: r.sort_order,
     deletedAt: r.deleted_at, createdAt: r.created_at
   };
 }
@@ -1072,7 +1073,8 @@ function openCustomerDetail(id){
   if(!c) return;
   const myDeals = deals.filter(d=>d.customerId===id);
   const ownedVehicles = myDeals.filter(d=>d.stage==='納車').map(d=>vehicles.find(v=>v.id===d.vehicleId)).filter(Boolean);
-  const touchpoints = myDeals.reduce((s,d)=>s+d.history.length,0);
+  const negoHistory = (c.negotiationHistory||[]).slice().sort((a,b)=>(b.date||0)-(a.date||0));
+  const touchpoints = myDeals.reduce((s,d)=>s+d.history.length,0) + negoHistory.length;
   const firstContact = myDeals.length? Math.min(...myDeals.map(d=>d.createdAt)) : c.createdAt;
   document.getElementById('view').innerHTML = `
     <div class="topbar">
@@ -1113,20 +1115,115 @@ function openCustomerDetail(id){
       <div class="grid">${ownedVehicles.map(v=>vehicleCardHtml(v)).join('')}</div>
     </div>`:''}
     <div class="panel">
-      <h3>💬 商談・接点履歴（${myDeals.length}件）</h3>
-      ${myDeals.length===0? `<div class="empty" style="padding:24px">まだ商談履歴がありません</div>` : myDeals.map(d=>`
-        <div class="panel" style="background:var(--panel2); margin-bottom:10px; cursor:pointer" onclick="openDealDetail('${d.id}')">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
-            <strong>${esc(vehName(d.vehicleId))}</strong>
-            <span class="staff-tag">${esc(d.stage)}</span>
-          </div>
-          <ul class="timeline">
-            ${d.history.map(h=>`<li><span class="dot"></span><div><b>${fmtDate(h.date)}</b>${esc(h.note)}</div></li>`).join('')}
-          </ul>
+      <h3>💬 商談・交渉記録（${touchpoints}件）</h3>
+      <div class="field-row3">
+        <div class="field" style="margin-bottom:0"><label>日付</label><input id="f_negodate" type="date" value="${todayStr()}"></div>
+        <div class="field" style="margin-bottom:0"><label>担当者</label>
+          <select id="f_negostaff">
+            <option value="">未設定</option>
+            ${sortedStaff().map(s=>`<option value="${esc(staffLabel(s))}">${esc(staffLabel(s))}</option>`).join('')}
+          </select>
         </div>
-      `).join('')}
+        <div></div>
+      </div>
+      <div class="field"><label>内容</label><textarea id="f_negonote" placeholder="商談内容・交渉経過など"></textarea></div>
+      <button class="btn sm" onclick="addNegotiationHistory('${c.id}')">＋ 記録を追加</button>
+      ${negoHistory.length>0?`
+      <ul class="timeline" style="margin-top:14px">
+        ${negoHistory.map(h=>`
+          <li>
+            <span class="dot"></span>
+            <div style="flex:1"><b>${fmtDate(h.date)}</b>${h.staff?`<span class="staff-tag" style="margin-right:6px">${esc(h.staff)}</span>`:''}${esc(h.note)}</div>
+            <span class="mv" onclick="openNegotiationHistoryEditForm('${c.id}','${h.id}')">✎</span>
+            <span class="mv" onclick="deleteNegotiationHistory('${c.id}','${h.id}')">🗑</span>
+          </li>
+        `).join('')}
+      </ul>`:''}
+      ${myDeals.length>0?`
+      <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--line)">
+        <label style="font-size:11.5px; color:var(--text-dim); font-weight:500; display:block; margin-bottom:8px">🚗 車両ごとの商談履歴</label>
+        ${myDeals.map(d=>`
+          <div class="panel" style="background:var(--panel2); margin-bottom:10px; cursor:pointer" onclick="openDealDetail('${d.id}')">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+              <strong>${esc(vehName(d.vehicleId))}</strong>
+              <span class="staff-tag">${esc(d.stage)}</span>
+            </div>
+            <ul class="timeline">
+              ${d.history.map(h=>`<li><span class="dot"></span><div><b>${fmtDate(h.date)}</b>${esc(h.note)}</div></li>`).join('')}
+            </ul>
+          </div>
+        `).join('')}
+      </div>`:''}
+      ${negoHistory.length===0 && myDeals.length===0?`<div class="empty" style="padding:24px; margin-top:14px">まだ商談・交渉記録がありません</div>`:''}
     </div>
   `;
+}
+async function addNegotiationHistory(customerId){
+  const dateStr = document.getElementById('f_negodate').value;
+  const staff = document.getElementById('f_negostaff').value;
+  const note = document.getElementById('f_negonote').value.trim();
+  if(!note){ alert('内容を入力してください'); return; }
+  const c = customers.find(x=>x.id===customerId);
+  if(!c) return;
+  c.negotiationHistory = c.negotiationHistory || [];
+  c.negotiationHistory.push({
+    id: uid('NH'),
+    date: dateStr ? new Date(dateStr+'T00:00:00').getTime() : Date.now(),
+    staff, note, createdAt: Date.now()
+  });
+  openCustomerDetail(customerId);
+  await upsertCustomerRow(c);
+}
+async function deleteNegotiationHistory(customerId, entryId){
+  if(!confirm('この記録を削除しますか？')) return;
+  const c = customers.find(x=>x.id===customerId);
+  if(!c) return;
+  c.negotiationHistory = (c.negotiationHistory||[]).filter(h=>h.id!==entryId);
+  openCustomerDetail(customerId);
+  await upsertCustomerRow(c);
+}
+function openNegotiationHistoryEditForm(customerId, entryId){
+  const c = customers.find(x=>x.id===customerId);
+  if(!c) return;
+  const h = (c.negotiationHistory||[]).find(x=>x.id===entryId);
+  if(!h) return;
+  const dt = new Date(h.date);
+  const dateStr = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  showModal(`
+    <div class="modal-head"><h3>商談・交渉記録を編集</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="field-row">
+        <div class="field"><label>日付</label><input id="f_negoeditdate" type="date" value="${dateStr}"></div>
+        <div class="field"><label>担当者</label>
+          <select id="f_negoeditstaff">
+            <option value="">未設定</option>
+            ${sortedStaff().map(s=>`<option value="${esc(staffLabel(s))}" ${h.staff===staffLabel(s)?'selected':''}>${esc(staffLabel(s))}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>内容</label><textarea id="f_negoeditnote">${esc(h.note)}</textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn danger" onclick="deleteNegotiationHistory('${customerId}','${entryId}')">削除</button>
+      <button class="btn ghost" onclick="openCustomerDetail('${customerId}')">キャンセル</button>
+      <button class="btn" onclick="saveNegotiationHistoryEntry('${customerId}','${entryId}')">保存する</button>
+    </div>
+  `);
+}
+async function saveNegotiationHistoryEntry(customerId, entryId){
+  const c = customers.find(x=>x.id===customerId);
+  if(!c) return;
+  const h = (c.negotiationHistory||[]).find(x=>x.id===entryId);
+  if(!h) return;
+  const dateStr = document.getElementById('f_negoeditdate').value;
+  const staff = document.getElementById('f_negoeditstaff').value;
+  const note = document.getElementById('f_negoeditnote').value.trim();
+  if(!note){ alert('内容を入力してください'); return; }
+  if(dateStr) h.date = new Date(dateStr+'T00:00:00').getTime();
+  h.staff = staff;
+  h.note = note;
+  openCustomerDetail(customerId);
+  await upsertCustomerRow(c);
 }
 function serviceDue(dateStr){
   if(!dateStr) return false;
