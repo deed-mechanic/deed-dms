@@ -547,6 +547,7 @@ function customerToRow(c){
     id: c.id, name: c.name||'', name_mn: c.nameMn||'', phone: c.phone||'', fb: c.fb||'',
     address: c.address||'', birthday: c.birthday||'', job: c.job||'', referrer: c.referrer||'',
     note: c.note||'', next_service_date: c.nextServiceDate||'', sales_staff: c.salesStaff||'',
+    customer_type: c.customerType||null,
     sort_order: c.sortOrder||0, deleted_at: c.deletedAt||null, created_at: c.createdAt||Date.now()
   };
 }
@@ -554,7 +555,7 @@ function rowToCustomer(r){
   return {
     id: r.id, name: r.name, nameMn: r.name_mn, phone: r.phone, fb: r.fb, address: r.address,
     birthday: r.birthday, job: r.job, referrer: r.referrer, note: r.note,
-    nextServiceDate: r.next_service_date, salesStaff: r.sales_staff, sortOrder: r.sort_order,
+    nextServiceDate: r.next_service_date, salesStaff: r.sales_staff, customerType: r.customer_type, sortOrder: r.sort_order,
     deletedAt: r.deleted_at, createdAt: r.created_at
   };
 }
@@ -840,6 +841,7 @@ function lowAppraisal(v){
 ============================================================ */
 let custFilter = '';
 let custSort = 'new';
+let custTypeFilter = 'all';
 const CUST_SORT_OPTIONS = {
   custom:'カスタム（手動で並び替え）',
   new:'登録が新しい順', old:'登録が古い順', name:'氏名順',
@@ -873,9 +875,11 @@ async function moveCustomer(id, neighborId){
   await upsertCustomerRow(a);
   await upsertCustomerRow(b);
 }
+function customerTypeBadgeClass(t){ return t==='自社客'?'b-stock':t==='他社客'?'b-tradein':''; }
 function renderCustomers(){
   const q = custFilter.trim().toLowerCase();
   let list = customers.filter(c => !q || (c.name+c.nameMn+c.phone+c.address).toLowerCase().includes(q));
+  if(custTypeFilter!=='all') list = list.filter(c => custTypeFilter==='none' ? !c.customerType : c.customerType===custTypeFilter);
   list = sortCustomerList(list);
   return `
     <div class="topbar">
@@ -887,6 +891,9 @@ function renderCustomers(){
       <select onchange='custSort=this.value; renderView()'>
         ${Object.entries(CUST_SORT_OPTIONS).map(([k,l])=>`<option value="${k}" ${custSort===k?'selected':''}>${l}</option>`).join('')}
       </select>
+      ${['all','自社客','他社客','none'].map(t=>`
+        <span class="chip ${custTypeFilter===t?'on':''}" onclick='custTypeFilter="${t}"; renderView()'>${t==='all'?'すべて':(t==='none'?'区分未設定':t)}</span>
+      `).join('')}
     </div>
     ${list.length===0 ? `<div class="empty"><b>該当する顧客がいません</b>「＋新規顧客」から登録してください</div>` : `
     <div class="grid">
@@ -895,7 +902,10 @@ function renderCustomers(){
         const due = serviceDue(c.nextServiceDate);
         return `
         <div class="card" onclick="openCustomerDetail('${c.id}')">
-          ${due?`<span class="badge b-sold">🔔 点検時期</span>`:''}
+          <div style="display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; margin-bottom:2px;">
+            ${c.customerType?`<span class="badge ${customerTypeBadgeClass(c.customerType)}" style="position:static">${esc(c.customerType)}</span>`:''}
+            ${due?`<span class="badge b-sold" style="position:static">🔔 点検時期</span>`:''}
+          </div>
           <div class="name">${esc(c.name)}</div>
           <div class="meta">${esc(c.nameMn||'')} ${c.nameMn?'・':''}${esc(c.phone||'電話未登録')}</div>
           <div class="meta" style="margin-top:-6px;">📍 ${esc(c.address||'住所未登録')}</div>
@@ -938,6 +948,14 @@ function openCustomerForm(existing){
       <div class="field-row">
         <div class="field"><label>氏名（日本語表記）</label><input id="f_name" value="${esc(c.name)}" placeholder="佐藤 太郎"></div>
         <div class="field"><label>氏名（モンゴル語）</label><input id="f_nameMn" value="${esc(c.nameMn)}" placeholder="Бат Эрдэнэ"></div>
+      </div>
+      <div class="field">
+        <label>顧客区分</label>
+        <select id="f_custtype">
+          <option value="" ${!c.customerType?'selected':''}>未設定</option>
+          <option value="自社客" ${c.customerType==='自社客'?'selected':''}>自社客（自社で購入・今後の代替やメンテナンス案内用）</option>
+          <option value="他社客" ${c.customerType==='他社客'?'selected':''}>他社客（イベント・メンテナンス案内から自社への取り込み用）</option>
+        </select>
       </div>
       <div class="field-row">
         <div class="field"><label>電話番号</label><input id="f_phone" value="${esc(c.phone)}" placeholder="9911-2233"></div>
@@ -1014,6 +1032,7 @@ async function saveCustomer(id){
     job: document.getElementById('f_job').value.trim(),
     referrer: document.getElementById('f_referrer').value.trim(),
     salesStaff: document.getElementById('f_salesstaff').value,
+    customerType: document.getElementById('f_custtype').value || null,
     nextServiceDate: document.getElementById('f_nextService').value,
     note: document.getElementById('f_note').value.trim(),
   };
@@ -1063,7 +1082,10 @@ function openCustomerDetail(id){
     <div class="panel">
       <div class="detail-head">
         <div>
-          <div class="detail-title">${esc(c.name)} 様</div>
+          <div class="detail-title">
+            ${esc(c.name)} 様
+            ${c.customerType?`<span class="badge ${customerTypeBadgeClass(c.customerType)}" style="position:static; margin-left:8px; vertical-align:middle;">${esc(c.customerType)}</span>`:''}
+          </div>
           <div class="detail-id">${esc(c.id)} ・ ${esc(c.nameMn||'')}</div>
         </div>
         <button class="btn ghost sm" onclick='openCustomerForm(${JSON.stringify(c).replace(/'/g,"&#39;")})'>✎ 編集</button>
