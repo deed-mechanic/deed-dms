@@ -2106,10 +2106,22 @@ async function saveServiceHistoryEntry(vehicleId, entryId){
 /* ============================================================
    RENDER: DEALS (kanban)
 ============================================================ */
-const DEAL_LANES = ['ドリギオン','バルダ','テムカ','エッサ'];
-function dealLaneStaffLabel(name){
-  const rec = sortedStaff().find(s=>s.name===name);
-  return rec ? staffLabel(rec) : name;
+const DEAL_LANE_NAMES = ['ドリギオン','バルダ','テムカ','エッサ'];
+function dealLaneStaffList(){
+  return sortedStaff().filter(s=>DEAL_LANE_NAMES.includes(s.name));
+}
+async function moveDealLane(id, dir){
+  const list = dealLaneStaffList();
+  const idx = list.findIndex(s=>s.id===id);
+  const swapIdx = idx+dir;
+  if(idx===-1 || swapIdx<0 || swapIdx>=list.length) return;
+  const a = list[idx], b = list[swapIdx];
+  const tmp = a.sortOrder||0;
+  a.sortOrder = b.sortOrder||0;
+  b.sortOrder = tmp;
+  renderView();
+  await upsertStaffRow(a);
+  await upsertStaffRow(b);
 }
 function renderDealLaneKanban(items){
   return `
@@ -2137,19 +2149,27 @@ function renderDealLaneKanban(items){
     </div>`;
 }
 function renderDeals(){
-  const lanes = DEAL_LANES.map(name=>({
-    name, label: dealLaneStaffLabel(name),
-    items: deals.filter(d=>(d.staff||'').startsWith(name))
+  const laneStaff = dealLaneStaffList();
+  const lanes = laneStaff.map(s=>({
+    id: s.id, label: staffLabel(s),
+    items: deals.filter(d=>(d.staff||'').startsWith(s.name))
   }));
-  const others = deals.filter(d=>!DEAL_LANES.some(n=>(d.staff||'').startsWith(n)));
+  const laneNames = laneStaff.map(s=>s.name);
+  const others = deals.filter(d=>!laneNames.some(n=>(d.staff||'').startsWith(n)));
   return `
     <div class="topbar">
       <div class="pagetitle">💬 商談パイプライン <span class="sub">${deals.length}件</span></div>
       <button class="btn" onclick="openDealForm()">＋ 新規商談</button>
     </div>
-    ${lanes.map(lane=>`
+    ${lanes.map((lane,i)=>`
       <div class="lane-block">
-        <div class="lane-head"><span>🧑 ${esc(lane.label)}</span><span class="cnt">${lane.items.length}件</span></div>
+        <div class="lane-head">
+          <span>🧑 ${esc(lane.label)}</span><span class="cnt">${lane.items.length}件</span>
+          <span style="margin-left:auto; display:flex; gap:6px">
+            <span class="mv" style="${i===0?'opacity:.3; pointer-events:none;':''}" onclick="moveDealLane('${lane.id}',-1)" title="上に移動">↑</span>
+            <span class="mv" style="${i===lanes.length-1?'opacity:.3; pointer-events:none;':''}" onclick="moveDealLane('${lane.id}',1)" title="下に移動">↓</span>
+          </span>
+        </div>
         ${renderDealLaneKanban(lane.items)}
       </div>
     `).join('')}
