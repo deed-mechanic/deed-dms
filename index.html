@@ -276,6 +276,16 @@
   @media (max-width:1100px){
     .kanban{overflow-x:auto; grid-auto-flow:column; grid-template-columns:repeat(9,140px);}
   }
+  .lane-block{margin-bottom:24px;}
+  .lane-head{
+    display:flex; align-items:center; gap:8px; font-weight:800; font-size:13.5px;
+    margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--line);
+  }
+  .lane-head .cnt{
+    font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-dim);
+    background:var(--panel2); padding:1px 8px; border-radius:10px;
+  }
+  .kanban.lane .kcol{max-height:320px;}
 
   .staff-tag{
     font-size:10.5px; background:var(--teal-soft); color:var(--teal); padding:2px 7px; border-radius:6px; display:inline-block; margin-top:2px;
@@ -2096,28 +2106,21 @@ async function saveServiceHistoryEntry(vehicleId, entryId){
 /* ============================================================
    RENDER: DEALS (kanban)
 ============================================================ */
-let dealFilter = {staff:'all'};
-function renderDeals(){
-  const staffOptions = sortedStaff().map(s=>staffLabel(s));
-  const filtered = dealFilter.staff==='all' ? deals : deals.filter(d=>d.staff===dealFilter.staff);
+const DEAL_LANES = ['ドリギオン','バルダ','テムカ','エッサ'];
+function dealLaneStaffLabel(name){
+  const rec = sortedStaff().find(s=>s.name===name);
+  return rec ? staffLabel(rec) : name;
+}
+function renderDealLaneKanban(items){
   return `
-    <div class="topbar">
-      <div class="pagetitle">💬 商談パイプライン <span class="sub">${filtered.length}件</span></div>
-      <button class="btn" onclick="openDealForm()">＋ 新規商談</button>
-    </div>
-    <div class="toolbar">
-      <span style="font-size:11.5px; color:var(--text-dim); margin-right:2px">担当者で絞り込み:</span>
-      <span class="chip ${dealFilter.staff==='all'?'on':''}" onclick='dealFilter.staff="all"; renderView()'>すべて</span>
-      ${staffOptions.map(s=>`<span class="chip ${dealFilter.staff===s?'on':''}" onclick='dealFilter.staff=${JSON.stringify(s)}; renderView()'>${esc(s)}</span>`).join('')}
-    </div>
-    <div class="kanban">
+    <div class="kanban lane">
       ${STAGES.map(stage=>{
-        const items = filtered.filter(d=>d.stage===stage).sort((a,b)=>(a.staff||'').localeCompare(b.staff||'','ja'));
+        const stageItems = items.filter(d=>d.stage===stage);
         return `
         <div class="kcol">
-          <div class="kcol-head"><span>${stage}</span><span class="cnt">${items.length}</span></div>
+          <div class="kcol-head"><span>${stage}</span><span class="cnt">${stageItems.length}</span></div>
           <div class="kcol-body">
-            ${items.map(d=>`
+            ${stageItems.map(d=>`
               <div class="kcard" onclick="openDealDetail('${d.id}')" title="${esc(custName(d.customerId))} 様 / ${esc(vehName(d.vehicleId))} / ${esc(d.staff||'担当未設定')}">
                 <div class="cust">${esc(custName(d.customerId))}</div>
                 <div class="veh">${esc(vehName(d.vehicleId))}</div>
@@ -2131,7 +2134,31 @@ function renderDeals(){
           </div>
         </div>`;
       }).join('')}
+    </div>`;
+}
+function renderDeals(){
+  const lanes = DEAL_LANES.map(name=>({
+    name, label: dealLaneStaffLabel(name),
+    items: deals.filter(d=>(d.staff||'').startsWith(name))
+  }));
+  const others = deals.filter(d=>!DEAL_LANES.some(n=>(d.staff||'').startsWith(n)));
+  return `
+    <div class="topbar">
+      <div class="pagetitle">💬 商談パイプライン <span class="sub">${deals.length}件</span></div>
+      <button class="btn" onclick="openDealForm()">＋ 新規商談</button>
     </div>
+    ${lanes.map(lane=>`
+      <div class="lane-block">
+        <div class="lane-head"><span>🧑 ${esc(lane.label)}</span><span class="cnt">${lane.items.length}件</span></div>
+        ${renderDealLaneKanban(lane.items)}
+      </div>
+    `).join('')}
+    ${others.length ? `
+      <div class="lane-block">
+        <div class="lane-head"><span>🧑 その他・未設定</span><span class="cnt">${others.length}件</span></div>
+        ${renderDealLaneKanban(others)}
+      </div>
+    ` : ''}
   `;
 }
 function stagePrev(stage){ const i=STAGES.indexOf(stage); return i>0; }
