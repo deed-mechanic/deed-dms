@@ -316,18 +316,18 @@
     </div>
     <nav class="navlist" id="navlist"></nav>
     <div class="sidebar-foot">
-      日本車中古車販売・査定<br>
+      Japanese Used Car Sales &amp; Appraisal<br>
       Улаанбаатар хот · Japan Used Cars
       <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px">
-        <button class="btn ghost sm" style="width:100%" onclick="downloadBackup(this)">💾 バックアップをダウンロード</button>
-        <button class="btn ghost sm" style="width:100%" onclick="openChangePasswordForm()">🔑 パスワードを変更</button>
+        <button class="btn ghost sm" style="width:100%" onclick="downloadBackup(this)">💾 Download Backup</button>
+        <button class="btn ghost sm" style="width:100%" onclick="openChangePasswordForm()">🔑 Change Password</button>
         <button class="btn ghost sm" style="width:100%" onclick="showVersionInfo()">ℹ️ Version 1.0</button>
-        <button class="btn ghost sm" style="width:100%" onclick="doLogout()">🔒 ログアウト</button>
+        <button class="btn ghost sm" style="width:100%" onclick="doLogout()">🔒 Log Out</button>
       </div>
     </div>
   </aside>
   <main>
-    <button id="menuBtn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰ メニュー</button>
+    <button id="menuBtn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰ Menu</button>
     <div id="view"></div>
   </main>
 </div>
@@ -335,24 +335,24 @@
 <div id="loginScreen" style="display:none; position:fixed; inset:0; background:var(--bg); z-index:100; align-items:center; justify-content:center;">
   <div class="panel" style="width:100%; max-width:340px; margin:16px;">
     <img class="brand-logo" alt="DEED MOTORS" src="" id="loginLogo" style="margin-bottom:16px;">
-    <h3 style="text-align:center; margin-bottom:16px;">🔒 スタッフ用パスワード</h3>
+    <h3 style="text-align:center; margin-bottom:16px;">🔒 Staff Password</h3>
     <div class="field" style="position:relative">
-      <input id="f_loginpw" type="password" placeholder="パスワードを入力" style="padding-right:40px" onkeydown="if(event.key==='Enter')doLogin()">
+      <input id="f_loginpw" type="password" placeholder="Enter password" style="padding-right:40px" onkeydown="if(event.key==='Enter')doLogin()">
       <span onclick="togglePwVisibility('f_loginpw', this)" style="position:absolute; right:10px; top:9px; cursor:pointer; font-size:15px; color:var(--text-dim);">👁</span>
     </div>
-    <div id="loginError" style="color:var(--red); font-size:12px; margin-bottom:10px; display:none;">パスワードが違います</div>
-    <button class="btn" style="width:100%" onclick="doLogin()">ログイン</button>
+    <div id="loginError" style="color:var(--red); font-size:12px; margin-bottom:10px; display:none;">Incorrect password</div>
+    <button class="btn" style="width:100%" onclick="doLogin()">Log In</button>
   </div>
 </div>
 
 <div id="mnKeyboardBar" style="position:fixed; left:0; right:0; bottom:0; background:var(--panel); border-top:1px solid var(--line); z-index:60; padding:8px 12px; display:none; box-shadow:0 -4px 14px rgba(0,0,0,.3);">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-    <span style="font-size:11.5px; color:var(--text-dim); font-weight:600;">🇲🇳 モンゴル語キーボード / Монгол гар</span>
-    <button class="btn ghost sm" onclick="toggleMnKeyboard()">閉じる ✕</button>
+    <span style="font-size:11.5px; color:var(--text-dim); font-weight:600;">🇲🇳 Mongolian Keyboard / Монгол гар</span>
+    <button class="btn ghost sm" onclick="toggleMnKeyboard()">Close ✕</button>
   </div>
   <div id="mnKeyboardKeys"></div>
 </div>
-<button id="mnKeyboardToggleBtn" class="btn" style="position:fixed; right:16px; bottom:16px; z-index:59;" onclick="toggleMnKeyboard()">🇲🇳 ⌨ モンゴル語キーボード</button>
+<button id="mnKeyboardToggleBtn" class="btn" style="position:fixed; right:16px; bottom:16px; z-index:59;" onclick="toggleMnKeyboard()">🇲🇳 ⌨ Mongolian Keyboard</button>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
@@ -369,16 +369,27 @@ let currentView = 'dashboard';
 let saving = false;
 
 const STAGES = ['問い合わせ','来店','査定','試乗','見積','交渉','契約','納車','キャンセル'];
-const VSTATUS = {stock:'在庫', nego:'商談中', sold:'売約済', delivered:'納車済'};
+const STAGE_LABELS_EN = {
+  '問い合わせ':'Inquiry', '来店':'Visit', '査定':'Appraisal', '試乗':'Test Drive', '見積':'Quote',
+  '交渉':'Negotiation', '契約':'Contract', '納車':'Delivery', 'キャンセル':'Cancelled'
+};
+function stageLabel(stage){ return STAGE_LABELS_EN[stage] || stage; }
+const VSTATUS = {stock:'In Stock', nego:'In Negotiation', sold:'Sold', delivered:'Delivered'};
 const DEFECT_OPTIONS = ['バンパー傷','フェンダー凹み','飛び石','シート汚れ','タイヤ摩耗','オイル漏れ','異音','修復歴あり','ガラス傷','塗装剥がれ'];
+const DEFECT_LABELS_EN = {
+  'バンパー傷':'Bumper scratch', 'フェンダー凹み':'Fender dent', '飛び石':'Stone chip', 'シート汚れ':'Seat stain',
+  'タイヤ摩耗':'Tire wear', 'オイル漏れ':'Oil leak', '異音':'Unusual noise', '修復歴あり':'Prior repair history',
+  'ガラス傷':'Glass scratch', '塗装剥がれ':'Paint peeling'
+};
+function defectLabel(d){ return DEFECT_LABELS_EN[d] || d; }
 
 const NAV = [
-  {id:'dashboard', ic:'🏠', ja:'ダッシュボード', mn:'Хяналтын самбар'},
-  {id:'customers', ic:'👤', ja:'顧客管理', mn:'Үйлчлүүлэгч'},
-  {id:'vehicles', ic:'🚗', ja:'車両・査定', mn:'Тээвэр · Үнэлгээ'},
-  {id:'deals', ic:'💬', ja:'商談パイプライン', mn:'Худалдааны явц'},
-  {id:'staff', ic:'👥', ja:'スタッフ管理', mn:'Ажилтан'},
-  {id:'trash', ic:'🗑', ja:'ゴミ箱', mn:'Хогийн сав'},
+  {id:'dashboard', ic:'🏠', ja:'Dashboard', mn:'Хяналтын самбар'},
+  {id:'customers', ic:'👤', ja:'Customers', mn:'Үйлчлүүлэгч'},
+  {id:'vehicles', ic:'🚗', ja:'Vehicles & Appraisal', mn:'Тээвэр · Үнэлгээ'},
+  {id:'deals', ic:'💬', ja:'Deal Pipeline', mn:'Худалдааны явц'},
+  {id:'staff', ic:'👥', ja:'Staff', mn:'Ажилтан'},
+  {id:'trash', ic:'🗑', ja:'Trash', mn:'Хогийн сав'},
 ];
 
 /* ---------------- Mongolian on-screen keyboard ---------------- */
@@ -431,9 +442,9 @@ function renderMnKeyboardKeys(){
     </div>
   `).join('') + `
     <div style="display:flex; gap:4px; margin-top:4px;">
-      <span class="mv" style="padding:8px 14px; ${mnShift?'background:var(--amber-soft); color:var(--amber);':''}" onclick="mnToggleShift()">⇧ 大文字</span>
-      <span class="mv" style="padding:8px 30px;" onclick="mnKeyInsert(' ')">スペース</span>
-      <span class="mv" style="padding:8px 14px;" onclick="mnKeyBackspace()">⌫ 削除</span>
+      <span class="mv" style="padding:8px 14px; ${mnShift?'background:var(--amber-soft); color:var(--amber);':''}" onclick="mnToggleShift()">⇧ Shift</span>
+      <span class="mv" style="padding:8px 30px;" onclick="mnKeyInsert(' ')">Space</span>
+      <span class="mv" style="padding:8px 14px;" onclick="mnKeyBackspace()">⌫ Delete</span>
     </div>
   `;
 }
@@ -475,7 +486,7 @@ async function doLogin(){
   if(!password) return;
   const { error } = await sb.auth.signInWithPassword({ email: DMS_SHARED_EMAIL, password });
   if(error){
-    errEl.textContent = 'パスワードが違います';
+    errEl.textContent = 'Incorrect password';
     errEl.style.display = 'block';
     return;
   }
@@ -490,26 +501,26 @@ function togglePwVisibility(inputId, iconEl){
 }
 function openChangePasswordForm(){
   showModal(`
-    <div class="modal-head"><h3>🔑 共通パスワードを変更</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-head"><h3>🔑 Change Shared Password</h3><button class="close-x" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
       <div style="font-size:11.5px; color:var(--text-dim); margin-bottom:14px; line-height:1.6">
-        全スタッフで共有しているログインパスワードを変更します。変更後は、他のスタッフにも新しいパスワードを伝えてください（6文字以上）。
+        This changes the login password shared by all staff. After changing it, be sure to tell the other staff the new password (6+ characters).
       </div>
       <div class="field" style="position:relative">
-        <label>新しいパスワード</label>
+        <label>New password</label>
         <input id="f_newpw1" type="password" style="padding-right:40px">
         <span onclick="togglePwVisibility('f_newpw1', this)" style="position:absolute; right:10px; top:30px; cursor:pointer; font-size:15px; color:var(--text-dim);">👁</span>
       </div>
       <div class="field" style="position:relative">
-        <label>新しいパスワード（確認）</label>
+        <label>New password (confirm)</label>
         <input id="f_newpw2" type="password" style="padding-right:40px">
         <span onclick="togglePwVisibility('f_newpw2', this)" style="position:absolute; right:10px; top:30px; cursor:pointer; font-size:15px; color:var(--text-dim);">👁</span>
       </div>
       <div id="changePwError" style="color:var(--red); font-size:12px; display:none;"></div>
     </div>
     <div class="modal-foot">
-      <button class="btn ghost" onclick="closeModal()">キャンセル</button>
-      <button class="btn" onclick="changePassword()">変更する</button>
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="changePassword()">Change</button>
     </div>
   `);
 }
@@ -518,15 +529,15 @@ async function changePassword(){
   const pw2 = document.getElementById('f_newpw2').value;
   const errEl = document.getElementById('changePwError');
   errEl.style.display = 'none';
-  if(pw1.length<6){ errEl.textContent='6文字以上で入力してください'; errEl.style.display='block'; return; }
-  if(pw1!==pw2){ errEl.textContent='パスワードが一致しません'; errEl.style.display='block'; return; }
+  if(pw1.length<6){ errEl.textContent='Please enter at least 6 characters'; errEl.style.display='block'; return; }
+  if(pw1!==pw2){ errEl.textContent='Passwords do not match'; errEl.style.display='block'; return; }
   const { error } = await sb.auth.updateUser({ password: pw1 });
-  if(error){ errEl.textContent = '変更に失敗しました: '+error.message; errEl.style.display='block'; return; }
+  if(error){ errEl.textContent = 'Failed to change password: '+error.message; errEl.style.display='block'; return; }
   closeModal();
-  alert('パスワードを変更しました。次回ログインから新しいパスワードを使用してください。');
+  alert('Password changed. Please use the new password from your next login.');
 }
 async function doLogout(){
-  if(!confirm('ログアウトしますか？')) return;
+  if(!confirm('Log out?')) return;
   await sb.auth.signOut();
   location.reload();
 }
@@ -628,10 +639,10 @@ async function deleteDealRow(id){
   saving = false; renderSaveBar();
 }
 function staffToRow(s){
-  return { id: s.id, name: s.name||'', role: s.role||'', active: s.active!==false, sort_order: s.sortOrder||0, created_at: s.createdAt||Date.now() };
+  return { id: s.id, name: s.name||'', role: s.role||'', email: s.email||'', active: s.active!==false, sort_order: s.sortOrder||0, created_at: s.createdAt||Date.now() };
 }
 function rowToStaff(r){
-  return { id: r.id, name: r.name, role: r.role, active: r.active, sortOrder: r.sort_order, createdAt: r.created_at };
+  return { id: r.id, name: r.name, role: r.role, email: r.email||'', active: r.active, sortOrder: r.sort_order, createdAt: r.created_at };
 }
 function sortedStaff(){ return [...staffList].sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0)); }
 async function upsertStaffRow(s){
@@ -704,7 +715,7 @@ async function loadAll(){
 }
 function renderSaveBar(){
   const el = document.getElementById('saveIndicator');
-  if(el) el.innerHTML = saving ? `<span class="savebar"><span class="dotpulse" style="background:var(--amber)"></span>保存中…</span>` : `<span class="savebar"><span class="dotpulse"></span>保存済み・全スタッフ共有</span>`;
+  if(el) el.innerHTML = saving ? `<span class="savebar"><span class="dotpulse" style="background:var(--amber)"></span>Saving…</span>` : `<span class="savebar"><span class="dotpulse"></span>Saved · Shared with all staff</span>`;
 }
 
 function seedDemoData(){
@@ -741,8 +752,8 @@ function sameMonth(ts){
   const d=new Date(ts), n=new Date();
   return d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth();
 }
-function custName(id){ const c=customers.find(x=>x.id===id); return c?c.name:'（顧客不明）'; }
-function vehName(id){ const v=vehicles.find(x=>x.id===id); return v? `${v.maker} ${v.model} (${v.year})`:'（車両不明）'; }
+function custName(id){ const c=customers.find(x=>x.id===id); return c?c.name:'(Unknown customer)'; }
+function vehName(id){ const v=vehicles.find(x=>x.id===id); return v? `${v.maker} ${v.model} (${v.year})`:'(Unknown vehicle)'; }
 
 /* ============================================================
    RENDER: NAV
@@ -770,43 +781,79 @@ function renderDashboard(){
   const s = stats();
   const recentDeals = [...deals].sort((a,b)=>latestDealTime(b)-latestDealTime(a)).slice(0,6);
   const dueCustomers = customers.filter(c=>serviceDue(c.nextServiceDate)).sort((a,b)=>new Date(a.nextServiceDate)-new Date(b.nextServiceDate));
+  const cr = contactReminders();
   return `
     <div class="topbar">
       <div>
-        <div class="pagetitle">🏠 ダッシュボード <span class="sub">本日 ${fmtDate(Date.now())}</span></div>
+        <div class="pagetitle">🏠 Dashboard <span class="sub">Today ${fmtDate(Date.now())}</span></div>
       </div>
       <span id="saveIndicator"></span>
     </div>
     <div class="stats-row">
       <div class="stat-card" style="--accent:var(--teal)">
-        <div class="k">🚗 在庫台数</div><div class="v">${s.stock}<span>台</span></div>
+        <div class="k">🚗 Vehicles in Stock</div><div class="v">${s.stock}<span>units</span></div>
       </div>
       <div class="stat-card" style="--accent:var(--amber)">
-        <div class="k">💬 商談中</div><div class="v">${s.nego}<span>件</span></div>
+        <div class="k">💬 In Negotiation</div><div class="v">${s.nego}<span>deals</span></div>
       </div>
       <div class="stat-card" style="--accent:var(--red)">
-        <div class="k">📋 査定未実施</div><div class="v">${s.appraisalPending}<span>台</span></div>
+        <div class="k">📋 Not Yet Appraised</div><div class="v">${s.appraisalPending}<span>units</span></div>
       </div>
       <div class="stat-card" style="--accent:var(--green)">
-        <div class="k">💰 累計粗利益</div><div class="v" style="font-size:20px">${fmtMoney(s.totalProfit)}</div>
+        <div class="k">💰 Total Gross Profit</div><div class="v" style="font-size:20px">${fmtMoney(s.totalProfit)}</div>
       </div>
     </div>
     <div class="panel">
-      <h3>🔔 車検・点検リマインド（AI21スタイル）</h3>
-      ${dueCustomers.length===0 ? `<div class="empty" style="padding:20px">30日以内に予定されている車検・点検はありません</div>` : `
+      <h3>🔔 Inspection Reminders (AI21 style)</h3>
+      ${dueCustomers.length===0 ? `<div class="empty" style="padding:20px">No inspections due within the next 30 days</div>` : `
       <div class="grid">
         ${dueCustomers.map(c=>`
           <div class="card" onclick="openCustomerDetail('${c.id}')">
             <span class="badge b-sold">🔔 ${fmtDate(c.nextServiceDate)}</span>
-            <div class="name">${esc(c.name)} 様</div>
-            <div class="meta">${esc(c.phone||'電話未登録')}</div>
+            <div class="name">${esc(c.name)}</div>
+            <div class="meta">${esc(c.phone||'No phone on file')}</div>
           </div>
         `).join('')}
       </div>`}
     </div>
     <div class="panel">
-      <h3>📅 最近の商談動向</h3>
-      ${recentDeals.length===0 ? `<div class="empty">まだ商談データがありません</div>` : `
+      <h3>📞 Contact Reminders</h3>
+      ${(cr.staleContacts.length+cr.followups.length+cr.stagnant.length)===0 ? `<div class="empty" style="padding:20px">No customers currently need contact</div>` : `
+      ${cr.staleContacts.length? `<div style="margin-bottom:10px"><b>No contact in a while (${CONTACT_STALE_DAYS}+ days)</b></div>
+      <div class="grid" style="margin-bottom:16px">
+        ${cr.staleContacts.map(x=>`
+          <div class="card" onclick="openCustomerDetail('${x.c.id}')">
+            <span class="badge b-sold">📞 No contact for ${x.days} days</span>
+            <div class="name">${esc(x.c.name)}</div>
+            <div class="meta">${esc(x.c.salesStaff||'Unassigned')} / ${esc(x.c.phone||'No phone on file')}</div>
+          </div>
+        `).join('')}
+      </div>` : ''}
+      ${cr.followups.length? `<div style="margin-bottom:10px"><b>Post-delivery follow-up</b></div>
+      <div class="grid" style="margin-bottom:16px">
+        ${cr.followups.map(x=>`
+          <div class="card" onclick="openCustomerDetail('${x.c.id}')">
+            <span class="badge b-sold">🚗 ${x.days} days since delivery</span>
+            <div class="name">${esc(x.c.name)}</div>
+            <div class="meta">${esc(x.c.salesStaff||'Unassigned')} / ${esc(x.c.phone||'No phone on file')}</div>
+          </div>
+        `).join('')}
+      </div>` : ''}
+      ${cr.stagnant.length? `<div style="margin-bottom:10px"><b>Stalled negotiations (no progress in ${DEAL_STAGNANT_DAYS}+ days)</b></div>
+      <div class="grid">
+        ${cr.stagnant.map(x=>`
+          <div class="card" onclick="openDealDetail('${x.d.id}')">
+            <span class="badge b-sold">💬 Stalled ${x.days} days (${esc(stageLabel(x.d.stage))})</span>
+            <div class="name">${esc(custName(x.d.customerId))}</div>
+            <div class="meta">${esc(x.d.staff||'Unassigned')} / ${esc(vehName(x.d.vehicleId))}</div>
+          </div>
+        `).join('')}
+      </div>` : ''}
+      `}
+    </div>
+    <div class="panel">
+      <h3>📅 Recent Deal Activity</h3>
+      ${recentDeals.length===0 ? `<div class="empty">No deal activity yet</div>` : `
       <ul class="timeline">
         ${recentDeals.map(d=>{
           const last = d.history[d.history.length-1];
@@ -814,16 +861,16 @@ function renderDashboard(){
             <span class="dot"></span>
             <div>
               <b>${fmtDate(last?last.date:d.createdAt)}</b>
-              <strong>${esc(custName(d.customerId))}</strong> 様 — ${esc(vehName(d.vehicleId))}
-              <span class="staff-tag">${esc(d.stage)}</span>
+              <strong>${esc(custName(d.customerId))}</strong> — ${esc(vehName(d.vehicleId))}
+              <span class="staff-tag">${esc(stageLabel(d.stage))}</span>
             </div>
           </li>`;
         }).join('')}
       </ul>`}
     </div>
     <div class="panel">
-      <h3>🔧 査定が必要な在庫車両</h3>
-      ${vehicles.filter(v=>v.status==='stock' && lowAppraisal(v)).length===0 ? `<div class="empty" style="padding:20px">対象車両はありません</div>` : `
+      <h3>🔧 Stock Vehicles Needing Appraisal</h3>
+      ${vehicles.filter(v=>v.status==='stock' && lowAppraisal(v)).length===0 ? `<div class="empty" style="padding:20px">No vehicles to show</div>` : `
       <div class="grid">
         ${vehicles.filter(v=>v.status==='stock' && lowAppraisal(v)).map(v=>vehicleCardHtml(v)).join('')}
       </div>`}
@@ -844,9 +891,9 @@ let custFilter = '';
 let custSort = 'new';
 let custTypeFilter = 'all';
 const CUST_SORT_OPTIONS = {
-  custom:'カスタム（手動で並び替え）',
-  new:'登録が新しい順', old:'登録が古い順', name:'氏名順',
-  deals:'商談件数が多い順', service_due:'次回車検・点検が近い順'
+  custom:'Custom (manual order)',
+  new:'Newest first', old:'Oldest first', name:'By name',
+  deals:'Most deals first', service_due:'Next inspection due soonest'
 };
 function sortCustomerList(list){
   const sorted = [...list];
@@ -876,6 +923,8 @@ async function moveCustomer(id, neighborId){
   await upsertCustomerRow(a);
   await upsertCustomerRow(b);
 }
+const CUSTOMER_TYPE_LABELS_EN = {'自社客':'In-House Customer', '他社客':'Other Dealer Customer'};
+function customerTypeLabel(t){ return CUSTOMER_TYPE_LABELS_EN[t] || t; }
 function customerTypeBadgeClass(t){ return t==='自社客'?'b-stock':t==='他社客'?'b-tradein':''; }
 function renderCustomers(){
   const q = custFilter.trim().toLowerCase();
@@ -884,19 +933,19 @@ function renderCustomers(){
   list = sortCustomerList(list);
   return `
     <div class="topbar">
-      <div class="pagetitle">👤 顧客管理 <span class="sub">${customers.length}名登録</span></div>
-      <button class="btn" onclick="openCustomerForm()">＋ 新規顧客</button>
+      <div class="pagetitle">👤 Customers <span class="sub">${customers.length} registered</span></div>
+      <button class="btn" onclick="openCustomerForm()">＋ New Customer</button>
     </div>
     <div class="toolbar">
-      <input type="text" placeholder="🔍 氏名・電話番号・住所で検索…" value="${esc(custFilter)}" oninput="custFilter=this.value; renderView()">
+      <input type="text" placeholder="🔍 Search by name, phone, or address…" value="${esc(custFilter)}" oninput="custFilter=this.value; renderView()">
       <select onchange='custSort=this.value; renderView()'>
         ${Object.entries(CUST_SORT_OPTIONS).map(([k,l])=>`<option value="${k}" ${custSort===k?'selected':''}>${l}</option>`).join('')}
       </select>
       ${['all','自社客','他社客','none'].map(t=>`
-        <span class="chip ${custTypeFilter===t?'on':''}" onclick='custTypeFilter="${t}"; renderView()'>${t==='all'?'すべて':(t==='none'?'区分未設定':t)}</span>
+        <span class="chip ${custTypeFilter===t?'on':''}" onclick='custTypeFilter="${t}"; renderView()'>${t==='all'?'All':(t==='none'?'No Type Set':customerTypeLabel(t))}</span>
       `).join('')}
     </div>
-    ${list.length===0 ? `<div class="empty"><b>該当する顧客がいません</b>「＋新規顧客」から登録してください</div>` : `
+    ${list.length===0 ? `<div class="empty"><b>No matching customers</b>Use "＋ New Customer" to register one</div>` : `
     <div class="grid">
       ${list.map((c,i)=>{
         const dealCount = deals.filter(d=>d.customerId===c.id).length;
@@ -904,20 +953,20 @@ function renderCustomers(){
         return `
         <div class="card" onclick="openCustomerDetail('${c.id}')">
           <div style="display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; margin-bottom:2px;">
-            ${c.customerType?`<span class="badge ${customerTypeBadgeClass(c.customerType)}" style="position:static">${esc(c.customerType)}</span>`:''}
-            ${due?`<span class="badge b-sold" style="position:static">🔔 点検時期</span>`:''}
+            ${c.customerType?`<span class="badge ${customerTypeBadgeClass(c.customerType)}" style="position:static">${esc(customerTypeLabel(c.customerType))}</span>`:''}
+            ${due?`<span class="badge b-sold" style="position:static">🔔 Inspection Due</span>`:''}
           </div>
           <div class="name">${esc(c.name)}</div>
-          <div class="meta">${esc(c.nameMn||'')} ${c.nameMn?'・':''}${esc(c.phone||'電話未登録')}</div>
-          <div class="meta" style="margin-top:-6px;">📍 ${esc(c.address||'住所未登録')}</div>
+          <div class="meta">${esc(c.nameMn||'')} ${c.nameMn?'・':''}${esc(c.phone||'No phone on file')}</div>
+          <div class="meta" style="margin-top:-6px;">📍 ${esc(c.address||'No address on file')}</div>
           ${c.salesStaff?`<span class="staff-tag" style="margin-top:4px">👤 ${esc(c.salesStaff)}</span>`:''}
           ${custSort==='custom' ? `<div style="display:flex; gap:6px; margin-top:6px;">
-            <span class="mv" style="${i===0?'opacity:.3; pointer-events:none;':''}" onclick="event.stopPropagation(); moveCustomer('${c.id}',${list[i-1]?`'${list[i-1].id}'`:'null'})">↑ 上へ</span>
-            <span class="mv" style="${i===list.length-1?'opacity:.3; pointer-events:none;':''}" onclick="event.stopPropagation(); moveCustomer('${c.id}',${list[i+1]?`'${list[i+1].id}'`:'null'})">↓ 下へ</span>
+            <span class="mv" style="${i===0?'opacity:.3; pointer-events:none;':''}" onclick="event.stopPropagation(); moveCustomer('${c.id}',${list[i-1]?`'${list[i-1].id}'`:'null'})">↑ Up</span>
+            <span class="mv" style="${i===list.length-1?'opacity:.3; pointer-events:none;':''}" onclick="event.stopPropagation(); moveCustomer('${c.id}',${list[i+1]?`'${list[i+1].id}'`:'null'})">↓ Down</span>
           </div>`:''}
           <div class="row2">
-            <span class="score">商談履歴 ${dealCount}件</span>
-            <span class="score">登録 ${fmtDate(c.createdAt)}</span>
+            <span class="score">${dealCount} deal(s)</span>
+            <span class="score">Registered ${fmtDate(c.createdAt)}</span>
           </div>
         </div>`;
       }).join('')}
@@ -931,58 +980,58 @@ function openCustomerForm(existing){
   linkedTradeInVehicleId = null;
   const alreadyLinked = existing ? vehicles.filter(v=>v.ownerCustomerId===c.id) : [];
   showModal(`
-    <div class="modal-head"><h3>${existing?'顧客情報を編集':'＋ 新規顧客登録'}</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-head"><h3>${existing?'Edit Customer':'＋ New Customer'}</h3><button class="close-x" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
       <div class="panel" style="background:var(--panel2); margin-bottom:16px; border-color:#48c2d644">
-        <h3 style="font-size:12.5px; color:var(--teal)">📋 査定車を検索して紐付け</h3>
+        <h3 style="font-size:12.5px; color:var(--teal)">📋 Search &amp; Link Appraisal Vehicle</h3>
         <div style="font-size:11.5px; color:var(--text-dim); margin-bottom:10px; line-height:1.6">
-          先に「車両・査定」で登録済みの査定車がある場合、登録番号の数字だけで検索して紐付けられます。入力し直す必要はありません。
+          If an appraisal vehicle is already registered under "Vehicles &amp; Appraisal", you can search by just the plate number digits and link it — no need to re-enter it.
         </div>
-        <input id="f_linksearch" type="tel" placeholder="登録番号の数字を入力…（例: 0426）" oninput="searchLinkableVehicle()">
+        <input id="f_linksearch" type="tel" placeholder="Enter plate number digits… (e.g. 0426)" oninput="searchLinkableVehicle()">
         <div id="linkSearchResults" style="margin-top:8px"></div>
         <div id="linkSelected" style="margin-top:8px"></div>
         ${alreadyLinked.length>0 ? `
         <div style="margin-top:10px; font-size:11.5px; color:var(--text-dim)">
-          既に紐づいている査定車：${alreadyLinked.map(v=>`<span class="staff-tag" style="margin-right:6px">${esc(v.maker)} ${esc(v.model)}</span>`).join('')}
+          Already linked appraisal vehicle(s): ${alreadyLinked.map(v=>`<span class="staff-tag" style="margin-right:6px">${esc(v.maker)} ${esc(v.model)}</span>`).join('')}
         </div>`:''}
       </div>
       <div class="field-row">
-        <div class="field"><label>氏名（日本語表記）</label><input id="f_name" value="${esc(c.name)}" placeholder="佐藤 太郎"></div>
-        <div class="field"><label>氏名（モンゴル語）</label><input id="f_nameMn" value="${esc(c.nameMn)}" placeholder="Бат Эрдэнэ"></div>
+        <div class="field"><label>Name (Japanese spelling)</label><input id="f_name" value="${esc(c.name)}" placeholder="佐藤 太郎"></div>
+        <div class="field"><label>Name (Mongolian)</label><input id="f_nameMn" value="${esc(c.nameMn)}" placeholder="Бат Эрдэнэ"></div>
       </div>
       <div class="field">
-        <label>顧客区分</label>
+        <label>Customer Type</label>
         <select id="f_custtype">
-          <option value="" ${!c.customerType?'selected':''}>未設定</option>
-          <option value="自社客" ${c.customerType==='自社客'?'selected':''}>自社客（自社で購入・今後の代替やメンテナンス案内用）</option>
-          <option value="他社客" ${c.customerType==='他社客'?'selected':''}>他社客（イベント・メンテナンス案内から自社への取り込み用）</option>
+          <option value="" ${!c.customerType?'selected':''}>Not set</option>
+          <option value="自社客" ${c.customerType==='自社客'?'selected':''}>In-House Customer (purchased from us — for future trade-in &amp; maintenance outreach)</option>
+          <option value="他社客" ${c.customerType==='他社客'?'selected':''}>Other Dealer Customer (for event/maintenance outreach &amp; converting to our own)</option>
         </select>
       </div>
       <div class="field-row">
-        <div class="field"><label>電話番号</label><input id="f_phone" value="${esc(c.phone)}" placeholder="9911-2233"></div>
+        <div class="field"><label>Phone Number</label><input id="f_phone" value="${esc(c.phone)}" placeholder="9911-2233"></div>
         <div class="field"><label>Facebook / Messenger</label><input id="f_fb" value="${esc(c.fb)}" placeholder="facebook.com/..."></div>
       </div>
-      <div class="field"><label>住所</label><input id="f_address" value="${esc(c.address)}" placeholder="バヤンズルフ区..."></div>
+      <div class="field"><label>Address</label><input id="f_address" value="${esc(c.address)}" placeholder="Bayanzurkh District..."></div>
       <div class="field-row">
-        <div class="field"><label>誕生日</label><input id="f_birthday" type="date" value="${esc(c.birthday)}"></div>
-        <div class="field"><label>職業・勤務先</label><input id="f_job" value="${esc(c.job)}" placeholder="会社員 / 自営業など"></div>
+        <div class="field"><label>Birthday</label><input id="f_birthday" type="date" value="${esc(c.birthday)}"></div>
+        <div class="field"><label>Occupation / Workplace</label><input id="f_job" value="${esc(c.job)}" placeholder="Office worker / Self-employed, etc."></div>
       </div>
       <div class="field-row">
-        <div class="field"><label>紹介者</label><input id="f_referrer" value="${esc(c.referrer)}" placeholder="紹介者名（あれば）"></div>
-        <div class="field"><label>販売担当者</label>
+        <div class="field"><label>Referred By</label><input id="f_referrer" value="${esc(c.referrer)}" placeholder="Referrer's name (if any)"></div>
+        <div class="field"><label>Sales Staff</label>
           <select id="f_salesstaff">
-            <option value="">未設定</option>
+            <option value="">Not set</option>
             ${sortedStaff().map(s=>`<option value="${esc(staffLabel(s))}" ${c.salesStaff===staffLabel(s)?'selected':''}>${esc(staffLabel(s))}</option>`).join('')}
           </select>
         </div>
       </div>
-      <div class="field"><label>次回車検・点検予定日 <span style="color:var(--text-dim2)">（ダッシュボードにリマインド表示されます）</span></label><input id="f_nextService" type="date" value="${esc(c.nextServiceDate)}"></div>
-      <div class="field"><label>備考</label><textarea id="f_note" placeholder="希望車種、下取り情報、家族構成など">${esc(c.note)}</textarea></div>
+      <div class="field"><label>Next Inspection Due Date <span style="color:var(--text-dim2)">(shown as a dashboard reminder)</span></label><input id="f_nextService" type="date" value="${esc(c.nextServiceDate)}"></div>
+      <div class="field"><label>Notes</label><textarea id="f_note" placeholder="Desired vehicle type, trade-in info, family details, etc.">${esc(c.note)}</textarea></div>
     </div>
     <div class="modal-foot">
-      ${existing?`<button class="btn danger" onclick="deleteCustomer('${c.id}')">削除</button>`:''}
-      <button class="btn ghost" onclick="closeModal()">キャンセル</button>
-      <button class="btn" onclick="saveCustomer('${existing?c.id:''}')">保存する</button>
+      ${existing?`<button class="btn danger" onclick="deleteCustomer('${c.id}')">Delete</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="saveCustomer('${existing?c.id:''}')">Save</button>
     </div>
   `);
 }
@@ -996,13 +1045,13 @@ function searchLinkableVehicle(){
     return regDigits && regDigits.includes(qDigits);
   }).slice(0,5);
   if(matches.length===0){
-    resultsEl.innerHTML = `<div style="font-size:11.5px; color:var(--text-dim2)">一致する未紐付けの査定車が見つかりません</div>`;
+    resultsEl.innerHTML = `<div style="font-size:11.5px; color:var(--text-dim2)">No matching unlinked appraisal vehicles found</div>`;
     return;
   }
   resultsEl.innerHTML = matches.map(v=>`
     <div class="card" style="padding:8px 10px; margin-bottom:6px; cursor:pointer" onclick="selectLinkVehicle('${v.id}')">
       <div style="font-weight:700; font-size:13px">${esc(v.maker)} ${esc(v.model)} ${v.year?`(${v.year})`:''}</div>
-      <div class="meta" style="font-size:11px">登録番号: ${esc(v.regNum||'—')} ・ VIN: ${esc(v.vin||'—')}</div>
+      <div class="meta" style="font-size:11px">Plate No.: ${esc(v.regNum||'—')} ・ VIN: ${esc(v.vin||'—')}</div>
     </div>
   `).join('');
 }
@@ -1014,8 +1063,8 @@ function selectLinkVehicle(vid){
   document.getElementById('f_linksearch').value = '';
   document.getElementById('linkSelected').innerHTML = `
     <div class="staff-tag" style="display:inline-flex; align-items:center; gap:8px; font-size:12.5px;">
-      ✓ リンク予定: ${esc(v.maker)} ${esc(v.model)}（登録番号: ${esc(v.regNum||'—')}）
-      <span style="cursor:pointer; color:var(--red)" onclick="unselectLinkVehicle()">✕ 解除</span>
+      ✓ Will link: ${esc(v.maker)} ${esc(v.model)} (Plate No.: ${esc(v.regNum||'—')})
+      <span style="cursor:pointer; color:var(--red)" onclick="unselectLinkVehicle()">✕ Unlink</span>
     </div>`;
 }
 function unselectLinkVehicle(){
@@ -1037,7 +1086,7 @@ async function saveCustomer(id){
     nextServiceDate: document.getElementById('f_nextService').value,
     note: document.getElementById('f_note').value.trim(),
   };
-  if(!data.name){ alert('氏名を入力してください'); return; }
+  if(!data.name){ alert('Please enter a name'); return; }
   let c;
   if(id){
     c = customers.find(x=>x.id===id);
@@ -1060,7 +1109,7 @@ async function saveCustomer(id){
   }
 }
 async function deleteCustomer(id){
-  if(!confirm('この顧客情報をゴミ箱に移動しますか？関連する商談履歴は残ります。「ゴミ箱」からいつでも復元できます。')) return;
+  if(!confirm('Move this customer to Trash? Related deal history will be kept. You can restore it from Trash at any time.')) return;
   const c = customers.find(x=>x.id===id);
   customers = customers.filter(c=>c.id!==id);
   closeModal();
@@ -1078,56 +1127,56 @@ function openCustomerDetail(id){
   const firstContact = myDeals.length? Math.min(...myDeals.map(d=>d.createdAt)) : c.createdAt;
   document.getElementById('view').innerHTML = `
     <div class="topbar">
-      <button class="btn ghost sm" onclick="go('customers')">← 顧客一覧へ</button>
+      <button class="btn ghost sm" onclick="go('customers')">← Back to Customers</button>
       <span id="saveIndicator"></span>
     </div>
     <div class="panel">
       <div class="detail-head">
         <div>
           <div class="detail-title">
-            ${esc(c.name)} 様
-            ${c.customerType?`<span class="badge ${customerTypeBadgeClass(c.customerType)}" style="position:static; margin-left:8px; vertical-align:middle;">${esc(c.customerType)}</span>`:''}
+            ${esc(c.name)}
+            ${c.customerType?`<span class="badge ${customerTypeBadgeClass(c.customerType)}" style="position:static; margin-left:8px; vertical-align:middle;">${esc(customerTypeLabel(c.customerType))}</span>`:''}
           </div>
           <div class="detail-id">${esc(c.id)} ・ ${esc(c.nameMn||'')}</div>
         </div>
-        <button class="btn ghost sm" onclick='openCustomerForm(${JSON.stringify(c).replace(/'/g,"&#39;")})'>✎ 編集</button>
+        <button class="btn ghost sm" onclick='openCustomerForm(${JSON.stringify(c).replace(/'/g,"&#39;")})'>✎ Edit</button>
       </div>
       <div class="kv-grid">
-        <div class="kv"><span class="k">電話番号</span><span class="v mono">${esc(c.phone||'—')}</span></div>
+        <div class="kv"><span class="k">Phone Number</span><span class="v mono">${esc(c.phone||'—')}</span></div>
         <div class="kv"><span class="k">Facebook/Messenger</span><span class="v">${esc(c.fb||'—')}</span></div>
-        <div class="kv"><span class="k">住所</span><span class="v">${esc(c.address||'—')}</span></div>
-        <div class="kv"><span class="k">誕生日</span><span class="v mono">${c.birthday?fmtDate(c.birthday):'—'}</span></div>
-        <div class="kv"><span class="k">職業・勤務先</span><span class="v">${esc(c.job||'—')}</span></div>
-        <div class="kv"><span class="k">紹介者</span><span class="v">${esc(c.referrer||'—')}</span></div>
-        <div class="kv"><span class="k">販売担当者</span><span class="v" style="color:var(--teal)">${esc(c.salesStaff||'—')}</span></div>
+        <div class="kv"><span class="k">Address</span><span class="v">${esc(c.address||'—')}</span></div>
+        <div class="kv"><span class="k">Birthday</span><span class="v mono">${c.birthday?fmtDate(c.birthday):'—'}</span></div>
+        <div class="kv"><span class="k">Occupation / Workplace</span><span class="v">${esc(c.job||'—')}</span></div>
+        <div class="kv"><span class="k">Referred By</span><span class="v">${esc(c.referrer||'—')}</span></div>
+        <div class="kv"><span class="k">Sales Staff</span><span class="v" style="color:var(--teal)">${esc(c.salesStaff||'—')}</span></div>
       </div>
-      ${c.note? `<div class="field" style="margin-top:10px"><label>備考</label><div class="panel" style="padding:10px 12px; background:var(--panel2)">${esc(c.note)}</div></div>`:''}
+      ${c.note? `<div class="field" style="margin-top:10px"><label>Notes</label><div class="panel" style="padding:10px 12px; background:var(--panel2)">${esc(c.note)}</div></div>`:''}
       <div class="kv-grid" style="margin-top:14px; padding-top:14px; border-top:1px solid var(--line)">
-        <div class="kv"><span class="k">初回接点</span><span class="v mono">${fmtDate(firstContact)}</span></div>
-        <div class="kv"><span class="k">累計接点数</span><span class="v mono">${touchpoints}回</span></div>
-        <div class="kv"><span class="k">購入台数</span><span class="v mono">${ownedVehicles.length}台</span></div>
-        <div class="kv"><span class="k">次回車検・点検</span><span class="v mono" style="${serviceDue(c.nextServiceDate)?'color:var(--red)':''}">${c.nextServiceDate?fmtDate(c.nextServiceDate):'未設定'}</span></div>
+        <div class="kv"><span class="k">First Contact</span><span class="v mono">${fmtDate(firstContact)}</span></div>
+        <div class="kv"><span class="k">Total Touchpoints</span><span class="v mono">${touchpoints}</span></div>
+        <div class="kv"><span class="k">Vehicles Purchased</span><span class="v mono">${ownedVehicles.length}</span></div>
+        <div class="kv"><span class="k">Next Inspection</span><span class="v mono" style="${serviceDue(c.nextServiceDate)?'color:var(--red)':''}">${c.nextServiceDate?fmtDate(c.nextServiceDate):'Not set'}</span></div>
       </div>
     </div>
     ${ownedVehicles.length>0?`
     <div class="panel">
-      <h3>🚗 所有・購入した車両（${ownedVehicles.length}台）</h3>
+      <h3>🚗 Vehicles Owned / Purchased (${ownedVehicles.length})</h3>
       <div class="grid">${ownedVehicles.map(v=>vehicleCardHtml(v)).join('')}</div>
     </div>`:''}
     <div class="panel">
-      <h3>💬 商談・交渉記録（${touchpoints}件）</h3>
+      <h3>💬 Deal &amp; Negotiation Log (${touchpoints})</h3>
       <div class="field-row3">
-        <div class="field" style="margin-bottom:0"><label>日付</label><input id="f_negodate" type="date" value="${todayStr()}"></div>
-        <div class="field" style="margin-bottom:0"><label>担当者</label>
+        <div class="field" style="margin-bottom:0"><label>Date</label><input id="f_negodate" type="date" value="${todayStr()}"></div>
+        <div class="field" style="margin-bottom:0"><label>Staff</label>
           <select id="f_negostaff">
-            <option value="">未設定</option>
+            <option value="">Not set</option>
             ${sortedStaff().map(s=>`<option value="${esc(staffLabel(s))}">${esc(staffLabel(s))}</option>`).join('')}
           </select>
         </div>
         <div></div>
       </div>
-      <div class="field"><label>内容</label><textarea id="f_negonote" placeholder="商談内容・交渉経過など"></textarea></div>
-      <button class="btn sm" onclick="addNegotiationHistory('${c.id}')">＋ 記録を追加</button>
+      <div class="field"><label>Details</label><textarea id="f_negonote" placeholder="Deal details, negotiation progress, etc."></textarea></div>
+      <button class="btn sm" onclick="addNegotiationHistory('${c.id}')">＋ Add Entry</button>
       ${negoHistory.length>0?`
       <ul class="timeline" style="margin-top:14px">
         ${negoHistory.map(h=>`
@@ -1141,12 +1190,12 @@ function openCustomerDetail(id){
       </ul>`:''}
       ${myDeals.length>0?`
       <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--line)">
-        <label style="font-size:11.5px; color:var(--text-dim); font-weight:500; display:block; margin-bottom:8px">🚗 車両ごとの商談履歴</label>
+        <label style="font-size:11.5px; color:var(--text-dim); font-weight:500; display:block; margin-bottom:8px">🚗 Deal History by Vehicle</label>
         ${myDeals.map(d=>`
           <div class="panel" style="background:var(--panel2); margin-bottom:10px; cursor:pointer" onclick="openDealDetail('${d.id}')">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
               <strong>${esc(vehName(d.vehicleId))}</strong>
-              <span class="staff-tag">${esc(d.stage)}</span>
+              <span class="staff-tag">${esc(stageLabel(d.stage))}</span>
             </div>
             <ul class="timeline">
               ${d.history.map(h=>`<li><span class="dot"></span><div><b>${fmtDate(h.date)}</b>${esc(h.note)}</div></li>`).join('')}
@@ -1154,7 +1203,7 @@ function openCustomerDetail(id){
           </div>
         `).join('')}
       </div>`:''}
-      ${negoHistory.length===0 && myDeals.length===0?`<div class="empty" style="padding:24px; margin-top:14px">まだ商談・交渉記録がありません</div>`:''}
+      ${negoHistory.length===0 && myDeals.length===0?`<div class="empty" style="padding:24px; margin-top:14px">No deal or negotiation records yet</div>`:''}
     </div>
   `;
 }
@@ -1162,7 +1211,7 @@ async function addNegotiationHistory(customerId){
   const dateStr = document.getElementById('f_negodate').value;
   const staff = document.getElementById('f_negostaff').value;
   const note = document.getElementById('f_negonote').value.trim();
-  if(!note){ alert('内容を入力してください'); return; }
+  if(!note){ alert('Please enter details'); return; }
   const c = customers.find(x=>x.id===customerId);
   if(!c) return;
   c.negotiationHistory = c.negotiationHistory || [];
@@ -1175,7 +1224,7 @@ async function addNegotiationHistory(customerId){
   await upsertCustomerRow(c);
 }
 async function deleteNegotiationHistory(customerId, entryId){
-  if(!confirm('この記録を削除しますか？')) return;
+  if(!confirm('Delete this entry?')) return;
   const c = customers.find(x=>x.id===customerId);
   if(!c) return;
   c.negotiationHistory = (c.negotiationHistory||[]).filter(h=>h.id!==entryId);
@@ -1190,23 +1239,23 @@ function openNegotiationHistoryEditForm(customerId, entryId){
   const dt = new Date(h.date);
   const dateStr = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
   showModal(`
-    <div class="modal-head"><h3>商談・交渉記録を編集</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-head"><h3>Edit Deal/Negotiation Entry</h3><button class="close-x" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
       <div class="field-row">
-        <div class="field"><label>日付</label><input id="f_negoeditdate" type="date" value="${dateStr}"></div>
-        <div class="field"><label>担当者</label>
+        <div class="field"><label>Date</label><input id="f_negoeditdate" type="date" value="${dateStr}"></div>
+        <div class="field"><label>Staff</label>
           <select id="f_negoeditstaff">
-            <option value="">未設定</option>
+            <option value="">Not set</option>
             ${sortedStaff().map(s=>`<option value="${esc(staffLabel(s))}" ${h.staff===staffLabel(s)?'selected':''}>${esc(staffLabel(s))}</option>`).join('')}
           </select>
         </div>
       </div>
-      <div class="field"><label>内容</label><textarea id="f_negoeditnote">${esc(h.note)}</textarea></div>
+      <div class="field"><label>Details</label><textarea id="f_negoeditnote">${esc(h.note)}</textarea></div>
     </div>
     <div class="modal-foot">
-      <button class="btn danger" onclick="deleteNegotiationHistory('${customerId}','${entryId}')">削除</button>
-      <button class="btn ghost" onclick="openCustomerDetail('${customerId}')">キャンセル</button>
-      <button class="btn" onclick="saveNegotiationHistoryEntry('${customerId}','${entryId}')">保存する</button>
+      <button class="btn danger" onclick="deleteNegotiationHistory('${customerId}','${entryId}')">Delete</button>
+      <button class="btn ghost" onclick="openCustomerDetail('${customerId}')">Cancel</button>
+      <button class="btn" onclick="saveNegotiationHistoryEntry('${customerId}','${entryId}')">Save</button>
     </div>
   `);
 }
@@ -1218,7 +1267,7 @@ async function saveNegotiationHistoryEntry(customerId, entryId){
   const dateStr = document.getElementById('f_negoeditdate').value;
   const staff = document.getElementById('f_negoeditstaff').value;
   const note = document.getElementById('f_negoeditnote').value.trim();
-  if(!note){ alert('内容を入力してください'); return; }
+  if(!note){ alert('Please enter details'); return; }
   if(dateStr) h.date = new Date(dateStr+'T00:00:00').getTime();
   h.staff = staff;
   h.note = note;
@@ -1231,15 +1280,70 @@ function serviceDue(dateStr){
   return diff <= 30;
 }
 
+/* ---------------- 連絡リマインド判定ロジック ----------------
+   同じ閾値・計算式を supabase/functions/daily-reminder-digest/index.ts 側にも実装している。
+   閾値を変更する場合は両方を揃えること。 */
+const CONTACT_STALE_DAYS = 7;      // 連絡停滞（全顧客対象）
+const DEAL_STAGNANT_DAYS = 7;      // オーダー中の商談停滞
+const DELIVERY_FOLLOWUP_DAYS = [3, 14]; // 納車後フォロー：固定タイミング（この後は90日ごと）
+const DELIVERY_FOLLOWUP_REPEAT_FROM = 14;
+const DELIVERY_FOLLOWUP_REPEAT_EVERY = 90;
+
+function daysSince(ts){ return ts ? (Date.now() - ts) / 86400000 : Infinity; }
+
+function contactStaleDays(c){
+  const hist = c.negotiationHistory||[];
+  if(hist.length===0) return null;
+  const last = hist.reduce((m,h)=>Math.max(m, h.date||0), 0);
+  const d = daysSince(last);
+  return d>=CONTACT_STALE_DAYS ? Math.floor(d) : null;
+}
+function dealsForCustomer(customerId){ return deals.filter(d=>d.customerId===customerId); }
+function deliveryDateOf(customerId){
+  const delivered = dealsForCustomer(customerId).filter(d=>d.stage==='納車');
+  if(delivered.length===0) return null;
+  let latest = null;
+  delivered.forEach(d=>{
+    const h = (d.history||[]).find(x=>x.note && (x.note.includes('ステータスを「納車」に変更') || x.note.includes('Status changed to "Delivery"')));
+    const ts = h ? h.date : d.createdAt;
+    if(!latest || ts>latest) latest = ts;
+  });
+  return latest;
+}
+function deliveryFollowupDue(deliveryDate){
+  if(!deliveryDate) return null;
+  const daysElapsed = Math.floor(daysSince(deliveryDate));
+  if(DELIVERY_FOLLOWUP_DAYS.includes(daysElapsed)) return daysElapsed;
+  if(daysElapsed>=DELIVERY_FOLLOWUP_REPEAT_FROM && (daysElapsed-DELIVERY_FOLLOWUP_REPEAT_FROM)%DELIVERY_FOLLOWUP_REPEAT_EVERY===0) return daysElapsed;
+  return null;
+}
+function dealStagnant(d){
+  if(['契約','納車','キャンセル'].includes(d.stage)) return null;
+  const last = d.history && d.history.length ? d.history[d.history.length-1].date : d.createdAt;
+  const days = daysSince(last);
+  return days>=DEAL_STAGNANT_DAYS ? Math.floor(days) : null;
+}
+function contactReminders(){
+  const staleContacts = customers.filter(c=>!c.deletedAt).map(c=>({c, days:contactStaleDays(c)})).filter(x=>x.days!==null)
+    .sort((a,b)=>b.days-a.days);
+  const followups = customers.filter(c=>!c.deletedAt).map(c=>{
+    const dd = deliveryDateOf(c.id);
+    return {c, deliveryDate:dd, days:deliveryFollowupDue(dd)};
+  }).filter(x=>x.days!==null).sort((a,b)=>a.days-b.days);
+  const stagnant = deals.filter(d=>!d.deletedAt).map(d=>({d, days:dealStagnant(d)})).filter(x=>x.days!==null)
+    .sort((a,b)=>b.days-a.days);
+  return {staleContacts, followups, stagnant};
+}
+
 /* ============================================================
    RENDER: VEHICLES
 ============================================================ */
 let vehFilter = {q:'', status:'all', sort:'new'};
 const VEH_SORT_OPTIONS = {
-  new:'登録が新しい順', old:'登録が古い順',
-  price_high:'価格が高い順', price_low:'価格が安い順',
-  year_new:'年式が新しい順', year_old:'年式が古い順',
-  maker:'メーカー名順'
+  new:'Newest first', old:'Oldest first',
+  price_high:'Price high to low', price_low:'Price low to high',
+  year_new:'Year newest first', year_old:'Year oldest first',
+  maker:'By make'
 };
 function sortVehicleList(list){
   const sorted = [...list];
@@ -1261,19 +1365,19 @@ function renderVehicles(){
   list = sortVehicleList(list);
   return `
     <div class="topbar">
-      <div class="pagetitle">🚗 車両・査定管理 <span class="sub">${vehicles.length}台</span></div>
-      <button class="btn" onclick="openVehicleForm()">＋ 新規車両登録</button>
+      <div class="pagetitle">🚗 Vehicles &amp; Appraisal <span class="sub">${vehicles.length} vehicles</span></div>
+      <button class="btn" onclick="openVehicleForm()">＋ New Vehicle</button>
     </div>
     <div class="toolbar">
-      <input type="text" placeholder="🔍 メーカー・車名・色・VINで検索…" value="${esc(vehFilter.q)}" oninput="vehFilter.q=this.value; renderView()">
+      <input type="text" placeholder="🔍 Search by make, model, color, or VIN…" value="${esc(vehFilter.q)}" oninput="vehFilter.q=this.value; renderView()">
       <select onchange='vehFilter.sort=this.value; renderView()'>
         ${Object.entries(VEH_SORT_OPTIONS).map(([k,l])=>`<option value="${k}" ${vehFilter.sort===k?'selected':''}>${l}</option>`).join('')}
       </select>
       ${['all','tradein','stock','nego','sold','delivered'].map(s=>`
-        <span class="chip ${vehFilter.status===s?'on':''}" onclick='vehFilter.status="${s}"; renderView()'>${s==='all'?'すべて':(s==='tradein'?'📋 査定車':VSTATUS[s])}</span>
+        <span class="chip ${vehFilter.status===s?'on':''}" onclick='vehFilter.status="${s}"; renderView()'>${s==='all'?'All':(s==='tradein'?'📋 Appraisal Vehicle':VSTATUS[s])}</span>
       `).join('')}
     </div>
-    ${list.length===0 ? `<div class="empty"><b>該当する車両がありません</b>検索条件を変更するか新規登録してください</div>` : `
+    ${list.length===0 ? `<div class="empty"><b>No matching vehicles</b>Change the search criteria or register a new vehicle</div>` : `
     <div class="grid">${list.map(v=>vehicleCardHtml(v)).join('')}</div>`}
   `;
 }
@@ -1282,22 +1386,22 @@ function vehicleCardHtml(v){
   const score = appraisalScore(v);
   const deal = dealForVehicle(v.id);
   const isTradeIn = v.kind==='tradein';
-  const badgeLabel = isTradeIn ? '📋 査定車' : VSTATUS[v.status];
+  const badgeLabel = isTradeIn ? '📋 Appraisal Vehicle' : VSTATUS[v.status];
   const hasImage = (v.files||[]).some(f=>isImageFile(f.name));
   const hasAppraisal = (v.serviceHistory||[]).some(h=>h.category==='appraisal');
   return `
     <div class="card" onclick="openVehicleDetail('${v.id}')">
       <span class="badge ${badgeClass(isTradeIn?'tradein':v.status)}">${badgeLabel}</span>
       <div class="name">${esc(v.maker)} ${esc(v.model)}</div>
-      <div class="meta">${v.year}年式 ・ ${esc(v.color)} ・ ${(v.mileage||0).toLocaleString()}km</div>
+      <div class="meta">${v.year} ・ ${esc(v.color)} ・ ${(v.mileage||0).toLocaleString()}km</div>
       ${(hasImage||hasAppraisal) ? `<div style="display:flex; gap:5px; margin:4px 0;">
-        ${hasImage?`<span class="mini-tag mini-tag-img">🖼 画像</span>`:''}
-        ${hasAppraisal?`<span class="mini-tag mini-tag-appr">✅ 査定済</span>`:''}
+        ${hasImage?`<span class="mini-tag mini-tag-img">🖼 Photos</span>`:''}
+        ${hasAppraisal?`<span class="mini-tag mini-tag-appr">✅ Appraised</span>`:''}
       </div>`:''}
-      ${deal && deal.stage!=='キャンセル' ? `<div class="meta" style="color:var(--teal); margin-top:-6px">🙋 ${esc(custName(deal.customerId))} 様 ・ ${esc(deal.stage)}</div>`:''}
+      ${deal && deal.stage!=='キャンセル' ? `<div class="meta" style="color:var(--teal); margin-top:-6px">🙋 ${esc(custName(deal.customerId))} ・ ${esc(stageLabel(deal.stage))}</div>`:''}
       <div class="row2">
         <span class="price">${fmtMoney(v.priceSale)}</span>
-        <span class="score">評価 ${score}/100</span>
+        <span class="score">Score ${score}/100</span>
       </div>
     </div>
   `;
@@ -1318,32 +1422,32 @@ function diagnosisPanelHtml(v){
   const dmg = (rep && rep.damageHistory) || {};
   const mkt = (rep && rep.marketPrice) || {};
   const fin = (rep && rep.finalAppraisal) || {};
-  const DAMAGE_LABEL = {none:'無', minor:'軽微あり(RA)', major:'重大あり(R)'};
+  const DAMAGE_LABEL = {none:'None', minor:'Minor (RA)', major:'Major (R)'};
   return `
     <div class="panel" style="border-color:#48c2d644">
-      <h3>🔗 査定ツール診断結果（deed-motors-scraper）</h3>
+      <h3>🔗 Appraisal Tool Diagnosis (deed-motors-scraper)</h3>
       <div class="gauge-wrap" style="align-items:center; margin-bottom:14px">
         <span class="badge" style="position:static; background:var(--teal-soft); color:var(--teal); font-size:20px; padding:8px 18px; font-weight:900">${esc(v.externalGrade||'—')}</span>
-        <div style="font-size:12px; color:var(--text-dim)">査定ツールでの評価グレード<br><span style="font-size:11px; color:var(--text-dim2)">こちらが正式な査定結果です</span></div>
+        <div style="font-size:12px; color:var(--text-dim)">Grade from the appraisal tool<br><span style="font-size:11px; color:var(--text-dim2)">This is the official appraisal result</span></div>
       </div>
       <div class="kv-grid">
-        <div class="kv"><span class="k">査定参考価格</span><span class="v mono" style="color:var(--amber)">${v.externalAppraisalPrice?esc(v.externalAppraisalPrice)+' сая ₮':'—'}</span></div>
-        ${fin.formula?`<div class="kv"><span class="k">算出式</span><span class="v mono" style="font-size:12px">${esc(fin.formula)}</span></div>`:''}
-        ${(fin.rangeLowManMnt!=null||fin.rangeHighManMnt!=null)?`<div class="kv"><span class="k">参考価格レンジ</span><span class="v mono">${fin.rangeLowManMnt??'—'} 〜 ${fin.rangeHighManMnt??'—'} сая ₮</span></div>`:''}
-        ${dmg.status?`<div class="kv"><span class="k">修復歴</span><span class="v">${DAMAGE_LABEL[dmg.status]||esc(dmg.status)}</span></div>`:''}
-        ${mkt.averagePriceManMnt!=null?`<div class="kv"><span class="k">市場平均価格</span><span class="v mono">${mkt.averagePriceManMnt} сая ₮</span></div>`:''}
-        ${(mkt.minPriceManMnt!=null||mkt.maxPriceManMnt!=null)?`<div class="kv"><span class="k">市場価格帯</span><span class="v mono">${mkt.minPriceManMnt??'—'} 〜 ${mkt.maxPriceManMnt??'—'} сая ₮</span></div>`:''}
-        ${mkt.sampleCount!=null?`<div class="kv"><span class="k">市場データ件数</span><span class="v mono">${mkt.sampleCount}件</span></div>`:''}
-        ${veh.fullModel?`<div class="kv"><span class="k">フル型式</span><span class="v">${esc(veh.fullModel)}</span></div>`:''}
-        ${veh.trimGrade?`<div class="kv"><span class="k">トリムグレード</span><span class="v">${esc(veh.trimGrade)}</span></div>`:''}
-        ${veh.engineModel?`<div class="kv"><span class="k">エンジン型式</span><span class="v">${esc(veh.engineModel)}</span></div>`:''}
-        ${veh.importedYearMonth?`<div class="kv"><span class="k">モンゴル輸入年月</span><span class="v">${esc(veh.importedYearMonth)}</span></div>`:''}
-        ${veh.inspector?`<div class="kv"><span class="k">点検者</span><span class="v">${esc(veh.inspector)}</span></div>`:''}
-        ${veh.appraisalDate?`<div class="kv"><span class="k">査定日</span><span class="v">${esc(veh.appraisalDate)}</span></div>`:''}
+        <div class="kv"><span class="k">Reference Appraisal Price</span><span class="v mono" style="color:var(--amber)">${v.externalAppraisalPrice?esc(v.externalAppraisalPrice)+' сая ₮':'—'}</span></div>
+        ${fin.formula?`<div class="kv"><span class="k">Formula</span><span class="v mono" style="font-size:12px">${esc(fin.formula)}</span></div>`:''}
+        ${(fin.rangeLowManMnt!=null||fin.rangeHighManMnt!=null)?`<div class="kv"><span class="k">Reference Price Range</span><span class="v mono">${fin.rangeLowManMnt??'—'} 〜 ${fin.rangeHighManMnt??'—'} сая ₮</span></div>`:''}
+        ${dmg.status?`<div class="kv"><span class="k">Repair History</span><span class="v">${DAMAGE_LABEL[dmg.status]||esc(dmg.status)}</span></div>`:''}
+        ${mkt.averagePriceManMnt!=null?`<div class="kv"><span class="k">Market Average Price</span><span class="v mono">${mkt.averagePriceManMnt} сая ₮</span></div>`:''}
+        ${(mkt.minPriceManMnt!=null||mkt.maxPriceManMnt!=null)?`<div class="kv"><span class="k">Market Price Range</span><span class="v mono">${mkt.minPriceManMnt??'—'} 〜 ${mkt.maxPriceManMnt??'—'} сая ₮</span></div>`:''}
+        ${mkt.sampleCount!=null?`<div class="kv"><span class="k">Market Data Points</span><span class="v mono">${mkt.sampleCount}</span></div>`:''}
+        ${veh.fullModel?`<div class="kv"><span class="k">Full Model Code</span><span class="v">${esc(veh.fullModel)}</span></div>`:''}
+        ${veh.trimGrade?`<div class="kv"><span class="k">Trim Grade</span><span class="v">${esc(veh.trimGrade)}</span></div>`:''}
+        ${veh.engineModel?`<div class="kv"><span class="k">Engine Model</span><span class="v">${esc(veh.engineModel)}</span></div>`:''}
+        ${veh.importedYearMonth?`<div class="kv"><span class="k">Imported to Mongolia</span><span class="v">${esc(veh.importedYearMonth)}</span></div>`:''}
+        ${veh.inspector?`<div class="kv"><span class="k">Inspector</span><span class="v">${esc(veh.inspector)}</span></div>`:''}
+        ${veh.appraisalDate?`<div class="kv"><span class="k">Appraisal Date</span><span class="v">${esc(veh.appraisalDate)}</span></div>`:''}
       </div>
       ${v.externalReportText?`
       <details style="margin-top:12px">
-        <summary style="cursor:pointer; font-size:11.5px; color:var(--text-dim)">詳細JSONを表示（サポート用）</summary>
+        <summary style="cursor:pointer; font-size:11.5px; color:var(--text-dim)">Show raw JSON (for support)</summary>
         <div class="panel" style="background:var(--panel2); margin-top:8px; padding:10px 12px; white-space:pre-wrap; font-size:11px; font-family:'JetBrains Mono',monospace">${esc(v.externalReportText)}</div>
       </details>`:''}
     </div>
@@ -1355,64 +1459,64 @@ function openVehicleForm(existing){
   const vKind = existing ? (v.kind||'stock') : 'tradein';
   const costDisplay = vKind==='tradein' ? 'display:none' : '';
   const statusDisplay = vKind==='tradein' ? 'display:none' : '';
-  const saleLabel = vKind==='tradein' ? '査定車 見込み額 (₮)' : '販売価格 (₮)';
+  const saleLabel = vKind==='tradein' ? 'Estimated Appraisal Value (₮)' : 'Sale Price (₮)';
   showModal(`
-    <div class="modal-head"><h3>${existing?'車両情報を編集':'＋ 新規車両登録'}</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-head"><h3>${existing?'Edit Vehicle':'＋ New Vehicle'}</h3><button class="close-x" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
       <div class="field">
-        <label>登録区分</label>
+        <label>Registration Type</label>
         <select id="f_kind" onchange="toggleVehicleKindFields()">
-          <option value="tradein" ${vKind==='tradein'?'selected':''}>📋 査定車（お客様の使用中車両・査定のみ）</option>
-          <option value="stock" ${vKind==='stock'?'selected':''}>🚗 在庫車（販売用ストック）</option>
+          <option value="tradein" ${vKind==='tradein'?'selected':''}>📋 Appraisal Vehicle (customer's current vehicle, appraisal only)</option>
+          <option value="stock" ${vKind==='stock'?'selected':''}>🚗 Stock Vehicle (for sale)</option>
         </select>
       </div>
       <div class="panel" style="background:var(--panel2); margin-bottom:16px; border-color:#48c2d644">
-        <h3 style="font-size:12.5px; color:var(--teal)">🔗 査定ツール（deed-motors-scraper）の結果を取り込む</h3>
+        <h3 style="font-size:12.5px; color:var(--teal)">🔗 Import Results from Appraisal Tool (deed-motors-scraper)</h3>
         <div style="font-size:11.5px; color:var(--text-dim); margin-bottom:10px; line-height:1.6">
-          査定ツールの「📋 結果をコピー」でコピーしたJSONをここに貼り付けてください。
+          Paste the JSON copied via "📋 Copy Results" in the appraisal tool here.
         </div>
         <textarea id="f_importjson" placeholder='{"vehicle":{"maker":"Toyota", ...}, "score":{"grade":"4.5"}, "finalAppraisal":{"referencePriceManMnt":48.6}}' style="min-height:70px; font-family:'JetBrains Mono',monospace; font-size:11px"></textarea>
         <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap">
-          <button type="button" class="btn sm" onclick="importFromClipboard('f_importjson', importAppraisalJSON)">📥 クリップボードから読み込む</button>
-          <button type="button" class="btn ghost sm" onclick="importAppraisalJSON()">📋 貼り付けたJSONを読み込む</button>
+          <button type="button" class="btn sm" onclick="importFromClipboard('f_importjson', importAppraisalJSON)">📥 Load from Clipboard</button>
+          <button type="button" class="btn ghost sm" onclick="importAppraisalJSON()">📋 Load Pasted JSON</button>
         </div>
         <div class="field-row" style="margin-top:12px">
-          <div class="field"><label>査定ツールのグレード</label><input id="f_extgrade" value="${esc(v.externalGrade)}" placeholder="4.5 / S / RA など"></div>
-          <div class="field"><label>査定参考価格 (сая ₮)</label><input id="f_extprice" value="${esc(v.externalAppraisalPrice)}" placeholder="48.6"></div>
+          <div class="field"><label>Appraisal Tool Grade</label><input id="f_extgrade" value="${esc(v.externalGrade)}" placeholder="4.5 / S / RA, etc."></div>
+          <div class="field"><label>Reference Appraisal Price (сая ₮)</label><input id="f_extprice" value="${esc(v.externalAppraisalPrice)}" placeholder="48.6"></div>
         </div>
         <div class="field" style="margin-top:6px">
-          <label>詳細JSON（自動保存されます・車両ページで確認可）</label>
+          <label>Detailed JSON (saved automatically, viewable on the vehicle page)</label>
           <textarea id="f_importtext" style="min-height:50px; font-family:'JetBrains Mono',monospace; font-size:11px">${esc(v.externalReportText)}</textarea>
         </div>
       </div>
       <div class="field-row3">
-        <div class="field"><label>メーカー</label><input id="f_maker" value="${esc(v.maker)}" placeholder="Toyota"></div>
-        <div class="field"><label>車名</label><input id="f_model" value="${esc(v.model)}" placeholder="Prius"></div>
-        <div class="field"><label>年式</label><input id="f_year" type="number" value="${v.year||''}" placeholder="2019"></div>
+        <div class="field"><label>Make</label><input id="f_maker" value="${esc(v.maker)}" placeholder="Toyota"></div>
+        <div class="field"><label>Model</label><input id="f_model" value="${esc(v.model)}" placeholder="Prius"></div>
+        <div class="field"><label>Year</label><input id="f_year" type="number" value="${v.year||''}" placeholder="2019"></div>
       </div>
       <div class="field-row">
-        <div class="field"><label>色</label><input id="f_color" value="${esc(v.color)}" placeholder="パールホワイト"></div>
-        <div class="field"><label>走行距離(km)</label><input id="f_mileage" type="number" value="${v.mileage||''}" placeholder="82000"></div>
+        <div class="field"><label>Color</label><input id="f_color" value="${esc(v.color)}" placeholder="Pearl White"></div>
+        <div class="field"><label>Mileage (km)</label><input id="f_mileage" type="number" value="${v.mileage||''}" placeholder="82000"></div>
       </div>
       <div class="field-row">
-        <div class="field"><label>登録番号／ナンバープレート</label><input id="f_regnum" value="${esc(v.regNum)}" placeholder="УБ 04 АБВ"></div>
-        <div class="field"><label>VIN／車台番号</label><input id="f_vin" class="mono" value="${esc(v.vin)}" placeholder="JTDKB3FU*012345**"></div>
+        <div class="field"><label>Plate Number</label><input id="f_regnum" value="${esc(v.regNum)}" placeholder="УБ 04 АБВ"></div>
+        <div class="field"><label>VIN</label><input id="f_vin" class="mono" value="${esc(v.vin)}" placeholder="JTDKB3FU*012345**"></div>
       </div>
       <div class="field-row">
-        <div class="field" id="f_cost_wrap" style="${costDisplay}"><label>仕入価格 (₮)</label><input id="f_cost" type="number" value="${v.priceCost||''}" placeholder="32000000"></div>
+        <div class="field" id="f_cost_wrap" style="${costDisplay}"><label>Purchase Cost (₮)</label><input id="f_cost" type="number" value="${v.priceCost||''}" placeholder="32000000"></div>
         <div class="field"><label id="f_sale_label">${saleLabel}</label><input id="f_sale" type="number" value="${v.priceSale||''}" placeholder="43000000"></div>
       </div>
-      <div class="field" id="f_status_wrap" style="${statusDisplay}"><label>ステータス</label>
+      <div class="field" id="f_status_wrap" style="${statusDisplay}"><label>Status</label>
         <select id="f_status">
           ${Object.entries(VSTATUS).map(([k,v2])=>`<option value="${k}" ${v.status===k?'selected':''}>${v2}</option>`).join('')}
         </select>
       </div>
-      <div class="field"><label>備考</label><textarea id="f_notes" placeholder="整備推奨事項など">${esc(v.notes)}</textarea></div>
+      <div class="field"><label>Notes</label><textarea id="f_notes" placeholder="Recommended maintenance, etc.">${esc(v.notes)}</textarea></div>
     </div>
     <div class="modal-foot">
-      ${existing?`<button class="btn danger" onclick="deleteVehicle('${v.id}')">削除</button>`:''}
-      <button class="btn ghost" onclick="closeModal()">キャンセル</button>
-      <button class="btn" onclick="saveVehicle('${existing?v.id:''}')">保存する</button>
+      ${existing?`<button class="btn danger" onclick="deleteVehicle('${v.id}')">Delete</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="saveVehicle('${existing?v.id:''}')">Save</button>
     </div>
   `);
 }
@@ -1420,13 +1524,13 @@ function toggleVehicleKindFields(){
   const isTradeIn = document.getElementById('f_kind').value==='tradein';
   document.getElementById('f_cost_wrap').style.display = isTradeIn ? 'none' : '';
   document.getElementById('f_status_wrap').style.display = isTradeIn ? 'none' : '';
-  document.getElementById('f_sale_label').textContent = isTradeIn ? '査定車 見込み額 (₮)' : '販売価格 (₮)';
+  document.getElementById('f_sale_label').textContent = isTradeIn ? 'Estimated Appraisal Value (₮)' : 'Sale Price (₮)';
 }
 // 査定ツールJSONのうち、DMSに専用入力欄が無い項目を備考欄へ整形して追記する。
 // 再読み込みしても同じブロックが積み重ならないよう、マーカーで囲んだ既存ブロックは
 // 差し替え前に必ず取り除く（Даавуу欄の更新バッジ蓄積バグと同種の事故を避けるため）。
-const APPRAISAL_NOTE_START = '――― 査定ツール自動反映 ―――';
-const APPRAISAL_NOTE_END   = '――――――――――――――――';
+const APPRAISAL_NOTE_START = '——— Auto-imported from Appraisal Tool ———';
+const APPRAISAL_NOTE_END   = '————————————————————';
 function buildAppraisalNoteBlock(data){
   const veh = data.vehicle || {};
   const dh  = data.damageHistory || {};
@@ -1434,20 +1538,20 @@ function buildAppraisalNoteBlock(data){
   const fin = data.finalAppraisal || {};
   const lines = [];
   const push = (label, val) => { if(val!==undefined && val!==null && val!==''){ lines.push(`${label}: ${val}`); } };
-  push('フル型式／グレード', [veh.fullModel, veh.trimGrade].filter(Boolean).join(' / '));
-  push('エンジン型式', veh.engineModel);
-  push('排気量', veh.displacementCc!=null ? `${veh.displacementCc}cc` : '');
-  push('輸入年月', veh.importedYearMonth);
-  push('点検者', veh.inspector);
-  push('査定日', veh.appraisalDate);
-  push('修復歴', dh.status==='none' ? '無' : (dh.status||''));
+  push('Full Model / Grade', [veh.fullModel, veh.trimGrade].filter(Boolean).join(' / '));
+  push('Engine Model', veh.engineModel);
+  push('Displacement', veh.displacementCc!=null ? `${veh.displacementCc}cc` : '');
+  push('Imported', veh.importedYearMonth);
+  push('Inspector', veh.inspector);
+  push('Appraisal Date', veh.appraisalDate);
+  push('Repair History', dh.status==='none' ? 'None' : (dh.status||''));
   if(Array.isArray(dh.affectedParts) && dh.affectedParts.length>0){
-    push('修復歴部位', dh.affectedParts.join('、'));
+    push('Repaired Areas', dh.affectedParts.join(', '));
   }
   if(mkt.averagePriceManMnt!=null){
-    push('市場価格（参考）', `平均${mkt.averagePriceManMnt} / ${mkt.minPriceManMnt}〜${mkt.maxPriceManMnt} сая ₮（${mkt.sampleCount}件）`);
+    push('Market Price (reference)', `avg ${mkt.averagePriceManMnt} / ${mkt.minPriceManMnt}-${mkt.maxPriceManMnt} сая ₮ (${mkt.sampleCount} samples)`);
   }
-  push('算出式', fin.formula);
+  push('Formula', fin.formula);
   if(lines.length===0) return '';
   return [APPRAISAL_NOTE_START, ...lines, APPRAISAL_NOTE_END].join('\n');
 }
@@ -1464,21 +1568,21 @@ async function importFromClipboard(textareaId, importFn){
   try{
     const text = await navigator.clipboard.readText();
     if(!text || !text.trim()){
-      alert('クリップボードが空です。査定ツール側で「📋 結果をコピー」を押してから実行してください。');
+      alert('Clipboard is empty. Press "📋 Copy Results" in the appraisal tool first, then try again.');
       return;
     }
     document.getElementById(textareaId).value = text;
     importFn();
   }catch(e){
-    alert('クリップボードを読み取れませんでした（ブラウザの権限設定をご確認ください）。テキストエリアに手動で貼り付けてから「JSONを読み込む」ボタンを押してください。');
+    alert('Could not read the clipboard (check your browser permission settings). Paste the text manually into the text area, then press "Load JSON".');
   }
 }
 function importAppraisalJSON(){
   const raw = document.getElementById('f_importjson').value.trim();
-  if(!raw){ alert('査定ツールでコピーしたJSONを貼り付けてから読み込んでください'); return; }
+  if(!raw){ alert('Paste the JSON copied from the appraisal tool, then load it'); return; }
   let data;
   try{ data = JSON.parse(raw); }
-  catch(e){ alert('JSONの形式が正しく読み取れませんでした。査定ツール側で「結果をコピー」をもう一度押してから貼り直してください。'); return; }
+  catch(e){ alert('Could not parse the JSON. Press "Copy Results" in the appraisal tool again and re-paste.'); return; }
   const veh = data.vehicle || {};
   const score = data.score || {};
   const fin = data.finalAppraisal || {};
@@ -1500,7 +1604,7 @@ function importAppraisalJSON(){
   notesEl.value = mergeAppraisalNote(notesEl.value, noteBlock);
   if(noteBlock) hit++;
   document.getElementById('f_importtext').value = JSON.stringify(data, null, 2);
-  alert(hit>0 ? `${hit}項目を読み込みました。内容を確認してから保存してください。` : 'JSONは読み取れましたが、対応する項目が見つかりませんでした。仕様書の項目名を確認してください。');
+  alert(hit>0 ? `Loaded ${hit} field(s). Please review before saving.` : 'The JSON was readable, but no matching fields were found. Check the field names in the spec.');
 }
 async function saveVehicle(id){
   const kind = document.getElementById('f_kind').value;
@@ -1521,7 +1625,7 @@ async function saveVehicle(id){
     externalAppraisalPrice: document.getElementById('f_extprice').value.trim(),
     externalReportText: document.getElementById('f_importtext').value.trim(),
   };
-  if(!data.maker || !data.model){ alert('メーカーと車名を入力してください'); return; }
+  if(!data.maker || !data.model){ alert('Please enter the make and model'); return; }
   let v;
   if(id){
     v = vehicles.find(x=>x.id===id);
@@ -1535,7 +1639,7 @@ async function saveVehicle(id){
   await upsertVehicleRow(v);
 }
 async function deleteVehicle(id){
-  if(!confirm('この車両をゴミ箱に移動しますか？「ゴミ箱」からいつでも復元できます。')) return;
+  if(!confirm('Move this vehicle to Trash? You can restore it from Trash at any time.')) return;
   const v = vehicles.find(x=>x.id===id);
   vehicles = vehicles.filter(v=>v.id!==id);
   closeModal();
@@ -1551,31 +1655,31 @@ function openVehicleDetail(id){
   const isTradeIn = v.kind==='tradein';
   document.getElementById('view').innerHTML = `
     <div class="topbar">
-      <button class="btn ghost sm" onclick="go('vehicles')">← 車両一覧へ</button>
+      <button class="btn ghost sm" onclick="go('vehicles')">← Back to Vehicles</button>
       <span id="saveIndicator"></span>
     </div>
     <div class="panel">
       <div class="detail-head">
         <div>
-          <div class="detail-title">${esc(v.maker)} ${esc(v.model)} ${isTradeIn?'<span style="font-size:13px; color:var(--teal); font-weight:500">（査定車）</span>':''}</div>
-          <div class="detail-id">${esc(v.id)} ・ 登録番号: ${esc(v.regNum||'—')} ・ VIN: ${esc(v.vin||'—')}</div>
+          <div class="detail-title">${esc(v.maker)} ${esc(v.model)} ${isTradeIn?'<span style="font-size:13px; color:var(--teal); font-weight:500">(Appraisal Vehicle)</span>':''}</div>
+          <div class="detail-id">${esc(v.id)} ・ Plate No.: ${esc(v.regNum||'—')} ・ VIN: ${esc(v.vin||'—')}</div>
         </div>
         <div style="display:flex; gap:8px">
-          ${isTradeIn?`<span class="badge" style="position:static; background:var(--teal-soft); color:var(--teal)">📋 査定車</span>`:`<span class="badge ${badgeClass(v.status)}" style="position:static">${VSTATUS[v.status]}</span>`}
-          <button class="btn ghost sm" onclick="printQuote('${v.id}')">📄 見積書を印刷</button>
-          <button class="btn ghost sm" onclick='openVehicleForm(${JSON.stringify(v).replace(/'/g,"&#39;")})'>✎ 編集</button>
+          ${isTradeIn?`<span class="badge" style="position:static; background:var(--teal-soft); color:var(--teal)">📋 Appraisal Vehicle</span>`:`<span class="badge ${badgeClass(v.status)}" style="position:static">${VSTATUS[v.status]}</span>`}
+          <button class="btn ghost sm" onclick="printQuote('${v.id}')">📄 Print Quote</button>
+          <button class="btn ghost sm" onclick='openVehicleForm(${JSON.stringify(v).replace(/'/g,"&#39;")})'>✎ Edit</button>
         </div>
       </div>
       <div class="kv-grid">
-        <div class="kv"><span class="k">年式</span><span class="v">${v.year}年</span></div>
-        <div class="kv"><span class="k">色</span><span class="v">${esc(v.color)}</span></div>
-        <div class="kv"><span class="k">走行距離</span><span class="v mono">${(v.mileage||0).toLocaleString()} km</span></div>
+        <div class="kv"><span class="k">Year</span><span class="v">${v.year}</span></div>
+        <div class="kv"><span class="k">Color</span><span class="v">${esc(v.color)}</span></div>
+        <div class="kv"><span class="k">Mileage</span><span class="v mono">${(v.mileage||0).toLocaleString()} km</span></div>
         ${isTradeIn?`
-        <div class="kv"><span class="k">査定車 見込み額</span><span class="v mono" style="color:var(--amber)">${fmtMoney(v.priceSale)}</span></div>
+        <div class="kv"><span class="k">Estimated Appraisal Value</span><span class="v mono" style="color:var(--amber)">${fmtMoney(v.priceSale)}</span></div>
         `:`
-        <div class="kv"><span class="k">仕入価格</span><span class="v mono">${fmtMoney(v.priceCost)}</span></div>
-        <div class="kv"><span class="k">販売価格</span><span class="v mono" style="color:var(--amber)">${fmtMoney(v.priceSale)}</span></div>
-        <div class="kv"><span class="k">想定粗利</span><span class="v mono" style="color:var(--green)">${fmtMoney((v.priceSale||0)-(v.priceCost||0))}</span></div>
+        <div class="kv"><span class="k">Purchase Cost</span><span class="v mono">${fmtMoney(v.priceCost)}</span></div>
+        <div class="kv"><span class="k">Sale Price</span><span class="v mono" style="color:var(--amber)">${fmtMoney(v.priceSale)}</span></div>
+        <div class="kv"><span class="k">Est. Gross Profit</span><span class="v mono" style="color:var(--green)">${fmtMoney((v.priceSale||0)-(v.priceCost||0))}</span></div>
         `}
       </div>
       ${v.notes?`<div class="panel" style="background:var(--panel2); margin-top:12px; padding:10px 12px">${esc(v.notes)}</div>`:''}
@@ -1584,19 +1688,19 @@ function openVehicleDetail(id){
     ${(v.externalGrade || v.externalAppraisalPrice || v.externalReportText) ? diagnosisPanelHtml(v) : ''}
 
     <div class="panel">
-      <h3>🔧 状態チェック（社内メモ）</h3>
+      <h3>🔧 Condition Check (Internal Notes)</h3>
       <div class="segbars">
-        ${segRow('外装','exterior',a.exterior)}
-        ${segRow('内装','interior',a.interior)}
-        ${segRow('エンジン','engine',a.engine)}
-        ${segRow('足回り','undercarriage',a.undercarriage)}
-        ${segRow('電装品','electrical',a.electrical)}
+        ${segRow('Exterior','exterior',a.exterior)}
+        ${segRow('Interior','interior',a.interior)}
+        ${segRow('Engine','engine',a.engine)}
+        ${segRow('Undercarriage','undercarriage',a.undercarriage)}
+        ${segRow('Electrical','electrical',a.electrical)}
       </div>
       <div style="margin-top:16px">
-        <label style="font-size:11.5px; color:var(--text-dim); font-weight:500; display:block; margin-bottom:8px">⚠ 減点項目（タップで切替）</label>
+        <label style="font-size:11.5px; color:var(--text-dim); font-weight:500; display:block; margin-bottom:8px">⚠ Deductions (tap to toggle)</label>
         <div class="defect-list">
           ${DEFECT_OPTIONS.map(d=>`
-            <span class="defect-tag" style="cursor:pointer; ${((v.defects||[]).includes(d))?'':'opacity:.35; background:var(--panel2); color:var(--text-dim); border-color:var(--line)'}" onclick="toggleDefect('${v.id}','${d}')">${d}</span>
+            <span class="defect-tag" style="cursor:pointer; ${((v.defects||[]).includes(d))?'':'opacity:.35; background:var(--panel2); color:var(--text-dim); border-color:var(--line)'}" onclick="toggleDefect('${v.id}','${d}')">${defectLabel(d)}</span>
           `).join('')}
         </div>
       </div>
@@ -1679,7 +1783,7 @@ function printQuote(vehicleId){
 </body></html>`;
 
   const win = window.open('', '_blank');
-  if(!win){ alert('ポップアップがブロックされました。ブラウザの設定を確認してください。'); return; }
+  if(!win){ alert('The popup was blocked. Please check your browser settings.'); return; }
   win.document.write(html);
   win.document.close();
   win.focus();
@@ -1690,13 +1794,13 @@ function tradeInInfoPanel(v){
   const relatedDeal = deals.find(d=>d.tradeInVehicleId===v.id);
   return `
     <div class="panel">
-      <h3>📋 査定車について</h3>
+      <h3>📋 About This Appraisal Vehicle</h3>
       <div class="empty" style="padding:20px; text-align:left; color:var(--text-dim)">
-        これは店舗の在庫車ではなく、${owner?`<strong style="color:var(--text)">${esc(owner.name)} 様</strong>`:'お客様'}が持ち込まれた査定車の記録です。
+        This is not one of our stock vehicles — it is a record of an appraisal vehicle brought in by ${owner?`<strong style="color:var(--text)">${esc(owner.name)}</strong>`:'a customer'}.
       </div>
       <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap">
-        ${owner?`<button class="btn ghost sm" onclick="openCustomerDetail('${owner.id}')">👤 ${esc(owner.name)} 様の顧客ページへ</button>`:''}
-        ${relatedDeal?`<button class="btn ghost sm" onclick="openVehicleDetail('${relatedDeal.vehicleId}')">🚗 対象の商談車両を見る</button>`:''}
+        ${owner?`<button class="btn ghost sm" onclick="openCustomerDetail('${owner.id}')">👤 Go to ${esc(owner.name)}'s customer page</button>`:''}
+        ${relatedDeal?`<button class="btn ghost sm" onclick="openVehicleDetail('${relatedDeal.vehicleId}')">🚗 View related deal vehicle</button>`:''}
       </div>
     </div>`;
 }
@@ -1711,11 +1815,11 @@ function dealPanelHtml(v){
   if(!deal || deal.stage==='キャンセル'){
     return `
     <div class="panel">
-      <h3>🙋 商談・顧客情報</h3>
+      <h3>🙋 Deal &amp; Customer Info</h3>
       <div class="empty" style="padding:26px 20px">
-        <b>まだこの車両の商談は始まっていません</b>
-        査定・展示のみの状態です。お客様が決まったら顧客情報と一緒にここで管理できます。
-        <div style="margin-top:16px"><button class="btn" onclick="openStartDeal('${v.id}')">＋ 商談を開始（顧客を紐付け）</button></div>
+        <b>No deal has started on this vehicle yet</b>
+        It's currently only appraised or on display. Once a customer is set, you can manage them together here.
+        <div style="margin-top:16px"><button class="btn" onclick="openStartDeal('${v.id}')">＋ Start Deal (link customer)</button></div>
       </div>
       ${pastDeals.length>0? pastDealsHtml(pastDeals) : ''}
     </div>`;
@@ -1723,38 +1827,38 @@ function dealPanelHtml(v){
   const c = customers.find(x=>x.id===deal.customerId) || {};
   return `
     <div class="panel">
-      <h3>🙋 商談・顧客情報 <span class="staff-tag">${esc(deal.stage)}</span></h3>
+      <h3>🙋 Deal &amp; Customer Info <span class="staff-tag">${esc(stageLabel(deal.stage))}</span></h3>
       <div class="kv-grid">
-        <div class="kv"><span class="k">顧客名</span><span class="v">${esc(c.name||'—')} 様</span></div>
-        <div class="kv"><span class="k">電話番号</span><span class="v mono">${esc(c.phone||'—')}</span></div>
+        <div class="kv"><span class="k">Customer Name</span><span class="v">${esc(c.name||'—')}</span></div>
+        <div class="kv"><span class="k">Phone Number</span><span class="v mono">${esc(c.phone||'—')}</span></div>
         <div class="kv"><span class="k">Facebook/Messenger</span><span class="v">${esc(c.fb||'—')}</span></div>
-        <div class="kv"><span class="k">住所</span><span class="v">${esc(c.address||'—')}</span></div>
-        <div class="kv"><span class="k">担当スタッフ</span><span class="v">${esc(deal.staff||'—')}</span></div>
+        <div class="kv"><span class="k">Address</span><span class="v">${esc(c.address||'—')}</span></div>
+        <div class="kv"><span class="k">Assigned Staff</span><span class="v">${esc(deal.staff||'—')}</span></div>
       </div>
       ${c.note?`<div class="panel" style="background:var(--panel2); margin-top:10px; padding:10px 12px">📝 ${esc(c.note)}</div>`:''}
       <div style="display:flex; gap:8px; margin:16px 0; flex-wrap:wrap">
-        ${stagePrev(deal.stage)?`<button class="btn ghost sm" onclick="moveStageAndRefresh('${deal.id}','${v.id}',-1)">← 前のステージへ戻す</button>`:''}
-        ${stageNext(deal.stage)?`<button class="btn sm" onclick="moveStageAndRefresh('${deal.id}','${v.id}',1)">次のステージへ進める →</button>`:''}
-        <button class="btn ghost sm" onclick="openCustomerForm(${JSON.stringify(c).replace(/'/g,"&#39;")})">✎ 顧客情報を編集</button>
-        <button class="btn ghost sm" onclick="openChangeDealVehicleForm('${deal.id}',{type:'vehicle',vehicleId:'${v.id}'})">🚗 対象車種を変更</button>
-        <button class="btn danger sm" onclick="cancelDeal('${deal.id}','${v.id}')">商談を中止</button>
+        ${stagePrev(deal.stage)?`<button class="btn ghost sm" onclick="moveStageAndRefresh('${deal.id}','${v.id}',-1)">← Back to Previous Stage</button>`:''}
+        ${stageNext(deal.stage)?`<button class="btn sm" onclick="moveStageAndRefresh('${deal.id}','${v.id}',1)">Advance to Next Stage →</button>`:''}
+        <button class="btn ghost sm" onclick="openCustomerForm(${JSON.stringify(c).replace(/'/g,"&#39;")})">✎ Edit Customer Info</button>
+        <button class="btn ghost sm" onclick="openChangeDealVehicleForm('${deal.id}',{type:'vehicle',vehicleId:'${v.id}'})">🚗 Change Target Vehicle</button>
+        <button class="btn danger sm" onclick="cancelDeal('${deal.id}','${v.id}')">Cancel Deal</button>
       </div>
-      <h3 style="font-size:13px; margin-bottom:8px">📅 対応履歴</h3>
+      <h3 style="font-size:13px; margin-bottom:8px">📅 Activity Log</h3>
       <ul class="timeline">
         ${deal.history.map((h,i)=>`<li><span class="dot"></span><div style="flex:1"><b>${fmtDate(h.date)}</b>${esc(h.note)}</div><span class="mv" onclick="openHistoryEditForm('${deal.id}',${i},{type:'vehicle',vehicleId:'${v.id}'})">✎</span></li>`).join('')}
       </ul>
       <div class="field" style="margin-top:12px">
-        <label>対応履歴を追加</label>
-        <textarea id="f_vehdealnote" placeholder="来店・見積・交渉内容などを記録…"></textarea>
-        <button class="btn sm" style="margin-top:8px" onclick="addDealNoteInline('${deal.id}','${v.id}')">追加する</button>
+        <label>Add Activity Entry</label>
+        <textarea id="f_vehdealnote" placeholder="Record visits, quotes, negotiation details, etc."></textarea>
+        <button class="btn sm" style="margin-top:8px" onclick="addDealNoteInline('${deal.id}','${v.id}')">Add</button>
       </div>
     </div>
     <div class="panel">
-      <h3>📋 査定車（お客様がお持ちの車）</h3>
+      <h3>📋 Appraisal Vehicle (customer's current vehicle)</h3>
       ${deal.tradeInVehicleId ? tradeInMiniCard(deal.tradeInVehicleId) : `
         <div class="empty" style="padding:20px">
-          この商談に紐づく査定車はまだ登録されていません
-          <div style="margin-top:14px"><button class="btn ghost sm" onclick="openTradeInForm('${deal.id}')">＋ 査定車を登録</button></div>
+          No appraisal vehicle has been registered for this deal yet
+          <div style="margin-top:14px"><button class="btn ghost sm" onclick="openTradeInForm('${deal.id}')">＋ Register Appraisal Vehicle</button></div>
         </div>
       `}
     </div>
@@ -1767,62 +1871,62 @@ function tradeInMiniCard(vid){
   const score = appraisalScore(v);
   return `
     <div class="card" style="cursor:pointer" onclick="openVehicleDetail('${v.id}')">
-      <span class="badge" style="background:var(--teal-soft); color:var(--teal)">📋 査定車</span>
+      <span class="badge" style="background:var(--teal-soft); color:var(--teal)">📋 Appraisal Vehicle</span>
       <div class="name">${esc(v.maker)} ${esc(v.model)}</div>
-      <div class="meta">${v.year||'-'}年式 ・ ${esc(v.color||'')} ・ ${(v.mileage||0).toLocaleString()}km</div>
+      <div class="meta">${v.year||'-'} ・ ${esc(v.color||'')} ・ ${(v.mileage||0).toLocaleString()}km</div>
       <div class="row2">
         <span class="price">${fmtMoney(v.priceSale)}</span>
-        <span class="score">査定 ${score}/100</span>
+        <span class="score">Score ${score}/100</span>
       </div>
     </div>`;
 }
 function openTradeInForm(dealId){
   showModal(`
-    <div class="modal-head"><h3>📋 査定車を登録</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-head"><h3>📋 Register Appraisal Vehicle</h3><button class="close-x" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
       <div class="panel" style="background:var(--panel2); margin-bottom:16px; border-color:#48c2d644">
-        <h3 style="font-size:12.5px; color:var(--teal)">🔗 査定ツール（deed-motors-scraper）の結果を取り込む</h3>
+        <h3 style="font-size:12.5px; color:var(--teal)">🔗 Import Results from Appraisal Tool (deed-motors-scraper)</h3>
         <div style="font-size:11.5px; color:var(--text-dim); margin-bottom:10px; line-height:1.6">
-          査定ツールの「📋 結果をコピー」でコピーしたJSONをここに貼り付けてください。下の項目に自動で入ります。
+          Paste the JSON copied via "📋 Copy Results" in the appraisal tool here. The fields below will fill in automatically.
         </div>
         <textarea id="ti_importjson" placeholder='{"vehicle":{"maker":"Toyota", ...}, "score":{"grade":"4.5"}, "finalAppraisal":{"referencePriceManMnt":48.6}}' style="min-height:70px; font-family:'JetBrains Mono',monospace; font-size:11px"></textarea>
         <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap">
-          <button type="button" class="btn sm" onclick="importFromClipboard('ti_importjson', importAppraisalJSONToTradeIn)">📥 クリップボードから読み込む</button>
-          <button type="button" class="btn ghost sm" onclick="importAppraisalJSONToTradeIn()">📋 貼り付けたJSONを読み込む</button>
+          <button type="button" class="btn sm" onclick="importFromClipboard('ti_importjson', importAppraisalJSONToTradeIn)">📥 Load from Clipboard</button>
+          <button type="button" class="btn ghost sm" onclick="importAppraisalJSONToTradeIn()">📋 Load Pasted JSON</button>
         </div>
         <div class="field-row" style="margin-top:12px">
-          <div class="field"><label>査定ツールのグレード</label><input id="ti_extgrade" placeholder="4.5 / S / RA など"></div>
-          <div class="field"><label>査定参考価格 (сая ₮)</label><input id="ti_extprice" placeholder="48.6"></div>
+          <div class="field"><label>Appraisal Tool Grade</label><input id="ti_extgrade" placeholder="4.5 / S / RA, etc."></div>
+          <div class="field"><label>Reference Appraisal Price (сая ₮)</label><input id="ti_extprice" placeholder="48.6"></div>
         </div>
       </div>
       <div class="field-row3">
-        <div class="field"><label>メーカー</label><input id="ti_maker" placeholder="Nissan"></div>
-        <div class="field"><label>車名</label><input id="ti_model" placeholder="Note"></div>
-        <div class="field"><label>年式</label><input id="ti_year" type="number" placeholder="2017"></div>
+        <div class="field"><label>Make</label><input id="ti_maker" placeholder="Nissan"></div>
+        <div class="field"><label>Model</label><input id="ti_model" placeholder="Note"></div>
+        <div class="field"><label>Year</label><input id="ti_year" type="number" placeholder="2017"></div>
       </div>
       <div class="field-row">
-        <div class="field"><label>色</label><input id="ti_color" placeholder="シルバー"></div>
-        <div class="field"><label>走行距離(km)</label><input id="ti_mileage" type="number" placeholder="95000"></div>
+        <div class="field"><label>Color</label><input id="ti_color" placeholder="Silver"></div>
+        <div class="field"><label>Mileage (km)</label><input id="ti_mileage" type="number" placeholder="95000"></div>
       </div>
       <div class="field-row">
-        <div class="field"><label>登録番号／ナンバープレート</label><input id="ti_regnum" placeholder="УБ 04 АБВ"></div>
-        <div class="field"><label>VIN／車台番号</label><input id="ti_vin" class="mono"></div>
+        <div class="field"><label>Plate Number</label><input id="ti_regnum" placeholder="УБ 04 АБВ"></div>
+        <div class="field"><label>VIN</label><input id="ti_vin" class="mono"></div>
       </div>
-      <div class="field"><label>査定車 見込み額 (₮)</label><input id="ti_price" type="number" placeholder="10000000"></div>
-      <div class="field"><label>備考</label><textarea id="ti_notes" placeholder="状態メモなど"></textarea></div>
+      <div class="field"><label>Estimated Appraisal Value (₮)</label><input id="ti_price" type="number" placeholder="10000000"></div>
+      <div class="field"><label>Notes</label><textarea id="ti_notes" placeholder="Condition notes, etc."></textarea></div>
     </div>
     <div class="modal-foot">
-      <button class="btn ghost" onclick="closeModal()">キャンセル</button>
-      <button class="btn" onclick="saveTradeIn('${dealId}')">登録して査定へ進む</button>
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="saveTradeIn('${dealId}')">Register &amp; Proceed to Appraisal</button>
     </div>
   `);
 }
 function importAppraisalJSONToTradeIn(){
   const raw = document.getElementById('ti_importjson').value.trim();
-  if(!raw){ alert('査定ツールでコピーしたJSONを貼り付けてから読み込んでください'); return; }
+  if(!raw){ alert('Paste the JSON copied from the appraisal tool, then load it'); return; }
   let data;
   try{ data = JSON.parse(raw); }
-  catch(e){ alert('JSONの形式が正しく読み取れませんでした。査定ツール側で「結果をコピー」をもう一度押してから貼り直してください。'); return; }
+  catch(e){ alert('Could not parse the JSON. Press "Copy Results" in the appraisal tool again and re-paste.'); return; }
   const veh = data.vehicle || {};
   const score = data.score || {};
   const fin = data.finalAppraisal || {};
@@ -1844,14 +1948,14 @@ function importAppraisalJSONToTradeIn(){
   notesEl.value = mergeAppraisalNote(notesEl.value, noteBlock);
   if(noteBlock) hit++;
   document.getElementById('ti_importjson').dataset.raw = JSON.stringify(data, null, 2);
-  alert(hit>0 ? `${hit}項目を読み込みました。内容を確認してから保存してください。` : 'JSONは読み取れましたが、対応する項目が見つかりませんでした。仕様書の項目名を確認してください。');
+  alert(hit>0 ? `Loaded ${hit} field(s). Please review before saving.` : 'The JSON was readable, but no matching fields were found. Check the field names in the spec.');
 }
 async function saveTradeIn(dealId){
   const deal = deals.find(d=>d.id===dealId);
   if(!deal) return;
   const maker = document.getElementById('ti_maker').value.trim();
   const model = document.getElementById('ti_model').value.trim();
-  if(!maker || !model){ alert('メーカーと車名を入力してください'); return; }
+  if(!maker || !model){ alert('Please enter the make and model'); return; }
   const importedRaw = document.getElementById('ti_importjson').dataset.raw || '';
   const tv = {
     id:uid('V'), kind:'tradein', status:'tradein', ownerCustomerId:deal.customerId,
@@ -1879,42 +1983,42 @@ async function saveTradeIn(dealId){
 function pastDealsHtml(pastDeals){
   return `
     <div class="panel" style="margin-top:16px">
-      <h3 style="font-size:13px">🕘 過去の商談（${pastDeals.length}件）</h3>
+      <h3 style="font-size:13px">🕘 Past Deals (${pastDeals.length})</h3>
       ${pastDeals.map(d=>`
         <div class="panel" style="background:var(--panel2); margin-bottom:8px; cursor:pointer" onclick="openDealDetail('${d.id}')">
-          <div style="display:flex; justify-content:space-between"><strong>${esc(custName(d.customerId))} 様</strong><span class="staff-tag">${esc(d.stage)}</span></div>
+          <div style="display:flex; justify-content:space-between"><strong>${esc(custName(d.customerId))}</strong><span class="staff-tag">${esc(stageLabel(d.stage))}</span></div>
         </div>
       `).join('')}
     </div>`;
 }
 function openStartDeal(vehicleId){
   showModal(`
-    <div class="modal-head"><h3>＋ 商談を開始</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-head"><h3>＋ Start Deal</h3><button class="close-x" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
-      <div class="field"><label>顧客を選択</label>
+      <div class="field"><label>Select Customer</label>
         <select id="f_dealcust" onchange="document.getElementById('newCustFields').style.display=this.value?'none':'block'">
-          <option value="">-- 新規顧客として登録 --</option>
-          ${customers.map(c=>`<option value="${c.id}">${esc(c.name)}（${esc(c.phone||'電話未登録')}）</option>`).join('')}
+          <option value="">-- Register as new customer --</option>
+          ${customers.map(c=>`<option value="${c.id}">${esc(c.name)} (${esc(c.phone||'No phone on file')})</option>`).join('')}
         </select>
       </div>
       <div id="newCustFields">
         <div class="field-row">
-          <div class="field"><label>氏名</label><input id="f_newcust_name" placeholder="佐藤 太郎"></div>
-          <div class="field"><label>電話番号</label><input id="f_newcust_phone" placeholder="9911-2233"></div>
+          <div class="field"><label>Name</label><input id="f_newcust_name" placeholder="佐藤 太郎"></div>
+          <div class="field"><label>Phone Number</label><input id="f_newcust_phone" placeholder="9911-2233"></div>
         </div>
       </div>
       <div class="field-row">
-        <div class="field"><label>担当スタッフ</label>
+        <div class="field"><label>Assigned Staff</label>
           <select id="f_dealstaff">${sortedStaff().map(s=>`<option value="${esc(staffLabel(s))}">${esc(staffLabel(s))}</option>`).join('')}</select>
         </div>
-        <div class="field"><label>初期ステータス</label>
-          <select id="f_dealstage">${STAGES.filter(s=>s!=='キャンセル').map(s=>`<option value="${s}">${s}</option>`).join('')}</select>
+        <div class="field"><label>Initial Status</label>
+          <select id="f_dealstage">${STAGES.filter(s=>s!=='キャンセル').map(s=>`<option value="${s}">${stageLabel(s)}</option>`).join('')}</select>
         </div>
       </div>
     </div>
     <div class="modal-foot">
-      <button class="btn ghost" onclick="closeModal()">キャンセル</button>
-      <button class="btn" onclick="startDealForVehicle('${vehicleId}')">商談を開始する</button>
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="startDealForVehicle('${vehicleId}')">Start Deal</button>
     </div>
   `);
 }
@@ -1922,7 +2026,7 @@ async function startDealForVehicle(vehicleId){
   let customerId = document.getElementById('f_dealcust').value;
   if(!customerId){
     const name = document.getElementById('f_newcust_name').value.trim();
-    if(!name){ alert('顧客名を入力してください'); return; }
+    if(!name){ alert('Please enter a customer name'); return; }
     const phone = document.getElementById('f_newcust_phone').value.trim();
     const maxOrder = customers.reduce((m,x)=>Math.max(m, x.sortOrder||0), -1);
     const newC = {id:uid('C'), name, nameMn:'', phone, fb:'', address:'', referrer:'', note:'', sortOrder: maxOrder+1, createdAt:Date.now()};
@@ -1934,7 +2038,7 @@ async function startDealForVehicle(vehicleId){
   const stage = document.getElementById('f_dealstage').value;
   const v = vehicles.find(x=>x.id===vehicleId);
   if(v && v.status==='stock'){ v.status='nego'; await upsertVehicleRow(v); }
-  const deal = {id:uid('D'), customerId, vehicleId, staff, stage, createdAt:Date.now(), history:[{date:Date.now(), note:`商談開始（${stage}）`}]};
+  const deal = {id:uid('D'), customerId, vehicleId, staff, stage, createdAt:Date.now(), history:[{date:Date.now(), note:`Deal started (${stageLabel(stage)})`}]};
   deals.push(deal);
   closeModal();
   openVehicleDetail(vehicleId);
@@ -1950,11 +2054,11 @@ async function addDealNoteInline(dealId, vehicleId){
   await upsertDealRow(d);
 }
 async function cancelDeal(dealId, vehicleId){
-  if(!confirm('この商談を中止しますか？車両は「在庫」に戻ります。')) return;
+  if(!confirm('Cancel this deal? The vehicle will be returned to "In Stock".')) return;
   const d = deals.find(x=>x.id===dealId);
   if(d){
     d.stage='キャンセル';
-    d.history.push({date:Date.now(), note:'商談を中止'});
+    d.history.push({date:Date.now(), note:'Deal cancelled'});
   }
   const v = vehicles.find(x=>x.id===vehicleId);
   if(v && v.status==='nego') v.status='stock';
@@ -1992,31 +2096,31 @@ async function toggleDefect(vid, defect){
 
 /* ---------------- vehicle files (photos / shaken docs) ---------------- */
 const FILE_CATEGORIES = {
-  front:'前面', rear:'後面', left:'左側', right:'右側', interior:'内装',
-  engine:'エンジン', underbody:'下回り', damage:'損傷箇所',
-  registration_document:'車検証', appraisal_document:'査定時資料', obd_screenshot:'OBD診断内容'
+  front:'Front', rear:'Rear', left:'Left Side', right:'Right Side', interior:'Interior',
+  engine:'Engine', underbody:'Underbody', damage:'Damaged Area',
+  registration_document:'Registration Doc.', appraisal_document:'Appraisal Doc.', obd_screenshot:'OBD Screenshot'
 };
 function isImageFile(name){ return /\.(jpe?g|png|gif|webp|heic)$/i.test(name||''); }
 function vehicleFilesPanel(v){
   const files = v.files || [];
   return `
     <div class="panel">
-      <h3>📷 写真・書類</h3>
+      <h3>📷 Photos &amp; Documents</h3>
       <div class="field-row" style="align-items:flex-end">
         <div class="field" style="margin-bottom:0">
-          <label>分類</label>
+          <label>Category</label>
           <select id="f_filecategory">
             ${Object.entries(FILE_CATEGORIES).map(([k,l])=>`<option value="${k}">${l}</option>`).join('')}
           </select>
         </div>
         <div class="field" style="margin-bottom:0">
-          <label>ファイルを選択（画像・PDF／複数選択可）</label>
+          <label>Select Files (images/PDF, multiple allowed)</label>
           <input type="file" id="f_fileupload" accept="image/*,.pdf" capture="environment" multiple onchange="uploadVehicleFile('${v.id}')">
         </div>
       </div>
-      <div style="font-size:11px; color:var(--text-dim2); margin-top:6px">選択すると自動でアップロードされます（複数枚まとめて選択可）</div>
+      <div style="font-size:11px; color:var(--text-dim2); margin-top:6px">Files upload automatically once selected (you can select multiple at once)</div>
       <div id="fileUploadStatus" style="font-size:11.5px; color:var(--text-dim); margin-top:6px"></div>
-      ${files.length===0 ? `<div class="empty" style="padding:20px; margin-top:14px">まだ写真・書類がアップロードされていません</div>` : `
+      ${files.length===0 ? `<div class="empty" style="padding:20px; margin-top:14px">No photos or documents uploaded yet</div>` : `
       <div class="grid" style="margin-top:14px">
         ${files.map((f,i)=>`
           <div class="card" style="cursor:default">
@@ -2028,7 +2132,7 @@ function vehicleFilesPanel(v){
             <div style="display:flex; gap:6px; margin-top:8px">
               <span class="mv" style="${i===0?'opacity:.3; pointer-events:none;':''}" onclick="moveVehicleFile('${v.id}',${i},-1)">↑</span>
               <span class="mv" style="${i===files.length-1?'opacity:.3; pointer-events:none;':''}" onclick="moveVehicleFile('${v.id}',${i},1)">↓</span>
-              <button class="btn danger sm" style="flex:1" onclick="deleteVehicleFile('${v.id}','${esc(f.path)}')">削除</button>
+              <button class="btn danger sm" style="flex:1" onclick="deleteVehicleFile('${v.id}','${esc(f.path)}')">Delete</button>
             </div>
           </div>
         `).join('')}
@@ -2041,13 +2145,13 @@ async function uploadVehicleFile(vehicleId){
   const category = document.getElementById('f_filecategory').value;
   const files = Array.from(fileInput.files || []);
   const statusEl = document.getElementById('fileUploadStatus');
-  if(files.length===0){ alert('ファイルを選択してください'); return; }
+  if(files.length===0){ alert('Please select a file'); return; }
   const v = vehicles.find(x=>x.id===vehicleId);
   v.files = v.files || [];
   let okCount = 0, failCount = 0;
   for(let i=0;i<files.length;i++){
     const file = files[i];
-    statusEl.textContent = `アップロード中… (${i+1}/${files.length})`;
+    statusEl.textContent = `Uploading… (${i+1}/${files.length})`;
     const safeName = file.name.replace(/[^a-zA-Z0-9_.\-]/g, '_');
     const path = `${vehicleId}/${category}/${Date.now()}_${i}_${safeName}`;
     const { error } = await sb.storage.from('vehicle-files').upload(path, file);
@@ -2057,12 +2161,12 @@ async function uploadVehicleFile(vehicleId){
     okCount++;
   }
   fileInput.value = '';
-  statusEl.textContent = failCount===0 ? `${okCount}件アップロードしました` : `${okCount}件成功・${failCount}件失敗しました`;
+  statusEl.textContent = failCount===0 ? `Uploaded ${okCount} file(s)` : `${okCount} succeeded, ${failCount} failed`;
   openVehicleDetail(vehicleId);
   await upsertVehicleRow(v);
 }
 async function deleteVehicleFile(vehicleId, path){
-  if(!confirm('このファイルを削除しますか？')) return;
+  if(!confirm('Delete this file?')) return;
   await sb.storage.from('vehicle-files').remove([path]);
   const v = vehicles.find(x=>x.id===vehicleId);
   v.files = (v.files||[]).filter(f=>f.path!==path);
@@ -2081,8 +2185,8 @@ async function moveVehicleFile(vehicleId, index, dir){
 
 /* ---------------- vehicle service history (入庫履歴) ---------------- */
 const SERVICE_CATEGORIES = {
-  appraisal:'査定', diagnosis:'故障診断', oil_change:'オイル交換',
-  tire_pressure:'空気圧調整', inspection:'点検', general_repair:'一般修理'
+  appraisal:'Appraisal', diagnosis:'Diagnosis', oil_change:'Oil Change',
+  tire_pressure:'Tire Pressure Check', inspection:'Inspection', general_repair:'General Repair'
 };
 function todayStr(){
   const d = new Date();
@@ -2092,27 +2196,27 @@ function serviceHistoryPanel(v){
   const history = (v.serviceHistory||[]).slice().sort((a,b)=>(b.date||0)-(a.date||0));
   return `
     <div class="panel">
-      <h3>🔧 入庫履歴</h3>
+      <h3>🔧 Service History</h3>
       <div class="field-row3">
-        <div class="field" style="margin-bottom:0"><label>種別</label>
+        <div class="field" style="margin-bottom:0"><label>Type</label>
           <select id="f_svctype" onchange="toggleSvcNoteRequired()">
             ${Object.entries(SERVICE_CATEGORIES).map(([k,l])=>`<option value="${k}">${l}</option>`).join('')}
           </select>
         </div>
-        <div class="field" style="margin-bottom:0"><label>日付</label><input id="f_svcdate" type="date" value="${todayStr()}"></div>
-        <div class="field" style="margin-bottom:0"><label>走行距離(km)</label><input id="f_svcmileage" type="number" placeholder="${v.mileage||''}"></div>
+        <div class="field" style="margin-bottom:0"><label>Date</label><input id="f_svcdate" type="date" value="${todayStr()}"></div>
+        <div class="field" style="margin-bottom:0"><label>Mileage (km)</label><input id="f_svcmileage" type="number" placeholder="${v.mileage||''}"></div>
       </div>
       <div class="field-row" style="margin-top:10px">
-        <div class="field"><label>担当者</label>
+        <div class="field"><label>Staff</label>
           <select id="f_svcstaff">
-            <option value="">未設定</option>
+            <option value="">Not set</option>
             ${sortedStaff().map(s=>`<option value="${esc(staffLabel(s))}">${esc(staffLabel(s))}</option>`).join('')}
           </select>
         </div>
-        <div class="field"><label id="f_svcnote_label">詳細・備考</label><input id="f_svcnote" placeholder="内容を記載"></div>
+        <div class="field"><label id="f_svcnote_label">Details / Notes</label><input id="f_svcnote" placeholder="Enter details"></div>
       </div>
-      <button class="btn sm" onclick="addServiceHistory('${v.id}')">＋ 記録を追加</button>
-      ${history.length===0 ? `<div class="empty" style="padding:20px; margin-top:14px">まだ入庫履歴がありません</div>` : `
+      <button class="btn sm" onclick="addServiceHistory('${v.id}')">＋ Add Entry</button>
+      ${history.length===0 ? `<div class="empty" style="padding:20px; margin-top:14px">No service history yet</div>` : `
       <ul class="timeline" style="margin-top:14px">
         ${history.map(h=>`
           <li>
@@ -2132,7 +2236,7 @@ function serviceHistoryPanel(v){
 }
 function toggleSvcNoteRequired(){
   const isGeneral = document.getElementById('f_svctype').value==='general_repair';
-  document.getElementById('f_svcnote_label').textContent = isGeneral ? '詳細・備考（必須）' : '詳細・備考';
+  document.getElementById('f_svcnote_label').textContent = isGeneral ? 'Details / Notes (required)' : 'Details / Notes';
 }
 async function addServiceHistory(vehicleId){
   const category = document.getElementById('f_svctype').value;
@@ -2140,7 +2244,7 @@ async function addServiceHistory(vehicleId){
   const mileage = document.getElementById('f_svcmileage').value;
   const staff = document.getElementById('f_svcstaff').value;
   const notes = document.getElementById('f_svcnote').value.trim();
-  if(category==='general_repair' && !notes){ alert('一般修理を選んだ場合は詳細・備考を入力してください'); return; }
+  if(category==='general_repair' && !notes){ alert('Please enter details when selecting General Repair'); return; }
   const v = vehicles.find(x=>x.id===vehicleId);
   if(!v) return;
   v.serviceHistory = v.serviceHistory || [];
@@ -2154,7 +2258,7 @@ async function addServiceHistory(vehicleId){
   await upsertVehicleRow(v);
 }
 async function deleteServiceHistory(vehicleId, entryId){
-  if(!confirm('この入庫履歴を削除しますか？')) return;
+  if(!confirm('Delete this service history entry?')) return;
   const v = vehicles.find(x=>x.id===vehicleId);
   if(!v) return;
   v.serviceHistory = (v.serviceHistory||[]).filter(h=>h.id!==entryId);
@@ -2169,38 +2273,38 @@ function openServiceHistoryEditForm(vehicleId, entryId){
   const dt = new Date(h.date);
   const dateStr = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
   showModal(`
-    <div class="modal-head"><h3>入庫履歴を編集</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-head"><h3>Edit Service History Entry</h3><button class="close-x" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
       <div class="field-row3">
-        <div class="field" style="margin-bottom:0"><label>種別</label>
+        <div class="field" style="margin-bottom:0"><label>Type</label>
           <select id="f_svcedittype" onchange="toggleSvcEditNoteRequired()">
             ${Object.entries(SERVICE_CATEGORIES).map(([k,l])=>`<option value="${k}" ${h.category===k?'selected':''}>${l}</option>`).join('')}
           </select>
         </div>
-        <div class="field" style="margin-bottom:0"><label>日付</label><input id="f_svceditdate" type="date" value="${dateStr}"></div>
-        <div class="field" style="margin-bottom:0"><label>走行距離(km)</label><input id="f_svceditmileage" type="number" value="${h.mileageKm||''}"></div>
+        <div class="field" style="margin-bottom:0"><label>Date</label><input id="f_svceditdate" type="date" value="${dateStr}"></div>
+        <div class="field" style="margin-bottom:0"><label>Mileage (km)</label><input id="f_svceditmileage" type="number" value="${h.mileageKm||''}"></div>
       </div>
       <div class="field-row" style="margin-top:10px">
-        <div class="field"><label>担当者</label>
+        <div class="field"><label>Staff</label>
           <select id="f_svceditstaff">
-            <option value="">未設定</option>
+            <option value="">Not set</option>
             ${sortedStaff().map(s=>`<option value="${esc(staffLabel(s))}" ${h.staff===staffLabel(s)?'selected':''}>${esc(staffLabel(s))}</option>`).join('')}
           </select>
         </div>
-        <div class="field"><label id="f_svceditnote_label">詳細・備考</label><input id="f_svceditnote" value="${esc(h.notes)}"></div>
+        <div class="field"><label id="f_svceditnote_label">Details / Notes</label><input id="f_svceditnote" value="${esc(h.notes)}"></div>
       </div>
     </div>
     <div class="modal-foot">
-      <button class="btn danger" onclick="deleteServiceHistory('${vehicleId}','${entryId}')">削除</button>
-      <button class="btn ghost" onclick="openVehicleDetail('${vehicleId}')">キャンセル</button>
-      <button class="btn" onclick="saveServiceHistoryEntry('${vehicleId}','${entryId}')">保存する</button>
+      <button class="btn danger" onclick="deleteServiceHistory('${vehicleId}','${entryId}')">Delete</button>
+      <button class="btn ghost" onclick="openVehicleDetail('${vehicleId}')">Cancel</button>
+      <button class="btn" onclick="saveServiceHistoryEntry('${vehicleId}','${entryId}')">Save</button>
     </div>
   `);
   toggleSvcEditNoteRequired();
 }
 function toggleSvcEditNoteRequired(){
   const isGeneral = document.getElementById('f_svcedittype').value==='general_repair';
-  document.getElementById('f_svceditnote_label').textContent = isGeneral ? '詳細・備考（必須）' : '詳細・備考';
+  document.getElementById('f_svceditnote_label').textContent = isGeneral ? 'Details / Notes (required)' : 'Details / Notes';
 }
 async function saveServiceHistoryEntry(vehicleId, entryId){
   const v = vehicles.find(x=>x.id===vehicleId);
@@ -2212,7 +2316,7 @@ async function saveServiceHistoryEntry(vehicleId, entryId){
   const mileage = document.getElementById('f_svceditmileage').value;
   const staff = document.getElementById('f_svceditstaff').value;
   const notes = document.getElementById('f_svceditnote').value.trim();
-  if(category==='general_repair' && !notes){ alert('一般修理を選んだ場合は詳細・備考を入力してください'); return; }
+  if(category==='general_repair' && !notes){ alert('Please enter details when selecting General Repair'); return; }
   h.category = category;
   if(dateStr) h.date = new Date(dateStr+'T00:00:00').getTime();
   h.mileageKm = mileage ? Number(mileage) : null;
@@ -2249,19 +2353,19 @@ function renderDealLaneKanban(items){
         const stageItems = items.filter(d=>d.stage===stage);
         return `
         <div class="kcol">
-          <div class="kcol-head"><span>${stage}</span><span class="cnt">${stageItems.length}</span></div>
+          <div class="kcol-head"><span>${stageLabel(stage)}</span><span class="cnt">${stageItems.length}</span></div>
           <div class="kcol-body">
             ${stageItems.map(d=>`
-              <div class="kcard" onclick="openDealDetail('${d.id}')" title="${esc(custName(d.customerId))} 様 / ${esc(vehName(d.vehicleId))} / ${esc(d.staff||'担当未設定')}">
+              <div class="kcard" onclick="openDealDetail('${d.id}')" title="${esc(custName(d.customerId))} / ${esc(vehName(d.vehicleId))} / ${esc(d.staff||'Unassigned')}">
                 <div class="cust">${esc(custName(d.customerId))}</div>
                 <div class="veh">${esc(vehName(d.vehicleId))}</div>
-                <div class="staff-tag" style="margin-bottom:5px; font-size:9.5px; padding:1px 5px;">${esc(d.staff||'担当未設定')}</div>
+                <div class="staff-tag" style="margin-bottom:5px; font-size:9.5px; padding:1px 5px;">${esc(d.staff||'Unassigned')}</div>
                 <div class="mvbtns">
                   ${stagePrev(stage)?`<span class="mv" onclick="event.stopPropagation(); moveStage('${d.id}',-1)">‹</span>`:'<span></span>'}
                   ${stageNext(stage)?`<span class="mv" onclick="event.stopPropagation(); moveStage('${d.id}',1)">›</span>`:'<span></span>'}
                 </div>
               </div>
-            `).join('') || `<div style="text-align:center; color:var(--text-dim2); font-size:10px; padding:12px 2px">なし</div>`}
+            `).join('') || `<div style="text-align:center; color:var(--text-dim2); font-size:10px; padding:12px 2px">None</div>`}
           </div>
         </div>`;
       }).join('')}
@@ -2277,16 +2381,16 @@ function renderDeals(){
   const others = deals.filter(d=>!laneNames.some(n=>(d.staff||'').startsWith(n)));
   return `
     <div class="topbar">
-      <div class="pagetitle">💬 商談パイプライン <span class="sub">${deals.length}件</span></div>
-      <button class="btn" onclick="openDealForm()">＋ 新規商談</button>
+      <div class="pagetitle">💬 Deal Pipeline <span class="sub">${deals.length} deals</span></div>
+      <button class="btn" onclick="openDealForm()">＋ New Deal</button>
     </div>
     ${lanes.map((lane,i)=>`
       <div class="lane-block">
         <div class="lane-head">
-          <span>🧑 ${esc(lane.label)}</span><span class="cnt">${lane.items.length}件</span>
+          <span>🧑 ${esc(lane.label)}</span><span class="cnt">${lane.items.length}</span>
           <span style="margin-left:auto; display:flex; gap:6px">
-            <span class="mv" style="${i===0?'opacity:.3; pointer-events:none;':''}" onclick="moveDealLane('${lane.id}',-1)" title="上に移動">↑</span>
-            <span class="mv" style="${i===lanes.length-1?'opacity:.3; pointer-events:none;':''}" onclick="moveDealLane('${lane.id}',1)" title="下に移動">↓</span>
+            <span class="mv" style="${i===0?'opacity:.3; pointer-events:none;':''}" onclick="moveDealLane('${lane.id}',-1)" title="Move up">↑</span>
+            <span class="mv" style="${i===lanes.length-1?'opacity:.3; pointer-events:none;':''}" onclick="moveDealLane('${lane.id}',1)" title="Move down">↓</span>
           </span>
         </div>
         ${renderDealLaneKanban(lane.items)}
@@ -2294,7 +2398,7 @@ function renderDeals(){
     `).join('')}
     ${others.length ? `
       <div class="lane-block">
-        <div class="lane-head"><span>🧑 その他・未設定</span><span class="cnt">${others.length}件</span></div>
+        <div class="lane-head"><span>🧑 Other / Unassigned</span><span class="cnt">${others.length}</span></div>
         ${renderDealLaneKanban(others)}
       </div>
     ` : ''}
@@ -2308,7 +2412,7 @@ function advanceDealStage(dealId, dir){
   const i = STAGES.indexOf(d.stage);
   const ni = Math.min(STAGES.length-1, Math.max(0, i+dir));
   d.stage = STAGES[ni];
-  d.history.push({date:Date.now(), note:`ステータスを「${STAGES[ni]}」に変更`});
+  d.history.push({date:Date.now(), note:`Status changed to "${stageLabel(STAGES[ni])}"`});
   const v = vehicles.find(x=>x.id===d.vehicleId);
   if(v){
     if(d.stage==='契約') v.status='sold';
@@ -2334,31 +2438,31 @@ async function moveStageAndRefresh(dealId, vehicleId, dir){
 
 function openDealForm(){
   if(customers.length===0 || vehicles.length===0){
-    alert('先に顧客と車両を1件以上登録してください。');
+    alert('Please register at least one customer and one vehicle first.');
     return;
   }
   showModal(`
-    <div class="modal-head"><h3>＋ 新規商談登録</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-head"><h3>＋ New Deal</h3><button class="close-x" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
-      <div class="field"><label>顧客</label>
+      <div class="field"><label>Customer</label>
         <select id="f_cust">${customers.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
       </div>
-      <div class="field"><label>車両</label>
+      <div class="field"><label>Vehicle</label>
         <select id="f_veh">${vehicles.map(v=>`<option value="${v.id}">${esc(v.maker)} ${esc(v.model)} (${v.year})</option>`).join('')}</select>
       </div>
       <div class="field-row">
-        <div class="field"><label>担当スタッフ</label>
+        <div class="field"><label>Assigned Staff</label>
           <select id="f_staff">${sortedStaff().map(s=>`<option value="${esc(staffLabel(s))}">${esc(staffLabel(s))}</option>`).join('')}</select>
         </div>
-        <div class="field"><label>初期ステータス</label>
-          <select id="f_stage">${STAGES.filter(s=>s!=='キャンセル').map(s=>`<option value="${s}">${s}</option>`).join('')}</select>
+        <div class="field"><label>Initial Status</label>
+          <select id="f_stage">${STAGES.filter(s=>s!=='キャンセル').map(s=>`<option value="${s}">${stageLabel(s)}</option>`).join('')}</select>
         </div>
       </div>
-      <div class="field"><label>メモ</label><textarea id="f_memo" placeholder="初回対応の内容など"></textarea></div>
+      <div class="field"><label>Memo</label><textarea id="f_memo" placeholder="Initial contact details, etc."></textarea></div>
     </div>
     <div class="modal-foot">
-      <button class="btn ghost" onclick="closeModal()">キャンセル</button>
-      <button class="btn" onclick="saveDeal()">登録する</button>
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="saveDeal()">Register</button>
     </div>
   `);
 }
@@ -2369,7 +2473,7 @@ async function saveDeal(){
   const stage = document.getElementById('f_stage').value;
   const memo = document.getElementById('f_memo').value.trim();
   const deal = {id:uid('D'), customerId, vehicleId, staff, stage, createdAt:Date.now(),
-    history:[{date:Date.now(), note: memo || `商談開始（${stage}）`}]};
+    history:[{date:Date.now(), note: memo || `Deal started (${stageLabel(stage)})`}]};
   deals.push(deal);
   closeModal();
   renderView();
@@ -2380,25 +2484,25 @@ function openDealDetail(id){
   const d = deals.find(x=>x.id===id);
   if(!d) return;
   showModal(`
-    <div class="modal-head"><h3>商談詳細</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-head"><h3>Deal Details</h3><button class="close-x" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
       <div class="kv-grid" style="margin-bottom:16px">
-        <div class="kv"><span class="k">顧客</span><span class="v">${esc(custName(d.customerId))} 様</span></div>
-        <div class="kv"><span class="k">車両</span><span class="v">${esc(vehName(d.vehicleId))} <span class="mv" onclick="openChangeDealVehicleForm('${d.id}',{type:'deal',dealId:'${d.id}'})">🚗 変更</span></span></div>
-        <div class="kv"><span class="k">担当</span><span class="v">${esc(d.staff||'—')}</span></div>
-        <div class="kv"><span class="k">現在のステータス</span><span class="v" style="color:var(--amber)">${esc(d.stage)}</span></div>
+        <div class="kv"><span class="k">Customer</span><span class="v">${esc(custName(d.customerId))}</span></div>
+        <div class="kv"><span class="k">Vehicle</span><span class="v">${esc(vehName(d.vehicleId))} <span class="mv" onclick="openChangeDealVehicleForm('${d.id}',{type:'deal',dealId:'${d.id}'})">🚗 Change</span></span></div>
+        <div class="kv"><span class="k">Assigned To</span><span class="v">${esc(d.staff||'—')}</span></div>
+        <div class="kv"><span class="k">Current Status</span><span class="v" style="color:var(--amber)">${esc(stageLabel(d.stage))}</span></div>
       </div>
-      <h3 style="margin-bottom:8px">📅 商談履歴</h3>
+      <h3 style="margin-bottom:8px">📅 Deal History</h3>
       <ul class="timeline">
         ${d.history.map((h,i)=>`<li><span class="dot"></span><div style="flex:1"><b>${fmtDate(h.date)}</b>${esc(h.note)}</div><span class="mv" onclick="openHistoryEditForm('${d.id}',${i},{type:'deal',dealId:'${d.id}'})">✎</span></li>`).join('')}
       </ul>
-      <div class="field" style="margin-top:14px"><label>履歴を追加</label><textarea id="f_addnote" placeholder="対応内容を記録…"></textarea></div>
+      <div class="field" style="margin-top:14px"><label>Add Entry</label><textarea id="f_addnote" placeholder="Record activity details…"></textarea></div>
     </div>
     <div class="modal-foot">
-      <button class="btn danger" onclick="deleteDeal('${d.id}')">この商談を削除</button>
-      ${d.stage!=='キャンセル'?`<button class="btn danger" onclick="closeModal(); cancelDeal('${d.id}','${d.vehicleId}')">交渉決裂・中止</button>`:''}
-      <button class="btn ghost" onclick="closeModal()">閉じる</button>
-      <button class="btn" onclick="addDealNote('${d.id}')">追加する</button>
+      <button class="btn danger" onclick="deleteDeal('${d.id}')">Delete This Deal</button>
+      ${d.stage!=='キャンセル'?`<button class="btn danger" onclick="closeModal(); cancelDeal('${d.id}','${d.vehicleId}')">Negotiation Failed / Cancel</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">Close</button>
+      <button class="btn" onclick="addDealNote('${d.id}')">Add</button>
     </div>
   `);
 }
@@ -2412,7 +2516,7 @@ async function addDealNote(id){
   await upsertDealRow(d);
 }
 async function deleteDeal(id){
-  if(!confirm('この商談記録をゴミ箱に移動しますか？「ゴミ箱」からいつでも復元できます。')) return;
+  if(!confirm('Move this deal record to Trash? You can restore it from Trash at any time.')) return;
   const d = deals.find(x=>x.id===id);
   deals = deals.filter(d=>d.id!==id);
   closeModal();
@@ -2432,15 +2536,15 @@ function openHistoryEditForm(dealId, index, returnTo){
   const dt = new Date(h.date);
   const dateStr = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
   showModal(`
-    <div class="modal-head"><h3>対応履歴を編集</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-head"><h3>Edit Activity Entry</h3><button class="close-x" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
-      <div class="field"><label>日付</label><input id="f_histdate" type="date" value="${dateStr}"></div>
-      <div class="field"><label>内容</label><textarea id="f_histnote">${esc(h.note)}</textarea></div>
+      <div class="field"><label>Date</label><input id="f_histdate" type="date" value="${dateStr}"></div>
+      <div class="field"><label>Details</label><textarea id="f_histnote">${esc(h.note)}</textarea></div>
     </div>
     <div class="modal-foot">
-      <button class="btn danger" onclick='deleteHistoryEntry("${dealId}",${index},${JSON.stringify(returnTo||null)})'>削除</button>
-      <button class="btn ghost" onclick='(${JSON.stringify(returnTo||null)}?returnFromDealEdit(${JSON.stringify(returnTo||null)}):closeModal())'>キャンセル</button>
-      <button class="btn" onclick='saveHistoryEntry("${dealId}",${index},${JSON.stringify(returnTo||null)})'>保存する</button>
+      <button class="btn danger" onclick='deleteHistoryEntry("${dealId}",${index},${JSON.stringify(returnTo||null)})'>Delete</button>
+      <button class="btn ghost" onclick='(${JSON.stringify(returnTo||null)}?returnFromDealEdit(${JSON.stringify(returnTo||null)}):closeModal())'>Cancel</button>
+      <button class="btn" onclick='saveHistoryEntry("${dealId}",${index},${JSON.stringify(returnTo||null)})'>Save</button>
     </div>
   `);
 }
@@ -2449,7 +2553,7 @@ async function saveHistoryEntry(dealId, index, returnTo){
   if(!d) return;
   const dateStr = document.getElementById('f_histdate').value;
   const note = document.getElementById('f_histnote').value.trim();
-  if(!note){ alert('内容を入力してください'); return; }
+  if(!note){ alert('Please enter details'); return; }
   const h = d.history[index];
   if(!h) return;
   if(dateStr){
@@ -2463,7 +2567,7 @@ async function saveHistoryEntry(dealId, index, returnTo){
   await upsertDealRow(d);
 }
 async function deleteHistoryEntry(dealId, index, returnTo){
-  if(!confirm('この履歴を削除しますか？')) return;
+  if(!confirm('Delete this entry?')) return;
   const d = deals.find(x=>x.id===dealId);
   if(!d) return;
   d.history.splice(index,1);
@@ -2474,20 +2578,20 @@ function openChangeDealVehicleForm(dealId, returnTo){
   const d = deals.find(x=>x.id===dealId);
   if(!d) return;
   showModal(`
-    <div class="modal-head"><h3>🚗 商談の対象車種を変更</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-head"><h3>🚗 Change Deal's Target Vehicle</h3><button class="close-x" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
       <div style="font-size:11.5px; color:var(--text-dim); margin-bottom:10px; line-height:1.6">
-        商談の対象は在庫車（販売用ストック）のみ選べます。査定車を変更したい場合は、下の「📋 査定車」欄から登録し直してください。
+        Only stock vehicles (for sale) can be selected as a deal's target. To change the appraisal vehicle, re-register it via the "📋 Appraisal Vehicle" section below instead.
       </div>
-      <div class="field"><label>車両を選択</label>
+      <div class="field"><label>Select Vehicle</label>
         <select id="f_changeveh">
           ${vehicles.filter(v=>v.kind!=='tradein').map(v=>`<option value="${v.id}" ${v.id===d.vehicleId?'selected':''}>${esc(v.maker)} ${esc(v.model)} (${v.year||'-'})</option>`).join('')}
         </select>
       </div>
     </div>
     <div class="modal-foot">
-      <button class="btn ghost" onclick='(${JSON.stringify(returnTo||null)}?returnFromDealEdit(${JSON.stringify(returnTo||null)}):closeModal())'>キャンセル</button>
-      <button class="btn" onclick='changeDealVehicle("${dealId}",${JSON.stringify(returnTo||null)})'>変更する</button>
+      <button class="btn ghost" onclick='(${JSON.stringify(returnTo||null)}?returnFromDealEdit(${JSON.stringify(returnTo||null)}):closeModal())'>Cancel</button>
+      <button class="btn" onclick='changeDealVehicle("${dealId}",${JSON.stringify(returnTo||null)})'>Change</button>
     </div>
   `);
 }
@@ -2497,7 +2601,7 @@ async function changeDealVehicle(dealId, returnTo){
   const newVehicleId = document.getElementById('f_changeveh').value;
   const oldVehicleId = d.vehicleId;
   if(newVehicleId===oldVehicleId){ returnFromDealEdit(returnTo); return; }
-  d.history.push({date:Date.now(), note:`対象車種を変更（${vehName(oldVehicleId)} → ${vehName(newVehicleId)}）`});
+  d.history.push({date:Date.now(), note:`Target vehicle changed (${vehName(oldVehicleId)} → ${vehName(newVehicleId)})`});
   d.vehicleId = newVehicleId;
   const adjustedReturnTo = (returnTo && returnTo.type==='vehicle') ? {type:'vehicle', vehicleId:newVehicleId} : returnTo;
   returnFromDealEdit(adjustedReturnTo);
@@ -2512,21 +2616,21 @@ function renderStaff(){
   const sorted = sortedStaff();
   return `
     <div class="topbar">
-      <div class="pagetitle">👥 スタッフ管理 <span class="sub">${staffList.length}名登録</span></div>
-      <button class="btn" onclick="openStaffForm()">＋ 新規スタッフ</button>
+      <div class="pagetitle">👥 Staff <span class="sub">${staffList.length} registered</span></div>
+      <button class="btn" onclick="openStaffForm()">＋ New Staff</button>
     </div>
-    ${sorted.length===0 ? `<div class="empty"><b>スタッフが登録されていません</b>「＋新規スタッフ」から登録してください</div>` : `
+    ${sorted.length===0 ? `<div class="empty"><b>No staff registered</b>Use "＋ New Staff" to register one</div>` : `
     <div class="grid">
       ${sorted.map((s,i)=>`
         <div class="card" style="cursor:default">
           <div class="name">${esc(s.name)}</div>
-          <div class="meta">${esc(s.role||'役職未設定')}</div>
+          <div class="meta">${esc(s.role||'No role set')}</div>
           <div class="row2" style="margin-top:10px">
             <div style="display:flex; gap:6px">
-              <span class="mv" style="${i===0?'opacity:.3; pointer-events:none;':''}" onclick="moveStaff('${s.id}',-1)">↑ 上へ</span>
-              <span class="mv" style="${i===sorted.length-1?'opacity:.3; pointer-events:none;':''}" onclick="moveStaff('${s.id}',1)">↓ 下へ</span>
+              <span class="mv" style="${i===0?'opacity:.3; pointer-events:none;':''}" onclick="moveStaff('${s.id}',-1)">↑ Up</span>
+              <span class="mv" style="${i===sorted.length-1?'opacity:.3; pointer-events:none;':''}" onclick="moveStaff('${s.id}',1)">↓ Down</span>
             </div>
-            <button class="btn ghost sm" onclick='openStaffForm(${JSON.stringify(s).replace(/'/g,"&#39;")})'>✎ 編集</button>
+            <button class="btn ghost sm" onclick='openStaffForm(${JSON.stringify(s).replace(/'/g,"&#39;")})'>✎ Edit</button>
           </div>
         </div>
       `).join('')}
@@ -2549,29 +2653,31 @@ async function moveStaff(id, dir){
 function openStaffForm(existing){
   const s = existing || {};
   showModal(`
-    <div class="modal-head"><h3>${existing?'スタッフ情報を編集':'＋ 新規スタッフ登録'}</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-head"><h3>${existing?'Edit Staff':'＋ New Staff'}</h3><button class="close-x" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
-      <div class="field"><label>氏名</label><input id="f_staffname" value="${esc(s.name)}" placeholder="マエダ"></div>
-      <div class="field"><label>役職・担当</label><input id="f_staffrole" value="${esc(s.role)}" placeholder="営業 / 査定・整備 / 社長 など"></div>
+      <div class="field"><label>Name</label><input id="f_staffname" value="${esc(s.name)}" placeholder="マエダ"></div>
+      <div class="field"><label>Role</label><input id="f_staffrole" value="${esc(s.role)}" placeholder="Sales / Appraisal &amp; Maintenance / President, etc."></div>
+      <div class="field"><label>Email Address <span style="color:var(--text-dim2)">(used for contact reminder emails)</span></label><input id="f_staffemail" type="email" value="${esc(s.email||'')}" placeholder="staff@deedmotors.mn"></div>
     </div>
     <div class="modal-foot">
-      ${existing?`<button class="btn danger" onclick="deleteStaff('${s.id}')">削除</button>`:''}
-      <button class="btn ghost" onclick="closeModal()">キャンセル</button>
-      <button class="btn" onclick="saveStaff('${existing?s.id:''}')">保存する</button>
+      ${existing?`<button class="btn danger" onclick="deleteStaff('${s.id}')">Delete</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="saveStaff('${existing?s.id:''}')">Save</button>
     </div>
   `);
 }
 async function saveStaff(id){
   const name = document.getElementById('f_staffname').value.trim();
   const role = document.getElementById('f_staffrole').value.trim();
-  if(!name){ alert('氏名を入力してください'); return; }
+  const email = document.getElementById('f_staffemail').value.trim();
+  if(!name){ alert('Please enter a name'); return; }
   let s;
   if(id){
     s = staffList.find(x=>x.id===id);
-    Object.assign(s, {name, role});
+    Object.assign(s, {name, role, email});
   }else{
     const maxOrder = staffList.reduce((m,x)=>Math.max(m, x.sortOrder||0), -1);
-    s = {id:uid('ST'), name, role, sortOrder: maxOrder+1, createdAt:Date.now()};
+    s = {id:uid('ST'), name, role, email, sortOrder: maxOrder+1, createdAt:Date.now()};
     staffList.push(s);
   }
   closeModal();
@@ -2579,7 +2685,7 @@ async function saveStaff(id){
   await upsertStaffRow(s);
 }
 async function deleteStaff(id){
-  if(!confirm('このスタッフを削除しますか？過去の商談記録に残っている担当者名はそのまま残ります。')) return;
+  if(!confirm('Delete this staff member? Their name will remain as-is on past deal records.')) return;
   staffList = staffList.filter(s=>s.id!==id);
   closeModal();
   go('staff');
@@ -2591,7 +2697,7 @@ async function deleteStaff(id){
 ============================================================ */
 async function downloadBackup(btn){
   const originalLabel = btn ? btn.textContent : '';
-  if(btn) btn.textContent = '⏳ 準備中…';
+  if(btn) btn.textContent = '⏳ Preparing…';
   try{
     const [custRes, vehRes, dealRes, staffRes] = await Promise.all([
       sb.from('customers').select('*'),
@@ -2600,12 +2706,12 @@ async function downloadBackup(btn){
       sb.from('staff').select('*'),
     ]);
     if(custRes.error || vehRes.error || dealRes.error || staffRes.error){
-      alert('バックアップの取得に失敗しました。時間をおいて再度お試しください。');
+      alert('Failed to fetch the backup. Please try again in a moment.');
       return;
     }
     const backup = {
       exportedAt: new Date().toISOString(),
-      note: 'DEED MOTORS DMS バックアップ（削除済み＝ゴミ箱内のデータも含みます）',
+      note: 'DEED MOTORS DMS backup (includes deleted / Trash items)',
       customers: custRes.data,
       vehicles: vehRes.data,
       deals: dealRes.data,
@@ -2639,40 +2745,40 @@ async function loadAndRenderTrash(){
   if(!el || currentView!=='trash') return;
   el.innerHTML = `
     <div class="topbar">
-      <div class="pagetitle">🗑 ゴミ箱 <span class="sub">削除した顧客・車両・商談を復元できます</span></div>
+      <div class="pagetitle">🗑 Trash <span class="sub">Restore deleted customers, vehicles, and deals</span></div>
     </div>
     <div class="panel">
-      <h3>👤 顧客（${trashedCustomers.length}件）</h3>
-      ${trashedCustomers.length===0 ? `<div class="empty" style="padding:16px">ゴミ箱は空です</div>` : trashedCustomers.map(c=>`
+      <h3>👤 Customers (${trashedCustomers.length})</h3>
+      ${trashedCustomers.length===0 ? `<div class="empty" style="padding:16px">Trash is empty</div>` : trashedCustomers.map(c=>`
         <div class="panel" style="background:var(--panel2); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-          <div><strong>${esc(c.name)}</strong> <span class="meta">削除日時: ${fmtDate(c.deletedAt)}</span></div>
+          <div><strong>${esc(c.name)}</strong> <span class="meta">Deleted: ${fmtDate(c.deletedAt)}</span></div>
           <div style="display:flex; gap:6px">
-            <button class="btn ghost sm" onclick="restoreCustomer('${c.id}')">↩ 復元</button>
-            <button class="btn danger sm" onclick="permanentlyDeleteCustomer('${c.id}')">完全に削除</button>
+            <button class="btn ghost sm" onclick="restoreCustomer('${c.id}')">↩ Restore</button>
+            <button class="btn danger sm" onclick="permanentlyDeleteCustomer('${c.id}')">Delete Permanently</button>
           </div>
         </div>
       `).join('')}
     </div>
     <div class="panel">
-      <h3>🚗 車両（${trashedVehicles.length}件）</h3>
-      ${trashedVehicles.length===0 ? `<div class="empty" style="padding:16px">ゴミ箱は空です</div>` : trashedVehicles.map(v=>`
+      <h3>🚗 Vehicles (${trashedVehicles.length})</h3>
+      ${trashedVehicles.length===0 ? `<div class="empty" style="padding:16px">Trash is empty</div>` : trashedVehicles.map(v=>`
         <div class="panel" style="background:var(--panel2); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-          <div><strong>${esc(v.maker)} ${esc(v.model)}</strong> <span class="meta">削除日時: ${fmtDate(v.deletedAt)}</span></div>
+          <div><strong>${esc(v.maker)} ${esc(v.model)}</strong> <span class="meta">Deleted: ${fmtDate(v.deletedAt)}</span></div>
           <div style="display:flex; gap:6px">
-            <button class="btn ghost sm" onclick="restoreVehicle('${v.id}')">↩ 復元</button>
-            <button class="btn danger sm" onclick="permanentlyDeleteVehicle('${v.id}')">完全に削除</button>
+            <button class="btn ghost sm" onclick="restoreVehicle('${v.id}')">↩ Restore</button>
+            <button class="btn danger sm" onclick="permanentlyDeleteVehicle('${v.id}')">Delete Permanently</button>
           </div>
         </div>
       `).join('')}
     </div>
     <div class="panel">
-      <h3>💬 商談（${trashedDeals.length}件）</h3>
-      ${trashedDeals.length===0 ? `<div class="empty" style="padding:16px">ゴミ箱は空です</div>` : trashedDeals.map(d=>`
+      <h3>💬 Deals (${trashedDeals.length})</h3>
+      ${trashedDeals.length===0 ? `<div class="empty" style="padding:16px">Trash is empty</div>` : trashedDeals.map(d=>`
         <div class="panel" style="background:var(--panel2); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-          <div><strong>${esc(custName(d.customerId))} 様 ・ ${esc(vehName(d.vehicleId))}</strong> <span class="meta">削除日時: ${fmtDate(d.deletedAt)}</span></div>
+          <div><strong>${esc(custName(d.customerId))} ・ ${esc(vehName(d.vehicleId))}</strong> <span class="meta">Deleted: ${fmtDate(d.deletedAt)}</span></div>
           <div style="display:flex; gap:6px">
-            <button class="btn ghost sm" onclick="restoreDeal('${d.id}')">↩ 復元</button>
-            <button class="btn danger sm" onclick="permanentlyDeleteDeal('${d.id}')">完全に削除</button>
+            <button class="btn ghost sm" onclick="restoreDeal('${d.id}')">↩ Restore</button>
+            <button class="btn danger sm" onclick="permanentlyDeleteDeal('${d.id}')">Delete Permanently</button>
           </div>
         </div>
       `).join('')}
@@ -2707,17 +2813,17 @@ async function restoreDeal(id){
   loadAndRenderTrash();
 }
 async function permanentlyDeleteCustomer(id){
-  if(!confirm('完全に削除します。この操作は取り消せません。よろしいですか？')) return;
+  if(!confirm('This will permanently delete it. This cannot be undone. Are you sure?')) return;
   await deleteCustomerRow(id);
   loadAndRenderTrash();
 }
 async function permanentlyDeleteVehicle(id){
-  if(!confirm('完全に削除します。この操作は取り消せません。よろしいですか？')) return;
+  if(!confirm('This will permanently delete it. This cannot be undone. Are you sure?')) return;
   await deleteVehicleRow(id);
   loadAndRenderTrash();
 }
 async function permanentlyDeleteDeal(id){
-  if(!confirm('完全に削除します。この操作は取り消せません。よろしいですか？')) return;
+  if(!confirm('This will permanently delete it. This cannot be undone. Are you sure?')) return;
   await deleteDealRow(id);
   loadAndRenderTrash();
 }
@@ -2737,7 +2843,7 @@ function renderView(){
   else if(currentView==='vehicles') el.innerHTML = renderVehicles();
   else if(currentView==='deals') el.innerHTML = renderDeals();
   else if(currentView==='staff') el.innerHTML = renderStaff();
-  else if(currentView==='trash') { el.innerHTML = `<div class="empty">読み込み中…</div>`; loadAndRenderTrash(); }
+  else if(currentView==='trash') { el.innerHTML = `<div class="empty">Loading…</div>`; loadAndRenderTrash(); }
   renderSaveBar();
 }
 
@@ -2749,33 +2855,33 @@ function showVersionInfo(){
   showModal(`
     <div class="modal-head"><h3>🚗 DEED MOTORS DMS — Version 1.0</h3><button class="close-x" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
-      <div style="font-size:12.5px; color:var(--text-dim); margin-bottom:14px">在庫管理・査定・商談・顧客の一元管理システム（MVP）</div>
-      <h3 style="font-size:13px">✅ 実装済み機能</h3>
+      <div style="font-size:12.5px; color:var(--text-dim); margin-bottom:14px">Unified inventory, appraisal, deal, and customer management system (MVP)</div>
+      <h3 style="font-size:13px">✅ Implemented Features</h3>
       <ul class="timeline">
-        <li><span class="dot"></span><div><b>在庫</b>展示車両の個別管理（メーカー・年式・価格・ステータス）</div></li>
-        <li><span class="dot"></span><div><b>査定</b>5段階ゲージ査定カルテ・減点タグ・自動スコア計算</div></li>
-        <li><span class="dot"></span><div><b>商談</b>車両ページ内に顧客情報を統合表示、カンバン全体俯瞰も可能</div></li>
-        <li><span class="dot"></span><div><b>査定車</b>来店客の持ち込み車を同じ査定フォームで登録・査定</div></li>
-        <li><span class="dot"></span><div><b>顧客</b>生涯データ（初回接点・接点数・購入台数・所有車履歴）</div></li>
-        <li><span class="dot"></span><div><b>リマインド</b>次回車検・点検日の自動通知（AI21スタイル）</div></li>
-        <li><span class="dot"></span><div><b>外部連携</b>査定ツール（deed-motors-scraper）のJSON結果取り込み</div></li>
-        <li><span class="dot"></span><div><b>共有</b>全データはスタッフ間でリアルタイム共有・自動保存</div></li>
+        <li><span class="dot"></span><div><b>Inventory</b>Individual management of display vehicles (make, year, price, status)</div></li>
+        <li><span class="dot"></span><div><b>Appraisal</b>5-point gauge appraisal sheet, deduction tags, automatic score calculation</div></li>
+        <li><span class="dot"></span><div><b>Deals</b>Integrated customer info on the vehicle page, plus a full kanban overview</div></li>
+        <li><span class="dot"></span><div><b>Appraisal Vehicles</b>Register and appraise walk-in customers' vehicles using the same form</div></li>
+        <li><span class="dot"></span><div><b>Customers</b>Lifetime data (first contact, touchpoints, vehicles purchased, ownership history)</div></li>
+        <li><span class="dot"></span><div><b>Reminders</b>Automatic notifications for upcoming inspections (AI21 style)</div></li>
+        <li><span class="dot"></span><div><b>Integration</b>Import JSON results from the appraisal tool (deed-motors-scraper)</div></li>
+        <li><span class="dot"></span><div><b>Sharing</b>All data is shared in real time across staff and saved automatically</div></li>
       </ul>
-      <h3 style="font-size:13px; margin-top:14px">🔜 今後の候補</h3>
+      <h3 style="font-size:13px; margin-top:14px">🔜 Future Candidates</h3>
       <ul class="timeline">
-        <li><span class="dot"></span><div>写真・車検証などのファイル管理（外部ストレージ連携が必要）</div></li>
-        <li><span class="dot"></span><div>契約書・査定レポートのPDF出力</div></li>
-        <li><span class="dot"></span><div>Facebook Messenger連携</div></li>
+        <li><span class="dot"></span><div>File management for photos, registration documents, etc. (requires external storage integration)</div></li>
+        <li><span class="dot"></span><div>PDF export of contracts and appraisal reports</div></li>
+        <li><span class="dot"></span><div>Facebook Messenger integration</div></li>
       </ul>
     </div>
-    <div class="modal-foot"><button class="btn" onclick="closeModal()">閉じる</button></div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal()">Close</button></div>
   `);
 }
 /* ---------------- init ---------------- */
 async function startApp(){
   document.getElementById('app').style.display = 'flex';
   document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('view').innerHTML = `<div class="empty">読み込み中… ачааллаж байна…</div>`;
+  document.getElementById('view').innerHTML = `<div class="empty">Loading… ачааллаж байна…</div>`;
   renderMnKeyboardKeys();
   await loadAll();
   renderNav();
