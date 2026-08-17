@@ -1426,8 +1426,8 @@ function renderVehicles(){
       <select onchange='vehFilter.sort=this.value; renderView()'>
         ${Object.entries(VEH_SORT_OPTIONS).map(([k,l])=>`<option value="${k}" ${vehFilter.sort===k?'selected':''}>${l}</option>`).join('')}
       </select>
-      ${['all','tradein','order','stock','nego','sold','delivered'].map(s=>`
-        <span class="chip ${vehFilter.status===s?'on':''}" onclick='vehFilter.status="${s}"; renderView()'>${s==='all'?'All':(s==='tradein'?'📋 Appraisal Vehicle':(s==='order'?'🔍 On Order':VSTATUS[s]))}</span>
+      ${['all','stock','tradein','nego','order','sold','delivered'].map(s=>`
+        <span class="chip ${vehFilter.status===s?'on':''}" style="${s==='order' && vehFilter.status!==s ? 'background:var(--violet-soft); color:var(--violet); border-color:#9c7bea55;' : ''}" onclick='vehFilter.status="${s}"; renderView()'>${s==='all'?'All':(s==='tradein'?'📋 Appraisal Vehicle':(s==='order'?'🔍 On Order (no vehicle yet)':VSTATUS[s]))}</span>
       `).join('')}
     </div>
     ${list.length===0 ? `<div class="empty"><b>No matching vehicles</b>Change the search criteria or register a new vehicle</div>` : `
