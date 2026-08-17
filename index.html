@@ -952,7 +952,7 @@ function renderCustomers(){
       <select onchange='custSort=this.value; renderView()'>
         ${Object.entries(CUST_SORT_OPTIONS).map(([k,l])=>`<option value="${k}" ${custSort===k?'selected':''}>${l}</option>`).join('')}
       </select>
-      ${['all','自社客','他社客','none'].map(t=>`
+      ${['自社客','他社客','none','all'].map(t=>`
         <span class="chip ${custTypeFilter===t?'on':''}" onclick='custTypeFilter="${t}"; renderView()'>${t==='all'?'All':(t==='none'?'No Type Set':customerTypeLabel(t))}</span>
       `).join('')}
     </div>
@@ -1426,7 +1426,7 @@ function renderVehicles(){
       <select onchange='vehFilter.sort=this.value; renderView()'>
         ${Object.entries(VEH_SORT_OPTIONS).map(([k,l])=>`<option value="${k}" ${vehFilter.sort===k?'selected':''}>${l}</option>`).join('')}
       </select>
-      ${['all','stock','tradein','nego','order','sold','delivered'].map(s=>`
+      ${['stock','tradein','nego','order','sold','delivered','all'].map(s=>`
         <span class="chip ${vehFilter.status===s?'on':''}" style="${s==='order' && vehFilter.status!==s ? 'background:var(--violet-soft); color:var(--violet); border-color:#9c7bea55;' : ''}" onclick='vehFilter.status="${s}"; renderView()'>${s==='all'?'All':(s==='tradein'?'📋 Appraisal Vehicle':(s==='order'?'🔍 On Order (no vehicle yet)':VSTATUS[s]))}</span>
       `).join('')}
     </div>
