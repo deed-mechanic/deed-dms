@@ -1391,7 +1391,7 @@ function contactReminders(){
 /* ============================================================
    RENDER: VEHICLES
 ============================================================ */
-let vehFilter = {q:'', status:'all', sort:'new'};
+let vehFilter = {q:'', status:'stock', sort:'new'};
 const VEH_SORT_OPTIONS = {
   new:'Newest first', old:'Oldest first',
   price_high:'Price high to low', price_low:'Price low to high',
@@ -1445,7 +1445,8 @@ function vehicleCardHtml(v){
   const hasAppraisal = (v.serviceHistory||[]).some(h=>h.category==='appraisal');
   const notArrived = !isTradeIn && !isOrder && v.arrived===false;
   return `
-    <div class="card" style="${isOrder?'background:linear-gradient(180deg, #9c7bea14, var(--panel)); border-color:#9c7bea55;':''}" onclick="openVehicleDetail('${v.id}')">
+    <div class="card" style="${isOrder?'background:var(--violet-soft); border:2px dashed var(--violet);':''}" onclick="openVehicleDetail('${v.id}')">
+      ${isOrder?`<div style="font-size:10px; font-weight:700; letter-spacing:.5px; color:var(--violet); margin-bottom:6px;">🔍 NO VEHICLE YET — TARGET SPEC ONLY</div>`:''}
       <span class="badge ${badgeClass(isTradeIn?'tradein':(isOrder?'order':v.status))}">${badgeLabel}</span>
       <div class="name">${esc(v.maker)} ${esc(v.model)}</div>
       <div class="meta">${v.year} ・ ${esc(v.color)} ・ ${(v.mileage||0).toLocaleString()}km</div>
