@@ -2284,7 +2284,7 @@ function vehicleFilesPanel(v){
     <div class="panel">
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
         <h3 style="margin:0">📷 Photos &amp; Documents</h3>
-        ${files.length>0?`<button class="btn ghost sm" onclick="downloadAllVehicleFiles('${v.id}')">⬇ Download All (${files.length})</button>`:''}
+        ${files.length>0?`<button class="btn ghost sm" onclick="downloadAllVehicleFiles('${v.id}')">💾 Download All (${files.length})</button>`:''}
       </div>
       <div class="field-row" style="align-items:flex-end">
         <div class="field" style="margin-bottom:0">
@@ -2312,7 +2312,7 @@ function vehicleFilesPanel(v){
             <div style="display:flex; gap:6px; margin-top:8px">
               <span class="mv" style="${i===0?'opacity:.3; pointer-events:none;':''}" onclick="moveVehicleFile('${v.id}',${i},-1)">↑</span>
               <span class="mv" style="${i===files.length-1?'opacity:.3; pointer-events:none;':''}" onclick="moveVehicleFile('${v.id}',${i},1)">↓</span>
-              <span class="mv" onclick="downloadVehicleFile('${esc(f.url)}','${esc(f.name).replace(/'/g,"&#39;")}', this)" title="Download">⬇</span>
+              <span class="mv" style="background:var(--teal-soft); border-color:#48c2d666; color:var(--teal)" onclick="downloadVehicleFile('${esc(f.url)}','${esc(f.name).replace(/'/g,"&#39;")}', this)" title="Download">💾</span>
               <button class="btn danger sm" style="flex:1" onclick="deleteVehicleFile('${v.id}','${esc(f.path)}')">Delete</button>
             </div>
           </div>
