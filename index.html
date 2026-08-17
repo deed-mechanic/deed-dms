@@ -2282,7 +2282,10 @@ function vehicleFilesPanel(v){
   const files = v.files || [];
   return `
     <div class="panel">
-      <h3>📷 Photos &amp; Documents</h3>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <h3 style="margin:0">📷 Photos &amp; Documents</h3>
+        ${files.length>0?`<button class="btn ghost sm" onclick="downloadAllVehicleFiles('${v.id}')">⬇ Download All (${files.length})</button>`:''}
+      </div>
       <div class="field-row" style="align-items:flex-end">
         <div class="field" style="margin-bottom:0">
           <label>Category</label>
@@ -2309,6 +2312,7 @@ function vehicleFilesPanel(v){
             <div style="display:flex; gap:6px; margin-top:8px">
               <span class="mv" style="${i===0?'opacity:.3; pointer-events:none;':''}" onclick="moveVehicleFile('${v.id}',${i},-1)">↑</span>
               <span class="mv" style="${i===files.length-1?'opacity:.3; pointer-events:none;':''}" onclick="moveVehicleFile('${v.id}',${i},1)">↓</span>
+              <span class="mv" onclick="downloadVehicleFile('${esc(f.url)}','${esc(f.name).replace(/'/g,"&#39;")}', this)" title="Download">⬇</span>
               <button class="btn danger sm" style="flex:1" onclick="deleteVehicleFile('${v.id}','${esc(f.path)}')">Delete</button>
             </div>
           </div>
@@ -2316,6 +2320,35 @@ function vehicleFilesPanel(v){
       </div>`}
     </div>
   `;
+}
+async function downloadVehicleFile(url, filename, btnEl){
+  const originalText = btnEl ? btnEl.textContent : '';
+  if(btnEl) btnEl.textContent = '⏳';
+  try{
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('fetch failed');
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename || 'file';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(blobUrl);
+  }catch(e){
+    alert('Failed to download the file. Please try again.');
+  }finally{
+    if(btnEl) btnEl.textContent = originalText;
+  }
+}
+async function downloadAllVehicleFiles(vehicleId){
+  const v = vehicles.find(x=>x.id===vehicleId);
+  if(!v || !(v.files||[]).length) return;
+  for(const f of v.files){
+    await downloadVehicleFile(f.url, f.name);
+    await new Promise(r=>setTimeout(r, 300));
+  }
 }
 async function uploadVehicleFile(vehicleId){
   const fileInput = document.getElementById('f_fileupload');
