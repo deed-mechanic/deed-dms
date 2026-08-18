@@ -367,6 +367,16 @@ let deals = [];
 let staffList = [];
 let currentView = 'dashboard';
 let saving = false;
+const DEFAULT_REMINDER_SETTINGS = {
+  hotStaleDays: 2,
+  prospectStaleDays: 3,
+  inquiryStaleDays: 3,
+  orderStaleDays: 5,
+  deliveryFirstFollowupDays: 1,
+  deliveryRepeatFollowupDays: 7,
+  ownedCustomerFollowupDays: 60,
+};
+let reminderSettings = {...DEFAULT_REMINDER_SETTINGS};
 
 const STAGES = ['問い合わせ','来店','査定','試乗','見積','交渉','契約','納車','キャンセル'];
 const STAGE_LABELS_EN = {
@@ -389,6 +399,8 @@ const NAV = [
   {id:'vehicles', ic:'🚗', ja:'Vehicles & Appraisal', mn:'Тээвэр · Үнэлгээ'},
   {id:'deals', ic:'💬', ja:'Deal Pipeline', mn:'Худалдааны явц'},
   {id:'staff', ic:'👥', ja:'Staff', mn:'Ажилтан'},
+  {id:'settings', ic:'⚙️', ja:'Reminder Settings', mn:'Тохиргоо'},
+  {id:'calendar', ic:'📅', ja:'Calendar', mn:'Хуанли'},
   {id:'trash', ic:'🗑', ja:'Trash', mn:'Хогийн сав'},
 ];
 
@@ -561,6 +573,7 @@ function customerToRow(c){
     customer_type: c.customerType||null, negotiation_history: c.negotiationHistory||[],
     lead_source: c.leadSource||'', desired_vehicle: c.desiredVehicle||'', budget: c.budget||null,
     has_responded: !!c.hasResponded, has_chatted: !!c.hasChatted,
+    claim: c.claim||null, other_dealer_status: c.otherDealerStatus||null,
     sort_order: c.sortOrder||0, deleted_at: c.deletedAt||null, created_at: c.createdAt||Date.now()
   };
 }
@@ -572,6 +585,7 @@ function rowToCustomer(r){
     negotiationHistory: r.negotiation_history||[], sortOrder: r.sort_order,
     leadSource: r.lead_source, desiredVehicle: r.desired_vehicle, budget: r.budget,
     hasResponded: !!r.has_responded, hasChatted: !!r.has_chatted,
+    claim: r.claim||null, otherDealerStatus: r.other_dealer_status||null,
     deletedAt: r.deleted_at, createdAt: r.created_at
   };
 }
@@ -690,20 +704,23 @@ async function migrateFromLegacyKv(){
   }
 }
 async function loadAll(){
-  const [custRes, vehRes, dealRes, staffRes] = await Promise.all([
+  const [custRes, vehRes, dealRes, staffRes, settingsRes] = await Promise.all([
     sb.from('customers').select('*').is('deleted_at', null),
     sb.from('vehicles').select('*').is('deleted_at', null),
     sb.from('deals').select('*').is('deleted_at', null),
     sb.from('staff').select('*'),
+    sb.from('dms_kv').select('value').eq('key', 'reminder_settings').maybeSingle(),
   ]);
   if(custRes.error) console.error('load customers error', custRes.error);
   if(vehRes.error) console.error('load vehicles error', vehRes.error);
   if(dealRes.error) console.error('load deals error', dealRes.error);
   if(staffRes.error) console.error('load staff error', staffRes.error);
+  if(settingsRes.error) console.error('load reminder settings error', settingsRes.error);
   customers = (custRes.data||[]).map(rowToCustomer);
   vehicles = (vehRes.data||[]).map(rowToVehicle);
   deals = (dealRes.data||[]).map(rowToDeal);
   staffList = (staffRes.data||[]).map(rowToStaff);
+  reminderSettings = {...DEFAULT_REMINDER_SETTINGS, ...(settingsRes.data && settingsRes.data.value || {})};
 
   if(customers.length===0 && vehicles.length===0 && deals.length===0){
     const migrated = await migrateFromLegacyKv();
@@ -723,6 +740,13 @@ async function loadAll(){
     ];
     await Promise.all(staffList.map(upsertStaffRow));
   }
+}
+async function saveReminderSettings(newSettings){
+  saving = true; renderSaveBar();
+  reminderSettings = {...DEFAULT_REMINDER_SETTINGS, ...newSettings};
+  const { error } = await sb.from('dms_kv').upsert({ key: 'reminder_settings', value: reminderSettings });
+  if(error) console.error('save reminder settings error', error);
+  saving = false; renderSaveBar();
 }
 function renderSaveBar(){
   const el = document.getElementById('saveIndicator');
@@ -757,7 +781,26 @@ function stats(){
   const appraisalPending = vehicles.filter(v=>!v.appraisal || Object.values(v.appraisal).every(x=>!x)).length;
   const deliveredThisMonth = vehicles.filter(v=>v.status==='delivered' && sameMonth(v.createdAt)).length;
   const totalProfit = vehicles.filter(v=>v.status==='sold'||v.status==='delivered').reduce((s,v)=>s+((v.priceSale||0)-(v.priceCost||0)),0);
-  return {stock, nego, appraisalPending, deliveredThisMonth, totalProfit, totalVehicles:vehicles.length};
+  const monthlySales = monthlySalesCount();
+  return {stock, nego, appraisalPending, deliveredThisMonth, totalProfit, monthlySales, totalVehicles:vehicles.length};
+}
+// 商談が「契約」ステージに移った日 = 販売成立日 として、当月分をカウントする。
+// 展示在庫車（vehicle.kind==='stock'）と、オーダー受注（vehicle.kind==='order'）を分けて集計。
+function stageChangeDate(d, targetStage){
+  const label = STAGE_LABELS_EN[targetStage] || targetStage;
+  const h = (d.history||[]).find(x=>x.note && (x.note.includes(`ステータスを「${targetStage}」に変更`) || x.note.includes(`Status changed to "${label}"`)));
+  return h ? h.date : null;
+}
+function monthlySalesCount(){
+  let stockSales = 0, orderSales = 0;
+  deals.filter(d=>!d.deletedAt).forEach(d=>{
+    const contractDate = stageChangeDate(d, '契約');
+    if(!contractDate || !sameMonth(contractDate)) return;
+    const v = vehicles.find(x=>x.id===d.vehicleId);
+    if(!v || v.kind==='tradein') return;
+    if(v.kind==='order') orderSales++; else stockSales++;
+  });
+  return {stockSales, orderSales, total: stockSales+orderSales};
 }
 function sameMonth(ts){
   const d=new Date(ts), n=new Date();
@@ -811,7 +854,11 @@ function renderDashboard(){
         <div class="k">📋 Not Yet Appraised</div><div class="v">${s.appraisalPending}<span>units</span></div>
       </div>
       <div class="stat-card" style="--accent:var(--green)">
-        <div class="k">💰 Total Gross Profit</div><div class="v" style="font-size:20px">${fmtMoney(s.totalProfit)}</div>
+        <div class="k">🚗 Sales This Month</div><div class="v">${s.monthlySales.total}<span>units</span></div>
+        <div style="display:flex; gap:14px; margin-top:8px">
+          <div><div style="font-size:20px; font-weight:800; color:var(--text)">${s.monthlySales.stockSales}</div><div style="font-size:12px; color:var(--text-dim)">Stock</div></div>
+          <div><div style="font-size:20px; font-weight:800; color:var(--text)">${s.monthlySales.orderSales}</div><div style="font-size:12px; color:var(--text-dim)">Orders</div></div>
+        </div>
       </div>
     </div>
     <div class="panel">
@@ -827,36 +874,80 @@ function renderDashboard(){
         `).join('')}
       </div>`}
     </div>
+    ${cr.claims.length? `
+    <div class="panel" style="border:2px solid var(--red); background:var(--red-soft)">
+      <h3 style="color:var(--red)">🚨 Active Claims — Resolve ASAP</h3>
+      <div class="grid">
+        ${cr.claims.map(x=>`
+          <div class="card" style="border-color:var(--red)" onclick="openCustomerDetail('${x.c.id}')">
+            <span class="badge" style="background:var(--red); color:#fff">🚨 Open for ${x.days} day(s)</span>
+            <div class="name" style="color:var(--red)">${esc(x.c.name)}</div>
+            <div class="meta" style="color:var(--red)">${esc(x.c.salesStaff||'Unassigned')} / ${esc(x.c.phone||'No phone on file')}</div>
+            <div class="meta" style="color:var(--red)">${esc(x.c.claim.note||'')}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : ''}
     <div class="panel">
       <h3>📞 Contact Reminders</h3>
-      ${(cr.staleContacts.length+cr.followups.length+cr.stagnant.length)===0 ? `<div class="empty" style="padding:20px">No customers currently need contact</div>` : `
-      ${cr.staleContacts.length? `<div style="margin-bottom:10px"><b>No contact in a while (${CONTACT_STALE_DAYS}+ days)</b></div>
+      ${(cr.hot.length+cr.deliveryFollowups.length+cr.prospects.length+cr.inquiries.length+cr.orders.length+cr.ownedFollowups.length)===0 ? `<div class="empty" style="padding:20px">No customers currently need contact</div>` : `
+      ${cr.hot.length? `<div style="margin-bottom:10px"><b>① Hot leads (no contact ${reminderSettings.hotStaleDays}+ days)</b></div>
       <div class="grid" style="margin-bottom:16px">
-        ${cr.staleContacts.map(x=>`
+        ${cr.hot.map(x=>`
           <div class="card" onclick="openCustomerDetail('${x.c.id}')">
-            <span class="badge b-sold">📞 No contact for ${x.days} days</span>
+            <span class="badge b-sold">🔥 No contact for ${x.days} days (${esc(stageLabel(x.d.stage))})</span>
+            <div class="name">${esc(x.c.name)}</div>
+            <div class="meta">${esc(x.d.staff||'Unassigned')} / ${esc(x.c.phone||'No phone on file')}</div>
+          </div>
+        `).join('')}
+      </div>` : ''}
+      ${cr.deliveryFollowups.length? `<div style="margin-bottom:10px"><b>② Post-delivery follow-up</b></div>
+      <div class="grid" style="margin-bottom:16px">
+        ${cr.deliveryFollowups.map(x=>`
+          <div class="card" onclick="openCustomerDetail('${x.c.id}')">
+            <span class="badge b-sold">🚗 ${x.days} days since last contact</span>
             <div class="name">${esc(x.c.name)}</div>
             <div class="meta">${esc(x.c.salesStaff||'Unassigned')} / ${esc(x.c.phone||'No phone on file')}</div>
           </div>
         `).join('')}
       </div>` : ''}
-      ${cr.followups.length? `<div style="margin-bottom:10px"><b>Post-delivery follow-up</b></div>
+      ${cr.prospects.length? `<div style="margin-bottom:10px"><b>③ Prospects (no contact ${reminderSettings.prospectStaleDays}+ days)</b></div>
       <div class="grid" style="margin-bottom:16px">
-        ${cr.followups.map(x=>`
+        ${cr.prospects.map(x=>`
           <div class="card" onclick="openCustomerDetail('${x.c.id}')">
-            <span class="badge b-sold">🚗 ${x.days} days since delivery</span>
+            <span class="badge b-sold">👀 No contact for ${x.days} days (${esc(stageLabel(x.d.stage))})</span>
             <div class="name">${esc(x.c.name)}</div>
-            <div class="meta">${esc(x.c.salesStaff||'Unassigned')} / ${esc(x.c.phone||'No phone on file')}</div>
+            <div class="meta">${esc(x.d.staff||'Unassigned')} / ${esc(x.c.phone||'No phone on file')}</div>
           </div>
         `).join('')}
       </div>` : ''}
-      ${cr.stagnant.length? `<div style="margin-bottom:10px"><b>Stalled negotiations (no progress in ${DEAL_STAGNANT_DAYS}+ days)</b></div>
-      <div class="grid">
-        ${cr.stagnant.map(x=>`
+      ${cr.inquiries.length? `<div style="margin-bottom:10px"><b>④ New inquiries (no contact ${reminderSettings.inquiryStaleDays}+ days)</b></div>
+      <div class="grid" style="margin-bottom:16px">
+        ${cr.inquiries.map(x=>`
+          <div class="card" onclick="openCustomerDetail('${x.c.id}')">
+            <span class="badge b-sold">📩 No contact for ${x.days} days</span>
+            <div class="name">${esc(x.c.name)}</div>
+            <div class="meta">${esc(x.d.staff||'Unassigned')} / ${esc(x.c.phone||'No phone on file')}</div>
+          </div>
+        `).join('')}
+      </div>` : ''}
+      ${cr.orders.length? `<div style="margin-bottom:10px"><b>⑤ Orders in progress (no update ${reminderSettings.orderStaleDays}+ days)</b></div>
+      <div class="grid" style="margin-bottom:16px">
+        ${cr.orders.map(x=>`
           <div class="card" onclick="openDealDetail('${x.d.id}')">
-            <span class="badge b-sold">💬 Stalled ${x.days} days (${esc(stageLabel(x.d.stage))})</span>
+            <span class="badge b-sold">🔨 ${x.days} days since update</span>
             <div class="name">${esc(custName(x.d.customerId))}</div>
             <div class="meta">${esc(x.d.staff||'Unassigned')} / ${esc(vehName(x.d.vehicleId))}</div>
+          </div>
+        `).join('')}
+      </div>` : ''}
+      ${cr.ownedFollowups.length? `<div style="margin-bottom:10px"><b>⑥ In-house customer check-in (every ${reminderSettings.ownedCustomerFollowupDays} days)</b></div>
+      <div class="grid">
+        ${cr.ownedFollowups.map(x=>`
+          <div class="card" onclick="openCustomerDetail('${x.c.id}')">
+            <span class="badge b-sold">🤝 ${x.days} days since last contact</span>
+            <div class="name">${esc(x.c.name)}</div>
+            <div class="meta">${esc(x.c.salesStaff||'Unassigned')} / ${esc(x.c.phone||'No phone on file')}</div>
           </div>
         `).join('')}
       </div>` : ''}
@@ -964,7 +1055,9 @@ function renderCustomers(){
         return `
         <div class="card" onclick="openCustomerDetail('${c.id}')">
           <div style="display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; margin-bottom:2px;">
+            ${c.claim?`<span class="badge" style="position:static; background:var(--red); color:#fff">🚨 Claim Open</span>`:''}
             ${c.customerType?`<span class="badge ${customerTypeBadgeClass(c.customerType)}" style="position:static">${esc(customerTypeLabel(c.customerType))}</span>`:''}
+            ${c.customerType==='他社客'?otherDealerStatusSelectHtml(c):''}
             ${due?`<span class="badge b-sold" style="position:static">🔔 Inspection Due</span>`:''}
           </div>
           <div class="name">${esc(c.name)}</div>
@@ -1172,12 +1265,23 @@ function openCustomerDetail(id){
       <button class="btn ghost sm" onclick="go('customers')">← Back to Customers</button>
       <span id="saveIndicator"></span>
     </div>
+    ${c.claim?`
+    <div class="panel" style="border:2px solid var(--red); background:var(--red-soft)">
+      <h3 style="color:var(--red)">🚨 Active Claim — Open for ${Math.floor(daysSince(c.claim.raisedAt))} day(s)</h3>
+      <div class="field" style="margin-top:0"><div class="panel" style="padding:10px 12px; background:var(--panel); color:var(--red)">${esc(c.claim.note||'')}</div></div>
+      <div class="meta" style="color:var(--red); margin-bottom:10px">Raised ${fmtDate(c.claim.raisedAt)}${c.claim.staff?` by ${esc(c.claim.staff)}`:''}</div>
+      <button class="btn" style="background:var(--red)" onclick="resolveClaim('${c.id}')">✅ Mark Resolved</button>
+    </div>` : `
+    <div class="panel" style="background:var(--panel2)">
+      <button class="btn ghost sm" onclick="openRaiseClaimForm('${c.id}')">⚠️ Report a Claim / Complaint</button>
+    </div>`}
     <div class="panel">
       <div class="detail-head">
         <div>
           <div class="detail-title">
             ${esc(c.name)}
             ${c.customerType?`<span class="badge ${customerTypeBadgeClass(c.customerType)}" style="position:static; margin-left:8px; vertical-align:middle;">${esc(customerTypeLabel(c.customerType))}</span>`:''}
+            ${c.customerType==='他社客'?`<span style="margin-left:8px; vertical-align:middle; display:inline-block">${otherDealerStatusSelectHtml(c)}</span>`:''}
           </div>
           <div class="detail-id">${esc(c.id)} ・ ${esc(c.nameMn||'')}</div>
         </div>
@@ -1260,6 +1364,64 @@ function openCustomerDetail(id){
     </div>
   `;
 }
+function openRaiseClaimForm(customerId){
+  showModal(`
+    <div class="modal-head"><h3>⚠️ Report a Claim / Complaint</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Staff</label>
+        <select id="f_claimstaff">
+          <option value="">Not set</option>
+          ${sortedStaff().map(s=>`<option value="${esc(staffLabel(s))}">${esc(staffLabel(s))}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Details</label><textarea id="f_claimnote" placeholder="What happened, what the customer is asking for, etc."></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn" style="background:var(--red)" onclick="raiseClaim('${customerId}')">🚨 Report Claim</button>
+    </div>
+  `);
+}
+async function raiseClaim(customerId){
+  const staff = document.getElementById('f_claimstaff').value;
+  const note = document.getElementById('f_claimnote').value.trim();
+  if(!note){ alert('Please enter details'); return; }
+  const c = customers.find(x=>x.id===customerId);
+  if(!c) return;
+  c.claim = { note, staff, raisedAt: Date.now() };
+  c.negotiationHistory = c.negotiationHistory || [];
+  c.negotiationHistory.push({ id: uid('NH'), date: Date.now(), staff, note: `⚠️ Claim reported: ${note}`, createdAt: Date.now() });
+  closeModal();
+  openCustomerDetail(customerId);
+  await upsertCustomerRow(c);
+}
+async function resolveClaim(customerId){
+  if(!confirm('Mark this claim as resolved?')) return;
+  const c = customers.find(x=>x.id===customerId);
+  if(!c || !c.claim) return;
+  const note = c.claim.note;
+  c.claim = null;
+  c.negotiationHistory = c.negotiationHistory || [];
+  c.negotiationHistory.push({ id: uid('NH'), date: Date.now(), staff: '', note: `✅ Claim resolved: ${note}`, createdAt: Date.now() });
+  openCustomerDetail(customerId);
+  await upsertCustomerRow(c);
+}
+const OTHER_DEALER_STATUS_LABELS = { hot:'🔥 Hot', prospect:'👀 Prospect', no_prospect:'🚫 No Prospect' };
+function otherDealerStatusSelectHtml(c){
+  return `<select onclick="event.stopPropagation()" onchange="event.stopPropagation(); setOtherDealerStatus('${c.id}', this.value)" style="font-size:11px; padding:2px 6px; border-radius:20px; background:var(--panel2); color:var(--text); border:1px solid var(--line)">
+    <option value="" ${!c.otherDealerStatus?'selected':''}>Set Status</option>
+    <option value="hot" ${c.otherDealerStatus==='hot'?'selected':''}>🔥 Hot</option>
+    <option value="prospect" ${c.otherDealerStatus==='prospect'?'selected':''}>👀 Prospect</option>
+    <option value="no_prospect" ${c.otherDealerStatus==='no_prospect'?'selected':''}>🚫 No Prospect</option>
+  </select>`;
+}
+async function setOtherDealerStatus(customerId, value){
+  const c = customers.find(x=>x.id===customerId);
+  if(!c) return;
+  c.otherDealerStatus = value || null;
+  renderView();
+  await upsertCustomerRow(c);
+}
 async function addNegotiationHistory(customerId){
   const dateStr = document.getElementById('f_negodate').value;
   const staff = document.getElementById('f_negostaff').value;
@@ -1335,22 +1497,25 @@ function serviceDue(dateStr){
 
 /* ---------------- 連絡リマインド判定ロジック ----------------
    同じ閾値・計算式を supabase/functions/daily-reminder-digest/index.ts 側にも実装している。
-   閾値を変更する場合は両方を揃えること。 */
-const CONTACT_STALE_DAYS = 7;      // 連絡停滞（全顧客対象）
-const DEAL_STAGNANT_DAYS = 7;      // オーダー中の商談停滞
-const DELIVERY_FOLLOWUP_DAYS = [3, 14]; // 納車後フォロー：固定タイミング（この後は90日ごと）
-const DELIVERY_FOLLOWUP_REPEAT_FROM = 14;
-const DELIVERY_FOLLOWUP_REPEAT_EVERY = 90;
+   閾値を変更する場合は両方を揃えること。
+
+   6段階の優先度カテゴリ（すべて「基準日数以上経過していれば、行動記録(negotiationHistory追加
+   または商談ステージ変更)が入るまで毎日再アラート」という共通ルール）:
+     ①HOT客        stage: 見積・交渉         2日以上未接触
+     ②納車後フォロー  stage: 納車 かつ 自社客でない  納車直後は1日後、以降は7日ごと
+     ③見込み客      stage: 来店・査定・試乗    3日以上未接触
+     ④問い合わせ対応客 stage: 問い合わせ        3日以上未接触
+     ⑤オーダー注文客  stage: 契約             5日以上未接触（オークション仕入れ等の途中経過連絡）
+     ⑥自社客フォロー  stage: 納車 かつ 自社客     60日（2ヶ月）ごと
+   起算日は「直近の行動日」＝ negotiationHistory最新日・納車日・商談履歴最新日のうち最も新しいもの。 */
+const HOT_DEAL_STAGES = ['見積','交渉'];
+const PROSPECT_DEAL_STAGES = ['来店','査定','試乗'];
+const INQUIRY_DEAL_STAGES = ['問い合わせ'];
+const ORDER_DEAL_STAGE = '契約';
+// 日数の実際の値は reminderSettings（Settings画面で編集・dms_kvに保存）から取得する。
+// ここでのDEFAULT_REMINDER_SETTINGSはフォールバック用の初期値。
 
 function daysSince(ts){ return ts ? (Date.now() - ts) / 86400000 : Infinity; }
-
-function contactStaleDays(c){
-  const hist = c.negotiationHistory||[];
-  if(hist.length===0) return null;
-  const last = hist.reduce((m,h)=>Math.max(m, h.date||0), 0);
-  const d = daysSince(last);
-  return d>=CONTACT_STALE_DAYS ? Math.floor(d) : null;
-}
 function dealsForCustomer(customerId){ return deals.filter(d=>d.customerId===customerId); }
 function deliveryDateOf(customerId){
   const delivered = dealsForCustomer(customerId).filter(d=>d.stage==='納車');
@@ -1363,29 +1528,225 @@ function deliveryDateOf(customerId){
   });
   return latest;
 }
-function deliveryFollowupDue(deliveryDate){
-  if(!deliveryDate) return null;
-  const daysElapsed = Math.floor(daysSince(deliveryDate));
-  if(DELIVERY_FOLLOWUP_DAYS.includes(daysElapsed)) return daysElapsed;
-  if(daysElapsed>=DELIVERY_FOLLOWUP_REPEAT_FROM && (daysElapsed-DELIVERY_FOLLOWUP_REPEAT_FROM)%DELIVERY_FOLLOWUP_REPEAT_EVERY===0) return daysElapsed;
-  return null;
+// 直近の行動日＝negotiationHistory最新日・納車日のうち最も新しいもの
+function lastActionDate(c){
+  const hist = c.negotiationHistory||[];
+  const lastHist = hist.reduce((m,h)=>Math.max(m, h.date||0), 0);
+  const dd = deliveryDateOf(c.id) || 0;
+  return Math.max(lastHist, dd) || null;
 }
-function dealStagnant(d){
-  if(['契約','納車','キャンセル'].includes(d.stage)) return null;
-  const last = d.history && d.history.length ? d.history[d.history.length-1].date : d.createdAt;
-  const days = daysSince(last);
-  return days>=DEAL_STAGNANT_DAYS ? Math.floor(days) : null;
+function dealLastActionDate(d){
+  const hist = d.history||[];
+  return hist.length ? hist[hist.length-1].date : d.createdAt;
+}
+function staleDaysFor(anchorDate, thresholdDays){
+  if(!anchorDate) return null;
+  const d = daysSince(anchorDate);
+  return d>=thresholdDays ? Math.floor(d) : null;
+}
+function deliveryFollowupDue(c){
+  const dd = deliveryDateOf(c.id);
+  if(!dd) return null;
+  const hist = c.negotiationHistory||[];
+  const lastHistDate = hist.reduce((m,h)=>Math.max(m, h.date||0), 0);
+  // まだ納車後に行動記録が無ければ「翌日」基準、行動記録があれば「◯日ごと」基準
+  const noActionSinceDelivery = lastHistDate <= dd;
+  const threshold = noActionSinceDelivery ? reminderSettings.deliveryFirstFollowupDays : reminderSettings.deliveryRepeatFollowupDays;
+  const anchor = noActionSinceDelivery ? dd : lastHistDate;
+  return staleDaysFor(anchor, threshold);
+}
+function ownedCustomerFollowupDue(c){
+  const anchor = lastActionDate(c);
+  return staleDaysFor(anchor, reminderSettings.ownedCustomerFollowupDays);
 }
 function contactReminders(){
-  const staleContacts = customers.filter(c=>!c.deletedAt).map(c=>({c, days:contactStaleDays(c)})).filter(x=>x.days!==null)
+  const activeCustomers = customers.filter(c=>!c.deletedAt);
+  const activeDeals = deals.filter(d=>!d.deletedAt);
+  function customerOf(d){ return activeCustomers.find(c=>c.id===d.customerId); }
+
+  // ⓪ クレーム対応：閾値なし、解決するまで発生日から毎日アラート
+  const claims = activeCustomers.filter(c=>c.claim).map(c=>({c, days:Math.floor(daysSince(c.claim.raisedAt))}))
     .sort((a,b)=>b.days-a.days);
-  const followups = customers.filter(c=>!c.deletedAt).map(c=>{
+
+  const hot = activeDeals.filter(d=>HOT_DEAL_STAGES.includes(d.stage)).map(d=>{
+    const c = customerOf(d);
+    return {d, c, days: c ? staleDaysFor(lastActionDate(c), reminderSettings.hotStaleDays) : null};
+  }).filter(x=>x.days!==null).sort((a,b)=>b.days-a.days);
+
+  const prospects = activeDeals.filter(d=>PROSPECT_DEAL_STAGES.includes(d.stage)).map(d=>{
+    const c = customerOf(d);
+    return {d, c, days: c ? staleDaysFor(lastActionDate(c), reminderSettings.prospectStaleDays) : null};
+  }).filter(x=>x.days!==null).sort((a,b)=>b.days-a.days);
+
+  const inquiries = activeDeals.filter(d=>INQUIRY_DEAL_STAGES.includes(d.stage)).map(d=>{
+    const c = customerOf(d);
+    return {d, c, days: c ? staleDaysFor(lastActionDate(c), reminderSettings.inquiryStaleDays) : null};
+  }).filter(x=>x.days!==null).sort((a,b)=>b.days-a.days);
+
+  const orders = activeDeals.filter(d=>d.stage===ORDER_DEAL_STAGE).map(d=>{
+    const c = customerOf(d);
+    return {d, c, days: staleDaysFor(dealLastActionDate(d), reminderSettings.orderStaleDays)};
+  }).filter(x=>x.days!==null).sort((a,b)=>b.days-a.days);
+
+  const deliveryFollowups = activeCustomers.filter(c=>c.customerType!=='自社客').map(c=>({c, days:deliveryFollowupDue(c)}))
+    .filter(x=>x.days!==null).sort((a,b)=>a.days-b.days);
+
+  const ownedFollowups = activeCustomers.filter(c=>c.customerType==='自社客' && deliveryDateOf(c.id)).map(c=>({c, days:ownedCustomerFollowupDue(c)}))
+    .filter(x=>x.days!==null).sort((a,b)=>a.days-b.days);
+
+  return {claims, hot, deliveryFollowups, prospects, inquiries, orders, ownedFollowups};
+}
+
+/* ============================================================
+   CALENDAR: monthly view of when each reminder first comes due
+   Each open reminder is pinned to a single date — anchorDate + threshold —
+   computed from its CURRENT category/stage (not a historical replay of past
+   stage changes). If the underlying stage/anchor changes later, its pinned
+   date recalculates too. Claims are pinned to their raisedAt date.
+============================================================ */
+const CATEGORY_META = {
+  claim:    {label:'🚨 Claim',                     color:'var(--red)'},
+  hot:      {label:'① Hot Lead',                   color:'var(--amber)'},
+  delivery: {label:'② Post-Delivery Follow-up',    color:'var(--teal)'},
+  prospect: {label:'③ Prospect',                   color:'var(--blue)'},
+  inquiry:  {label:'④ New Inquiry',                color:'var(--violet)'},
+  order:    {label:'⑤ Order In Progress',          color:'var(--amber)'},
+  owned:    {label:'⑥ In-House Check-in',          color:'var(--green)'},
+};
+const CATEGORY_ORDER = ['claim','hot','delivery','prospect','inquiry','order','owned'];
+function allReminderItemsWithDueDate(){
+  const DAY = 86400000;
+  const activeCustomers = customers.filter(c=>!c.deletedAt);
+  const activeDeals = deals.filter(d=>!d.deletedAt);
+  const items = [];
+  activeCustomers.forEach(c=>{
+    if(c.claim){
+      items.push({category:'claim', dueDate:c.claim.raisedAt, customerId:c.id, staff:c.salesStaff, name:c.name});
+    }
+  });
+  activeDeals.forEach(d=>{
+    const c = activeCustomers.find(x=>x.id===d.customerId);
+    if(!c) return;
+    if(HOT_DEAL_STAGES.includes(d.stage)){
+      const anchor = lastActionDate(c);
+      if(anchor) items.push({category:'hot', dueDate:anchor+reminderSettings.hotStaleDays*DAY, customerId:c.id, dealId:d.id, staff:d.staff, name:c.name, stage:d.stage});
+    } else if(PROSPECT_DEAL_STAGES.includes(d.stage)){
+      const anchor = lastActionDate(c);
+      if(anchor) items.push({category:'prospect', dueDate:anchor+reminderSettings.prospectStaleDays*DAY, customerId:c.id, dealId:d.id, staff:d.staff, name:c.name, stage:d.stage});
+    } else if(INQUIRY_DEAL_STAGES.includes(d.stage)){
+      const anchor = lastActionDate(c);
+      if(anchor) items.push({category:'inquiry', dueDate:anchor+reminderSettings.inquiryStaleDays*DAY, customerId:c.id, dealId:d.id, staff:d.staff, name:c.name, stage:d.stage});
+    } else if(d.stage===ORDER_DEAL_STAGE){
+      const anchor = dealLastActionDate(d);
+      if(anchor) items.push({category:'order', dueDate:anchor+reminderSettings.orderStaleDays*DAY, customerId:c.id, dealId:d.id, staff:d.staff, name:c.name, stage:d.stage});
+    }
+  });
+  activeCustomers.forEach(c=>{
     const dd = deliveryDateOf(c.id);
-    return {c, deliveryDate:dd, days:deliveryFollowupDue(dd)};
-  }).filter(x=>x.days!==null).sort((a,b)=>a.days-b.days);
-  const stagnant = deals.filter(d=>!d.deletedAt).map(d=>({d, days:dealStagnant(d)})).filter(x=>x.days!==null)
-    .sort((a,b)=>b.days-a.days);
-  return {staleContacts, followups, stagnant};
+    if(!dd) return;
+    if(c.customerType==='自社客'){
+      const anchor = lastActionDate(c);
+      if(anchor) items.push({category:'owned', dueDate:anchor+reminderSettings.ownedCustomerFollowupDays*DAY, customerId:c.id, staff:c.salesStaff, name:c.name});
+    } else {
+      const hist = c.negotiationHistory||[];
+      const lastHistDate = hist.reduce((m,h)=>Math.max(m,h.date||0),0);
+      const noActionSinceDelivery = lastHistDate<=dd;
+      const dueDate = noActionSinceDelivery ? dd+reminderSettings.deliveryFirstFollowupDays*DAY : lastHistDate+reminderSettings.deliveryRepeatFollowupDays*DAY;
+      items.push({category:'delivery', dueDate, customerId:c.id, staff:c.salesStaff, name:c.name});
+    }
+  });
+  return items;
+}
+function dateKey(ts){ const d=new Date(ts); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth(); // 0-11
+function changeCalendarMonth(delta){
+  calMonth += delta;
+  if(calMonth<0){ calMonth=11; calYear--; }
+  if(calMonth>11){ calMonth=0; calYear++; }
+  renderView();
+}
+function renderCalendar(){
+  const items = allReminderItemsWithDueDate();
+  const byDay = {};
+  items.forEach(it=>{
+    const k = dateKey(it.dueDate);
+    (byDay[k] = byDay[k]||[]).push(it);
+  });
+  const firstOfMonth = new Date(calYear, calMonth, 1);
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const startWeekday = firstOfMonth.getDay(); // 0=Sun
+  const todayKey = dateKey(Date.now());
+  const monthLabel = firstOfMonth.toLocaleDateString('en-US', {year:'numeric', month:'long'});
+  const cells = [];
+  for(let i=0;i<startWeekday;i++) cells.push(null);
+  for(let d=1;d<=daysInMonth;d++) cells.push(d);
+  return `
+    <div class="topbar">
+      <div class="pagetitle">📅 Calendar <span class="sub">Monthly view of when each reminder first comes due</span></div>
+    </div>
+    <div class="panel">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px">
+        <button class="btn ghost sm" onclick="changeCalendarMonth(-1)">← Prev</button>
+        <div style="font-weight:700; font-size:15px">${monthLabel}</div>
+        <button class="btn ghost sm" onclick="changeCalendarMonth(1)">Next →</button>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:6px">
+        ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(w=>`<div style="text-align:center; font-size:11px; color:var(--text-dim); font-weight:600">${w}</div>`).join('')}
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:6px">
+        ${cells.map(d=>{
+          if(d===null) return `<div></div>`;
+          const dt = new Date(calYear, calMonth, d);
+          const k = dateKey(dt.getTime());
+          const dayItems = byDay[k]||[];
+          const counts = {};
+          dayItems.forEach(it=>{ counts[it.category] = (counts[it.category]||0)+1; });
+          const isToday = k===todayKey;
+          return `
+          <div class="card" style="padding:8px; min-height:76px; cursor:pointer; ${isToday?'border-color:var(--teal)':''}" onclick="openCalendarDay('${k}')">
+            <div style="font-size:12px; font-weight:700; color:${isToday?'var(--teal)':'var(--text-dim)'}">${d}</div>
+            <div style="display:flex; flex-wrap:wrap; gap:3px; margin-top:4px">
+              ${CATEGORY_ORDER.filter(cat=>counts[cat]).map(cat=>`
+                <span style="font-size:10px; padding:1px 5px; border-radius:8px; background:${CATEGORY_META[cat].color}; color:#fff">${counts[cat]}</span>
+              `).join('')}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+function openCalendarDay(k){
+  const items = allReminderItemsWithDueDate().filter(it=>dateKey(it.dueDate)===k);
+  const staffNames = [...new Set(items.map(it=>it.staff||'Unassigned'))].sort((a,b)=>{
+    if(a==='Unassigned') return 1;
+    if(b==='Unassigned') return -1;
+    return a.localeCompare(b);
+  });
+  const byStaff = staffNames.map(staff=>({
+    staff,
+    list: items.filter(it=>(it.staff||'Unassigned')===staff)
+      .sort((a,b)=>CATEGORY_ORDER.indexOf(a.category)-CATEGORY_ORDER.indexOf(b.category)),
+  }));
+  document.getElementById('view').innerHTML = `
+    <div class="topbar">
+      <button class="btn ghost sm" onclick="go('calendar')">← Back to Calendar</button>
+    </div>
+    ${byStaff.length===0 ? `<div class="panel"><h3>📅 ${k} — Reminders for everyone</h3><div class="empty" style="padding:20px">No reminders first come due on this day</div></div>` : byStaff.map(g=>`
+      <div class="panel">
+        <h3>👤 ${esc(g.staff)} <span class="sub">${g.list.length} item(s) due ${k}</span></h3>
+        <div class="grid">
+          ${g.list.map(it=>`
+            <div class="card" onclick="${it.dealId?`openDealDetail('${it.dealId}')`:`openCustomerDetail('${it.customerId}')`}">
+              <span class="badge" style="background:${CATEGORY_META[it.category].color}; color:#fff">${CATEGORY_META[it.category].label}</span>
+              <div class="name">${esc(it.name)}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('')}
+  `;
 }
 
 /* ============================================================
@@ -1446,8 +1807,8 @@ function vehicleCardHtml(v){
   const notArrived = !isTradeIn && !isOrder && v.arrived===false;
   return `
     <div class="card" style="${isOrder?'background:var(--violet-soft); border:2px dashed var(--violet);':''}" onclick="openVehicleDetail('${v.id}')">
-      ${isOrder?`<div style="font-size:10px; font-weight:700; letter-spacing:.5px; color:var(--violet); margin-bottom:6px;">🔍 NO VEHICLE YET — TARGET SPEC ONLY</div>`:''}
       <span class="badge ${badgeClass(isTradeIn?'tradein':(isOrder?'order':v.status))}">${badgeLabel}</span>
+      ${isOrder?`<div style="font-size:10px; font-weight:700; letter-spacing:.5px; color:var(--violet); margin-bottom:6px; padding-right:100px;">🔍 NO VEHICLE YET — TARGET SPEC ONLY</div>`:''}
       <div class="name">${esc(v.maker)} ${esc(v.model)}</div>
       <div class="meta">${v.year} ・ ${esc(v.color)} ・ ${(v.mileage||0).toLocaleString()}km</div>
       ${(hasImage||hasAppraisal||notArrived) ? `<div style="display:flex; gap:5px; margin:4px 0; flex-wrap:wrap;">
@@ -2823,6 +3184,51 @@ async function changeDealVehicle(dealId, returnTo){
    RENDER: STAFF
 ============================================================ */
 function staffLabel(s){ return s.role ? `${s.name}（${s.role}）` : s.name; }
+const REMINDER_SETTINGS_FIELDS = [
+  {key:'hotStaleDays', label:'① Hot leads — no contact for N+ days'},
+  {key:'deliveryFirstFollowupDays', label:'② Post-delivery follow-up — first check-in, N day(s) after delivery'},
+  {key:'deliveryRepeatFollowupDays', label:'② Post-delivery follow-up — repeat every N days after that'},
+  {key:'prospectStaleDays', label:'③ Prospects — no contact for N+ days'},
+  {key:'inquiryStaleDays', label:'④ New inquiries — no contact for N+ days'},
+  {key:'orderStaleDays', label:'⑤ Orders in progress — no update for N+ days'},
+  {key:'ownedCustomerFollowupDays', label:'⑥ In-house customer check-in — every N days'},
+];
+function renderReminderSettings(){
+  return `
+    <div class="topbar">
+      <div class="pagetitle">⚙️ Reminder Settings <span class="sub">Thresholds used by both the dashboard and daily reminder emails</span></div>
+      <span id="saveIndicator"></span>
+    </div>
+    <div class="panel">
+      <div class="empty" style="padding:10px 4px; text-align:left; border:none">
+        Changing a number here updates both the dashboard panel and the daily reminder emails.
+        The email side (Edge Function) reads this from the database on every run, so no redeploy is needed.
+      </div>
+      ${REMINDER_SETTINGS_FIELDS.map(f=>`
+        <div class="field-row" style="align-items:center">
+          <div class="field" style="flex:2; margin-bottom:10px"><label>${f.label}</label></div>
+          <div class="field" style="flex:1; margin-bottom:10px"><input id="f_rs_${f.key}" type="number" min="0" value="${reminderSettings[f.key]}"></div>
+        </div>
+      `).join('')}
+      <button class="btn" onclick="saveReminderSettingsForm()">💾 Save Settings</button>
+      <button class="btn ghost" onclick="resetReminderSettingsForm()" style="margin-left:8px">Reset to Defaults</button>
+    </div>
+  `;
+}
+async function saveReminderSettingsForm(){
+  const next = {};
+  for(const f of REMINDER_SETTINGS_FIELDS){
+    const v = parseInt(document.getElementById('f_rs_'+f.key).value, 10);
+    next[f.key] = Number.isFinite(v) && v>=0 ? v : DEFAULT_REMINDER_SETTINGS[f.key];
+  }
+  await saveReminderSettings(next);
+  renderView();
+}
+async function resetReminderSettingsForm(){
+  if(!confirm('Reset all thresholds to their default values?')) return;
+  await saveReminderSettings({...DEFAULT_REMINDER_SETTINGS});
+  renderView();
+}
 function renderStaff(){
   const sorted = sortedStaff();
   return `
@@ -3054,6 +3460,8 @@ function renderView(){
   else if(currentView==='vehicles') el.innerHTML = renderVehicles();
   else if(currentView==='deals') el.innerHTML = renderDeals();
   else if(currentView==='staff') el.innerHTML = renderStaff();
+  else if(currentView==='settings') el.innerHTML = renderReminderSettings();
+  else if(currentView==='calendar') el.innerHTML = renderCalendar();
   else if(currentView==='trash') { el.innerHTML = `<div class="empty">Loading…</div>`; loadAndRenderTrash(); }
   renderSaveBar();
 }
