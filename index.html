@@ -305,6 +305,57 @@
     #menuBtn{display:inline-flex !important;}
   }
   #menuBtn{display:none; background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:8px 10px; cursor:pointer;}
+
+  /* ---------------- Manual (📖 Гарын авлага) ---------------- */
+  .manual-nav{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px;}
+  .manual-nav a{
+    font-size:12px; padding:6px 12px; border-radius:20px; background:var(--panel2); border:1px solid var(--line);
+    color:var(--text-dim); text-decoration:none;
+  }
+  .manual-nav a:hover{color:var(--text); border-color:var(--amber);}
+  .manual-section{scroll-margin-top:14px;}
+  .manual-section + .manual-section{margin-top:16px;}
+  .manual-chapnum{
+    font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-dim2); border:1px solid var(--line);
+    border-radius:7px; padding:3px 9px; margin-right:8px;
+  }
+  .manual-section.critical .manual-chapnum{background:var(--red); color:#fff; border-color:var(--red);}
+  .manual-callout{
+    display:flex; gap:10px; align-items:flex-start; background:var(--panel2); border:1px solid var(--line);
+    border-left:3px solid var(--teal); border-radius:9px; padding:12px 14px; margin:12px 0;
+  }
+  .manual-callout.warn{border-left-color:var(--red);}
+  .manual-callout .ic{font-size:18px; line-height:1.3;}
+  .manual-callout b{display:block; margin-bottom:3px; font-size:13px;}
+  .manual-callout p{margin:0; color:var(--text-dim); font-size:12.5px;}
+  .manual-flow{display:flex; gap:0; margin:16px 0; overflow-x:auto; padding-bottom:4px;}
+  .manual-flow-step{
+    flex:1; min-width:140px; background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+    padding:12px 13px; position:relative;
+  }
+  .manual-flow-step .k{font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--text-dim2); display:block; margin-bottom:6px;}
+  .manual-flow-step .t{font-weight:700; font-size:13px; margin-bottom:3px;}
+  .manual-flow-step .d{font-size:11.5px; color:var(--text-dim);}
+  .manual-flow-step.alert{border-color:var(--red); background:var(--red-soft);}
+  .manual-flow-step.alert .t{color:var(--red);}
+  .manual-flow-step.reset{border-color:var(--teal); background:var(--teal-soft);}
+  .manual-flow-step.reset .t{color:var(--teal);}
+  .manual-flow-arrow{display:flex; align-items:center; justify-content:center; width:26px; flex-shrink:0; color:var(--text-dim2); font-size:16px;}
+  .manual-stages{display:flex; flex-wrap:wrap; gap:7px; margin:10px 0 14px;}
+  .manual-cat{
+    display:grid; grid-template-columns:36px 1fr auto; gap:12px; align-items:center; background:var(--panel2);
+    border:1px solid var(--line); border-radius:10px; padding:11px 13px; margin-bottom:8px;
+  }
+  .manual-cat .ic{font-size:19px; text-align:center;}
+  .manual-cat .name{font-weight:700; font-size:13px; margin-bottom:2px;}
+  .manual-cat .cond{font-size:11.5px; color:var(--text-dim);}
+  .manual-cat .days{font-family:'JetBrains Mono',monospace; font-size:11px; padding:4px 9px; border-radius:7px; white-space:nowrap; text-align:center;}
+  @media (max-width:600px){
+    .manual-flow{flex-direction:column;}
+    .manual-flow-arrow{width:auto; height:20px; transform:rotate(90deg);}
+    .manual-cat{grid-template-columns:30px 1fr;}
+    .manual-cat .days{grid-column:2; justify-self:start;}
+  }
 </style>
 </head>
 <body>
@@ -395,6 +446,7 @@ function defectLabel(d){ return DEFECT_LABELS_EN[d] || d; }
 
 const NAV = [
   {id:'dashboard', ic:'🏠', ja:'Dashboard', mn:'Хяналтын самбар'},
+  {id:'manual', ic:'📖', ja:'Manual', mn:'Гарын авлага'},
   {id:'customers', ic:'👤', ja:'Customers', mn:'Үйлчлүүлэгч'},
   {id:'vehicles', ic:'🚗', ja:'Vehicles & Appraisal', mn:'Тээвэр · Үнэлгээ'},
   {id:'deals', ic:'💬', ja:'Deal Pipeline', mn:'Худалдааны явц'},
@@ -3229,6 +3281,128 @@ async function resetReminderSettingsForm(){
   await saveReminderSettings({...DEFAULT_REMINDER_SETTINGS});
   renderView();
 }
+function renderManual(){
+  return `
+    <div class="topbar">
+      <div class="pagetitle">📖 Гарын авлага <span class="sub">DMS системийг хэрхэн ашиглах вэ</span></div>
+    </div>
+    <div class="manual-nav">
+      <a href="#m-ch1">01 Нэвтрэх · Цэс</a>
+      <a href="#m-ch2">⚠ Чухал дүрэм</a>
+      <a href="#m-ch3">03 Үндсэн бүртгэл</a>
+      <a href="#m-ch4">04 Сануулгын 6 төрөл</a>
+      <a href="#m-ch5">⚠ Гомдол</a>
+      <a href="#m-ch6">06 Хуанли</a>
+      <a href="#m-ch7">07 Асуулт</a>
+    </div>
+
+    <div class="panel manual-section" id="m-ch1">
+      <h3><span class="manual-chapnum">01</span> Нэвтрэх ба цэс</h3>
+      <p style="color:var(--text-dim); font-size:13px; margin:0 0 12px">Бүх ажилтан нэг ижил нэвтрэх эрх ашигладаг. Нэвтэрсний дараа зүүн талын цэснээс хэрэгтэй хэсгээ сонгоно:</p>
+      <ul style="margin:0; padding-left:20px; font-size:13px; color:var(--text-dim); line-height:1.9">
+        <li><b style="color:var(--text)">🏠 Dashboard</b> — Хянах самбар. Өнөөдрийн байдал, сануулгууд энд харагдана.</li>
+        <li><b style="color:var(--text)">👤 Customers</b> — Үйлчлүүлэгчийн бүртгэл.</li>
+        <li><b style="color:var(--text)">🚗 Vehicles &amp; Appraisal</b> — Машины бүртгэл, үнэлгээ.</li>
+        <li><b style="color:var(--text)">💬 Deal Pipeline</b> — Худалдааны явцын бүх шат.</li>
+        <li><b style="color:var(--text)">👥 Staff</b> — Ажилтны жагсаалт.</li>
+        <li><b style="color:var(--text)">⚙️ Reminder Settings</b> — Сануулгын хоногийн тохиргоо (менежер өөрчилдөг).</li>
+        <li><b style="color:var(--text)">📅 Calendar</b> — Сарын хуанли харагдац.</li>
+      </ul>
+    </div>
+
+    <div class="panel manual-section critical" id="m-ch2">
+      <h3><span class="manual-chapnum">⚠</span> Хамгийн чухал дүрэм: Үйл ажиллагаа бүрийг тэмдэглэ</h3>
+      <p style="font-size:13px; margin:0 0 10px">DMS систем нь таны <b>сүүлд юу хийснийг өөрөө мэддэггүй</b> — та бичиж өгсөн зүйлээс л мэднэ. Харилцагчтай ярилцах, уулзах, утсаар холбогдох бүрдээ шууд тэмдэглэл нэмнэ үү.</p>
+      <div class="manual-callout warn">
+        <span class="ic">🚨</span>
+        <div><b>Хэрэв тэмдэглэл нэмэхгүй бол</b><p>Систем таныг "удаан хугацаанд холбогдоогүй" гэж үзээд, ижил харилцагчийн сануулгыг <b>өдөр бүр</b> дахин илгээнэ.</p></div>
+      </div>
+      <div class="manual-flow">
+        <div class="manual-flow-step"><span class="k">01</span><div class="t">Холбогдоно</div><div class="d">Утсаар ярьсан, уулзсан</div></div>
+        <div class="manual-flow-arrow">→</div>
+        <div class="manual-flow-step"><span class="k">02</span><div class="t">Тоолуур эхэлнэ</div><div class="d">Сүүлийн холбогдсон өдрөөс хоног тоологдоно</div></div>
+        <div class="manual-flow-arrow">→</div>
+        <div class="manual-flow-step alert"><span class="k">03</span><div class="t">Босго хоногт хүрнэ</div><div class="d">Dashboard дээр гарч, имэйл илгээгдэнэ</div></div>
+        <div class="manual-flow-arrow">→</div>
+        <div class="manual-flow-step reset"><span class="k">04</span><div class="t">Тэмдэглэл нэмнэ → 0</div><div class="d">Тоолуур дахин эхэлж, сануулга алга болно</div></div>
+      </div>
+      <p style="font-size:13px; margin:12px 0 8px">Тэмдэглэл нэмэх газар: үйлчлүүлэгчийн дэлгэц дэх <b>«💬 Deal &amp; Negotiation Log»</b> хэсэг (Customers → тухайн харилцагч дээр дар).</p>
+      <div class="card" style="cursor:default; background:var(--panel2)">
+        <div style="font-weight:700; font-size:13px; margin-bottom:10px">💬 Deal &amp; Negotiation Log</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px">
+          <div class="field" style="margin-bottom:0"><label>Date</label><input value="Өнөөдөр" readonly></div>
+          <div class="field" style="margin-bottom:0"><label>Staff</label><input value="Таны нэр ①" readonly></div>
+        </div>
+        <div class="field" style="margin-bottom:10px"><label>Details</label><textarea readonly placeholder='жишээ: &quot;Утсаар ярьж, ирэх долоо хоногт эргэж холбогдохоор боллоо&quot; ②'></textarea></div>
+        <button class="btn sm" disabled>＋ Add Entry ③</button>
+      </div>
+      <ol style="font-size:13px; color:var(--text-dim); margin:12px 0 0; padding-left:20px; line-height:1.8">
+        <li><b style="color:var(--text)">Staff</b> — өөрийн нэрийг сонго.</li>
+        <li><b style="color:var(--text)">Details</b> — юу ярьсан, юу тохиролцсоноо товч бич.</li>
+        <li><b style="color:var(--text)">＋ Add Entry</b> дар — энэ дарахад л тоолуур 0 болно.</li>
+      </ol>
+      <div class="manual-callout">
+        <span class="ic">✅</span>
+        <div><b>Дүрэм товчоор</b><p>Ярилцсан, уулзсан, утсаар холбогдсон болгонд — тэр даруй «＋ Add Entry» дар. Дараа нь хийе гэж хойшлуулбал мартагдана.</p></div>
+      </div>
+    </div>
+
+    <div class="panel manual-section" id="m-ch3">
+      <h3><span class="manual-chapnum">03</span> Үндсэн бүртгэл</h3>
+      <p style="font-size:13px; margin:0 0 10px"><b>👤 Шинэ үйлчлүүлэгч бүртгэх:</b> Customers хуудсан дээр «＋ New Customer» дарж, нэр, утас, <b>хариуцах ажилтан (Sales Staff)</b>-аа заавал сонго. Энэ талбар буруу бол сануулгын имэйл өөр хүнд очино!</p>
+      <p style="font-size:13px; margin:0 0 8px"><b>💬 Худалдааны явцын шатууд:</b> Харилцагч бүр доорх дарааллаар шилждэг:</p>
+      <div class="manual-stages">
+        ${['Inquiry','Visit','Appraisal','Test Drive','Quote','Negotiation','Contract','Delivery'].map(s=>`<span class="staff-tag">${s}</span>`).join('')}
+        <span class="staff-tag" style="color:var(--red); border-color:var(--red)">Cancelled</span>
+      </div>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:0">Аль шатанд байгаагаас нь хамаараад, дараагийн бүлэгт тайлбарласан 6 төрлийн сануулгын аль нь идэвхжихийг систем өөрөө тодорхойлно.</p>
+    </div>
+
+    <div class="panel manual-section" id="m-ch4">
+      <h3><span class="manual-chapnum">04</span> Сануулгын 6 төрөл</h3>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:0 0 12px">Хоногийн тоог менежер ⚙️ Reminder Settings-ээс өөрчилж болно — доорхи нь одоогийн анхны утга.</p>
+      <div class="manual-cat"><div class="ic">🔥</div><div><div class="name">① Hot Lead — Халуун харилцагч</div><div class="cond">Quote / Negotiation шатанд</div></div><div class="days" style="background:var(--amber-soft); color:var(--amber)">2+ хоног</div></div>
+      <div class="manual-cat"><div class="ic">🚗</div><div><div class="name">② Post-Delivery Follow-up — Хүргэлтийн дараах уулзалт</div><div class="cond">Хүргэсэн, "Дотоод үйлчлүүлэгч" биш</div></div><div class="days" style="background:var(--teal-soft); color:var(--teal)">1 хоног → 7 хоног тутам</div></div>
+      <div class="manual-cat"><div class="ic">👀</div><div><div class="name">③ Prospect — Сонирхогч харилцагч</div><div class="cond">Visit / Appraisal / Test Drive шатанд</div></div><div class="days" style="background:var(--blue-soft); color:var(--blue)">3+ хоног</div></div>
+      <div class="manual-cat"><div class="ic">📩</div><div><div class="name">④ New Inquiry — Шинэ асуулга</div><div class="cond">Анхны асуулга ирсэн</div></div><div class="days" style="background:var(--violet-soft); color:var(--violet)">3+ хоног</div></div>
+      <div class="manual-cat"><div class="ic">🔨</div><div><div class="name">⑤ Order In Progress — Захиалгын явц</div><div class="cond">Гэрээ хийгдсэн, машин хараахан ирээгүй</div></div><div class="days" style="background:var(--amber-soft); color:var(--amber)">5+ хоног</div></div>
+      <div class="manual-cat"><div class="ic">🤝</div><div><div class="name">⑥ In-House Check-in — Байнгын үйлчлүүлэгчийн үзлэг</div><div class="cond">Хүргэсэн, "Дотоод үйлчлүүлэгч" тэмдэглэгдсэн</div></div><div class="days" style="background:var(--green-soft); color:var(--green)">60 хоног тутам</div></div>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:10px 0 0">Dashboard дээр карт дээр дарахад тухайн үйлчлүүлэгч/худалдааны явц шууд нээгдэнэ — тэндээс «＋ Add Entry» хийж болно.</p>
+    </div>
+
+    <div class="panel manual-section critical" id="m-ch5">
+      <h3><span class="manual-chapnum">⚠</span> Гомдол мэдээлэх (хамгийн яаралтай)</h3>
+      <p style="font-size:13px; margin:0 0 10px">Харилцагч гомдол мэдэгдвэл (машины чимээ, засвар, эвдрэл г.м.), энэ бол <b>бусад бүх сануулгаас түрүүлж</b> шийдвэрлэх ёстой зүйл.</p>
+      <div class="card" style="cursor:default; border-color:var(--red); background:var(--red-soft)">
+        <div style="font-weight:700; font-size:13px; color:var(--red); margin-bottom:6px">🚨 Active Claim — Open for 2 day(s)</div>
+        <div style="font-size:12px; color:var(--red); margin-bottom:10px">"Мотор дуугарч байна гэж дуудлага орсон."</div>
+        <button class="btn sm" style="background:var(--red)" disabled>✅ Mark Resolved</button>
+      </div>
+      <ul style="font-size:13px; color:var(--text-dim); margin:12px 0 0; padding-left:20px; line-height:1.8">
+        <li>Гомдол ирмэгц <b style="color:var(--text)">«⚠️ Report a Claim / Complaint»</b> дарж бичнэ.</li>
+        <li>Шийдэгдэх хүртэл Dashboard дээр улаан хүрээтэй гарч, <b style="color:var(--text)">өдөр бүр</b> сануулна.</li>
+        <li>Шийдсэний дараа <b style="color:var(--text)">«✅ Mark Resolved»</b> дарснаар л сануулга зогсоно.</li>
+      </ul>
+    </div>
+
+    <div class="panel manual-section" id="m-ch6">
+      <h3><span class="manual-chapnum">06</span> Хуанли (Calendar)</h3>
+      <p style="font-size:13px; margin:0 0 10px">📅 Calendar хэсэгт сар бүрийн аль өдөр хэдэн сануулга ирэхийг нэг дор харах боломжтой.</p>
+      <ul style="font-size:13px; color:var(--text-dim); margin:0; padding-left:20px; line-height:1.8">
+        <li>Өдрийн нүдэн дэх өнгөт тоо нь <b style="color:var(--text)">тухайн өдөр анх удаа хугацаа дуусах</b> сануулгын тоо.</li>
+        <li>Өдөр дээр дарахад <b style="color:var(--text)">бүх ажилтны</b> тухайн өдрийн сануулгыг ажилтнаар нь ангилж жагсаана.</li>
+      </ul>
+    </div>
+
+    <div class="panel manual-section" id="m-ch7">
+      <h3><span class="manual-chapnum">07</span> Түгээмэл асуулт</h3>
+      <div class="manual-callout"><span class="ic">❓</span><div><b>Яагаад ижил үйлчлүүлэгчийн сануулга өдөр бүр ирсээр байна вэ?</b><p>«＋ Add Entry» хийгээгүй байна. Утсаар ярьсны дараа шууд тэмдэглэлээ нэм — сануулга шууд арилна.</p></div></div>
+      <div class="manual-callout"><span class="ic">❓</span><div><b>Имэйл хэн хүлээж авдаг вэ?</b><p>Хариуцсан ажилтан голлон авна, бусад бүх ажилтан хуулбар (CC) авна.</p></div></div>
+      <div class="manual-callout"><span class="ic">❓</span><div><b>Хэдэн цагт имэйл ирдэг вэ?</b><p>Ням гарагаас бусад өдөр өглөө 8 цагт (Улаанбаатарын цагаар) автоматаар илгээгдэнэ.</p></div></div>
+      <div class="manual-callout"><span class="ic">💡</span><div><b>Зөвлөмж</b><p>Харилцагчтай ярилцах бүрдээ "тэмдэглэл оруулъя" гэдгээ санаарай. Энэ л хамгийн найдвартай арга.</p></div></div>
+    </div>
+  `;
+}
 function renderStaff(){
   const sorted = sortedStaff();
   return `
@@ -3462,6 +3636,7 @@ function renderView(){
   else if(currentView==='staff') el.innerHTML = renderStaff();
   else if(currentView==='settings') el.innerHTML = renderReminderSettings();
   else if(currentView==='calendar') el.innerHTML = renderCalendar();
+  else if(currentView==='manual') el.innerHTML = renderManual();
   else if(currentView==='trash') { el.innerHTML = `<div class="empty">Loading…</div>`; loadAndRenderTrash(); }
   renderSaveBar();
 }
