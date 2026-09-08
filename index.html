@@ -1182,8 +1182,9 @@ function openCustomerForm(existing){
         </div>
       </div>
       <div class="field"><label>Next Inspection Due Date <span style="color:var(--text-dim2)">(shown as a dashboard reminder)</span></label><input id="f_nextService" type="date" value="${esc(c.nextServiceDate)}"></div>
-      <div class="panel" style="background:var(--panel2); margin-bottom:16px">
-        <h3 style="font-size:12.5px; color:var(--amber)">🔥 Sales Lead Info</h3>
+      <details class="panel" style="background:var(--panel2); margin-bottom:16px" ${(c.leadSource||c.desiredVehicle||c.budget||c.hasResponded||c.hasChatted)?'open':''}>
+        <summary style="cursor:pointer; font-size:12.5px; color:var(--amber); font-weight:700;">🔥 Sales Lead Info <span style="color:var(--text-dim2); font-weight:400">(optional — tap to expand)</span></summary>
+        <div style="margin-top:10px">
         <div class="field-row">
           <div class="field"><label>Lead Source</label>
             <select id="f_leadsource">
@@ -1207,7 +1208,8 @@ function openCustomerForm(existing){
             <label style="margin-bottom:0">Chatted via Messenger</label>
           </div>
         </div>
-      </div>
+        </div>
+      </details>
       <div class="field"><label>Notes</label><textarea id="f_note" placeholder="Desired vehicle type, trade-in info, family details, etc.">${esc(c.note)}</textarea></div>
     </div>
     <div class="modal-foot">
@@ -1945,8 +1947,9 @@ function openVehicleForm(existing){
           <option value="order" ${vKind==='order'?'selected':''}>🔍 On Order (target spec, not yet purchased)</option>
         </select>
       </div>
-      <div class="panel" style="background:var(--panel2); margin-bottom:16px; border-color:#48c2d644">
-        <h3 style="font-size:12.5px; color:var(--teal)">🔗 Import Results from Appraisal Tool (deed-motors-scraper)</h3>
+      <details class="panel" style="background:var(--panel2); margin-bottom:16px; border-color:#48c2d644" ${(v.externalGrade||v.externalAppraisalPrice||v.externalReportText)?'open':''}>
+        <summary style="cursor:pointer; font-size:12.5px; color:var(--teal); font-weight:700;">🔗 Import Results from Appraisal Tool <span style="color:var(--text-dim2); font-weight:400">(optional — tap to expand)</span></summary>
+        <div style="margin-top:10px">
         <div style="font-size:11.5px; color:var(--text-dim); margin-bottom:10px; line-height:1.6">
           Paste the JSON copied via "📋 Copy Results" in the appraisal tool here.
         </div>
@@ -1963,7 +1966,8 @@ function openVehicleForm(existing){
           <label>Detailed JSON (saved automatically, viewable on the vehicle page)</label>
           <textarea id="f_importtext" style="min-height:50px; font-family:'JetBrains Mono',monospace; font-size:11px">${esc(v.externalReportText)}</textarea>
         </div>
-      </div>
+        </div>
+      </details>
       <div class="field-row3">
         <div class="field"><label>Make</label><input id="f_maker" value="${esc(v.maker)}" placeholder="Toyota"></div>
         <div class="field"><label>Model</label><input id="f_model" value="${esc(v.model)}" placeholder="Prius"></div>
@@ -1986,8 +1990,9 @@ function openVehicleForm(existing){
           ${Object.entries(VSTATUS).map(([k,v2])=>`<option value="${k}" ${v.status===k?'selected':''}>${v2}</option>`).join('')}
         </select>
       </div>
-      <div class="panel" id="f_tracking_wrap" style="background:var(--panel2); margin-bottom:16px; ${trackingDisplay}">
-        <h3 style="font-size:12.5px; color:var(--amber)">🚢 Import / Consignment Tracking <span style="color:var(--text-dim2); font-weight:400">(all optional)</span></h3>
+      <details class="panel" id="f_tracking_wrap" style="background:var(--panel2); margin-bottom:16px; ${trackingDisplay}" ${(v.purchasedDate||v.etd||v.eta||owner||v.ownerPayout||v.minSellPrice||v.negotiationCeiling||v.hasDocuments||v.stateInspectionStatus||v.fbBoosted||v.arrived===false)?'open':''}>
+        <summary style="cursor:pointer; font-size:12.5px; color:var(--amber); font-weight:700;">🚢 Import / Consignment Tracking <span style="color:var(--text-dim2); font-weight:400">(optional — tap to expand)</span></summary>
+        <div style="margin-top:10px">
         <div class="field" style="display:flex; align-items:center; gap:8px">
           <input id="f_arrived" type="checkbox" style="width:auto" ${v.arrived===false?'':'checked'}>
           <label style="margin-bottom:0">Arrived in Ulaanbaatar</label>
@@ -2026,7 +2031,8 @@ function openVehicleForm(existing){
             <label style="margin-bottom:0; margin-top:20px">FB Boosted</label>
           </div>
         </div>
-      </div>
+        </div>
+      </details>
       <div class="field"><label>Notes</label><textarea id="f_notes" placeholder="Recommended maintenance, etc.">${esc(v.notes)}</textarea></div>
     </div>
     <div class="modal-foot">
@@ -2475,8 +2481,9 @@ function openTradeInForm(dealId){
   showModal(`
     <div class="modal-head"><h3>📋 Register Appraisal Vehicle</h3><button class="close-x" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
-      <div class="panel" style="background:var(--panel2); margin-bottom:16px; border-color:#48c2d644">
-        <h3 style="font-size:12.5px; color:var(--teal)">🔗 Import Results from Appraisal Tool (deed-motors-scraper)</h3>
+      <details class="panel" style="background:var(--panel2); margin-bottom:16px; border-color:#48c2d644">
+        <summary style="cursor:pointer; font-size:12.5px; color:var(--teal); font-weight:700;">🔗 Import Results from Appraisal Tool <span style="color:var(--text-dim2); font-weight:400">(optional — tap to expand)</span></summary>
+        <div style="margin-top:10px">
         <div style="font-size:11.5px; color:var(--text-dim); margin-bottom:10px; line-height:1.6">
           Paste the JSON copied via "📋 Copy Results" in the appraisal tool here. The fields below will fill in automatically.
         </div>
@@ -2489,7 +2496,8 @@ function openTradeInForm(dealId){
           <div class="field"><label>Appraisal Tool Grade</label><input id="ti_extgrade" placeholder="4.5 / S / RA, etc."></div>
           <div class="field"><label>Reference Appraisal Price (сая ₮)</label><input id="ti_extprice" placeholder="48.6"></div>
         </div>
-      </div>
+        </div>
+      </details>
       <div class="field-row3">
         <div class="field"><label>Make</label><input id="ti_maker" placeholder="Nissan"></div>
         <div class="field"><label>Model</label><input id="ti_model" placeholder="Note"></div>
