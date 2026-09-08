@@ -919,7 +919,7 @@ function renderDashboard(){
       </div>
     </div>
     <div class="panel">
-      <h3>🔔 Inspection Reminders (AI21 style)</h3>
+      <h3>🔔 Inspection Reminders</h3>
       ${dueCustomers.length===0 ? `<div class="empty" style="padding:20px">No inspections due within the next 30 days</div>` : `
       <div class="grid">
         ${dueCustomers.map(c=>`
@@ -3056,9 +3056,12 @@ async function saveServiceHistoryEntry(vehicleId, entryId){
 /* ============================================================
    RENDER: DEALS (kanban)
 ============================================================ */
-const DEAL_LANE_NAMES = ['ドリギオン','バルダ','テムカ','エッサ'];
+// Every active staff member gets a pipeline lane. Previously this was a
+// hardcoded name list, which silently broke (lanes disappearing) whenever
+// staff joined, left, or were renamed. Deriving it from staffList instead
+// means the pipeline always reflects who's actually on the team.
 function dealLaneStaffList(){
-  return sortedStaff().filter(s=>DEAL_LANE_NAMES.includes(s.name));
+  return sortedStaff();
 }
 async function moveDealLane(id, dir){
   const list = dealLaneStaffList();
@@ -3808,7 +3811,7 @@ function showVersionInfo(){
         <li><span class="dot"></span><div><b>Deals</b>Integrated customer info on the vehicle page, plus a full kanban overview</div></li>
         <li><span class="dot"></span><div><b>Appraisal Vehicles</b>Register and appraise walk-in customers' vehicles using the same form</div></li>
         <li><span class="dot"></span><div><b>Customers</b>Lifetime data (first contact, touchpoints, vehicles purchased, ownership history)</div></li>
-        <li><span class="dot"></span><div><b>Reminders</b>Automatic notifications for upcoming inspections (AI21 style)</div></li>
+        <li><span class="dot"></span><div><b>Reminders</b>Automatic notifications for upcoming inspections</div></li>
         <li><span class="dot"></span><div><b>Integration</b>Import JSON results from the appraisal tool (deed-motors-scraper)</div></li>
         <li><span class="dot"></span><div><b>Sharing</b>All data is shared in real time across staff and saved automatically</div></li>
       </ul>
