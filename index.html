@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1169,7 +1169,7 @@ function openCustomerForm(existing){
       </div>
       <div class="field"><label>Address</label><input id="f_address" value="${esc(c.address)}" placeholder="Bayanzurkh District..."></div>
       <div class="field-row">
-        <div class="field"><label>Birthday</label><input id="f_birthday" type="date" value="${esc(c.birthday)}"></div>
+        <div class="field"><label>Birthday</label><input id="f_birthday" type="text" placeholder="YYYY-MM-DD" pattern="\d{4}-\d{2}-\d{2}" value="${esc(c.birthday)}"></div>
         <div class="field"><label>Occupation / Workplace</label><input id="f_job" value="${esc(c.job)}" placeholder="Office worker / Self-employed, etc."></div>
       </div>
       <div class="field-row">
@@ -1181,7 +1181,7 @@ function openCustomerForm(existing){
           </select>
         </div>
       </div>
-      <div class="field"><label>Next Inspection Due Date <span style="color:var(--text-dim2)">(shown as a dashboard reminder)</span></label><input id="f_nextService" type="date" value="${esc(c.nextServiceDate)}"></div>
+      <div class="field"><label>Next Inspection Due Date <span style="color:var(--text-dim2)">(shown as a dashboard reminder)</span></label><input id="f_nextService" type="text" placeholder="YYYY-MM-DD" pattern="\d{4}-\d{2}-\d{2}" value="${esc(c.nextServiceDate)}"></div>
       <details class="panel" style="background:var(--panel2); margin-bottom:16px" ${(c.leadSource||c.desiredVehicle||c.budget||c.hasResponded||c.hasChatted)?'open':''}>
         <summary style="cursor:pointer; font-size:12.5px; color:var(--amber); font-weight:700;">🔥 Sales Lead Info <span style="color:var(--text-dim2); font-weight:400">(optional — tap to expand)</span></summary>
         <div style="margin-top:10px">
@@ -1262,12 +1262,12 @@ async function saveCustomer(id){
     phone: document.getElementById('f_phone').value.trim(),
     fb: document.getElementById('f_fb').value.trim(),
     address: document.getElementById('f_address').value.trim(),
-    birthday: document.getElementById('f_birthday').value,
+    birthday: document.getElementById('f_birthday').value.trim(),
     job: document.getElementById('f_job').value.trim(),
     referrer: document.getElementById('f_referrer').value.trim(),
     salesStaff: document.getElementById('f_salesstaff').value,
     customerType: document.getElementById('f_custtype').value || null,
-    nextServiceDate: document.getElementById('f_nextService').value,
+    nextServiceDate: document.getElementById('f_nextService').value.trim(),
     note: document.getElementById('f_note').value.trim(),
     leadSource: document.getElementById('f_leadsource').value,
     desiredVehicle: document.getElementById('f_desiredvehicle').value.trim(),
@@ -1276,6 +1276,9 @@ async function saveCustomer(id){
     hasChatted: document.getElementById('f_haschatted').checked,
   };
   if(!data.name){ alert('Please enter a name'); return; }
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+  if(data.birthday && !datePattern.test(data.birthday)){ alert('Please enter Birthday as YYYY-MM-DD (e.g. 1990-05-15)'); return; }
+  if(data.nextServiceDate && !datePattern.test(data.nextServiceDate)){ alert('Please enter Next Inspection Due Date as YYYY-MM-DD (e.g. 2026-09-01)'); return; }
   let c;
   if(id){
     c = customers.find(x=>x.id===id);
