@@ -3399,7 +3399,13 @@ function renderManual(){
       <a href="#m-ch4">04 Сануулгын 6 төрөл</a>
       <a href="#m-ch5">⚠ Гомдол</a>
       <a href="#m-ch6">06 Хуанли</a>
-      <a href="#m-ch7">07 Асуулт</a>
+      <a href="#m-ch7">07 Харилцагчийн төрөл</a>
+      <a href="#m-ch8">08 Машины статус</a>
+      <a href="#m-ch9">09 Ажилтны эгнээ</a>
+      <a href="#m-ch10">10 Зураг татах</a>
+      <a href="#m-ch11">11 Мессежийн загвар</a>
+      <a href="#m-ch12">12 Удирдлагын хэрэгсэл</a>
+      <a href="#m-ch13">13 Асуулт</a>
     </div>
 
     <div class="panel manual-section" id="m-ch1">
@@ -3501,7 +3507,52 @@ function renderManual(){
     </div>
 
     <div class="panel manual-section" id="m-ch7">
-      <h3><span class="manual-chapnum">07</span> Түгээмэл асуулт</h3>
+      <h3><span class="manual-chapnum">07</span> Харилцагчийн төрөл</h3>
+      <p style="font-size:13px; margin:0 0 10px">Харилцагч бүр <b>«In-House Customer»</b> (манай өөрийн худалдсан/худалдах харилцагч) эсвэл <b>«Other Dealer Customer»</b> (өөр газраас машин авсан, гэхдээ мэдээллийг нь хадгалж байгаа харилцагч) гэсэн 2 төрлийн аль нэгээр тэмдэглэгдсэн байдаг. Харилцагчийн жагсаалт болон дэлгэрэнгүй хуудсан дээр өнгөт badge-ээр харагдана, дээд талын шүүлтүүрээр төрлөөр нь ялгаж үзэж болно.</p>
+      <div class="manual-callout"><span class="ic">🔥</span><div><b>Other Dealer Customer дээрх Hot / Prospect / No Prospect тэмдэг</b><p>«Other Dealer Customer» төрлийн харилцагчийн badge дээр дарах бүрдээ <b>тэмдэггүй → 🔥Hot → 👀Prospect → 🚫No Prospect → тэмдэггүй</b> гэж дараалан солигдоно. Энэ бол зөвхөн дотоод мэдээлэл хадгалах зорилготой гарын аргаар тэмдэглэдэг зүйл — автомат сануулгын имэйл болон Dashboard-ын сануулганд <b>нөлөөлдөггүй</b>.</p></div></div>
+      <div class="manual-callout"><span class="ic">🎉</span><div><b>Converted badge (Хөрвөсөн харилцагч)</b><p>«Other Dealer Customer» байсан хүн эцэст нь манайхаас машин худалдаж авбал, түүний төрлийг «In-House Customer» болгож өөрчлөхөд систем автоматаар <b>«🎉 Converted [огноо]»</b> гэсэн badge-ийг харилцагчийн профайл дээр байнга харуулна. Энэ нь өөр газрын харилцагчийг манайх руу татсан амжилтыг бүртгэдэг зорилготой.</p></div></div>
+    </div>
+
+    <div class="panel manual-section" id="m-ch8">
+      <h3><span class="manual-chapnum">08</span> Машины статус ангилал</h3>
+      <p style="font-size:13px; margin:0 0 10px">Vehicles &amp; Appraisal хуудсан дээрх шүүлтүүр дараах дарааллаар, дараах утгатай харагдана:</p>
+      <div class="manual-cat"><div class="ic">📦</div><div><div class="name">In Stock — Бэлэн байгаа</div><div class="cond">Худалдаанд бэлэн, харилцагч хараахан тодорхойгүй</div></div></div>
+      <div class="manual-cat"><div class="ic">📋</div><div><div class="name">Appraisal Vehicle — Үнэлгээний машин</div><div class="cond">Trade-in байдлаар авсан, үнэлгээ хийгдэж буй машин</div></div></div>
+      <div class="manual-cat"><div class="ic">🤝</div><div><div class="name">In Negotiation — Тохиролцож буй</div><div class="cond">Тодорхой харилцагчтай худалдааны яриа явж байгаа</div></div></div>
+      <div class="manual-cat"><div class="ic">🔍</div><div><div class="name">On Order — Захиалгаар</div><div class="cond">Машин бодитойгоор ХАРАЙХАН ирээгүй — зөвхөн спек/захиалга</div></div></div>
+      <div class="manual-callout warn"><span class="ic">🔍</span><div><b>On Order картын ялгаа</b><p>«On Order» төрлийн карт нь ягаан зурвасжсан хүрээ, тод дэвсгэртэй бөгөөд <b>«🔍 NO VEHICLE YET — TARGET SPEC ONLY»</b> гэсэн тэмдэглэгээтэй харагдана — учир нь энэ бол бодит машин биш, зөвхөн харилцагчийн хүсэлт дээр үндэслэсэн зорилтот спек. «All»-ээр харахад бусад машинтай андуурахгүйн тулд ийм зорилготойгоор өөр өнгөөр ялгасан.</p></div></div>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:10px 0 0">Мөн Японоос тээвэрлэгдэж буй (худалдан авсан ч хараахан ирээгүй) машин дээр <b>«🚢 In Transit»</b> гэсэн жижиг тэмдэг харагдана. Анхны шүүлтүүр «In Stock» дээр байхаар тохируулагдсан.</p>
+    </div>
+
+    <div class="panel manual-section" id="m-ch9">
+      <h3><span class="manual-chapnum">09</span> Ажилтан тус бүрийн худалдааны эгнээ</h3>
+      <p style="font-size:13px; margin:0 0 10px">💬 Deal Pipeline хуудсан дээр бүртгэлтэй ажилтан <b>тус бүрд өөрийн эгнээ (lane)</b> автоматаар үүсдэг — шинэ ажилтан нэмэгдэх, хуучин нь гарах бүрд эгнээ өөрөө шинэчлэгдэнэ, тусад нь тохируулах шаардлагагүй. Эгнээний дарааллыг Staff хуудсан дэх ↑/↓ товчлуурын адилаар өөрчилж болно (эгнээний баруун дээд буланд ↑/↓ товчлуур байна).</p>
+      <div class="manual-callout warn"><span class="ic">⚠</span><div><b>«交渉決裂・中止」/ Negotiation Failed &amp; Cancel товч</b><p>Тохиролцоо амжилтгүй болсон, худалдан авалт хийгдэхгүй болсон тохиолдолд картыг устгах биш, <b>«Negotiation Failed / Cancel»</b> товчийг дар. Ингэснээр стадиа «Cancelled» болж хадгалагдана — түүх, тоо баримтаас алдагдахгүй. Ердийн <b>Delete</b> (устгах) нь зөвхөн буруу оруулсан/давхардсан бичлэгийг бүрмөсөн арилгах зориулалттай.</p></div></div>
+    </div>
+
+    <div class="panel manual-section" id="m-ch10">
+      <h3><span class="manual-chapnum">10</span> Машины зураг татаж авах</h3>
+      <p style="font-size:13px; margin:0 0 10px">Машины дэлгэрэнгүй хуудсан дэх зургийн жагсаалтад зураг тус бүрийн дэргэд <b>💾</b> тэмдэгтэй товч байгаа бөгөөд дарахад тухайн зургийг өөрийн компьютер руу татаж авна. Жагсаалтын дээд хэсэгт байгаа <b>«💾 Download All»</b> товч дарвал тухайн машины бүх зургийг нэг дор татаж болно.</p>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:0">💾 (татах) товчийг зургийн дарааллыг өөрчлөх ↑/↓ товчтой бүү андуур — өнгө болон тэмдэг нь тусад нь ялгагдана.</p>
+    </div>
+
+    <div class="panel manual-section" id="m-ch11">
+      <h3><span class="manual-chapnum">11</span> Мессежийн бэлэн загвар</h3>
+      <p style="font-size:13px; margin:0 0 10px">Харилцагчийн дэлгэрэнгүй хуудас болон Dashboard-ын сануулгын карт дээр <b>«✉️ Message»</b> товч байдаг. Үүнийг дарвал төрсөн өдөр, улсын үзлэгийн сануулга, эсвэл ерөнхий санал болгох (outreach) гэсэн монгол хэл дээрх бэлэн бичвэрийн загвар гарч ирнэ. Товч дарж хуулаад (copy) шууд SMS/Messenger/утсаар илгээж болно.</p>
+      <div class="manual-callout"><span class="ic">💡</span><div><b>Санамж</b><p>Эдгээр бичвэрүүд нь автоматаар бэлдсэн ерөнхий загвар — илгээхийн өмнө нөхцөл байдалд тохируулан засварлаж болно, шаардлагатай бол монгол хэлний найруулгыг эх хэлээр ярьдаг ажилтнаараа шалгуулахыг зөвлөж байна.</p></div></div>
+    </div>
+
+    <div class="panel manual-section" id="m-ch12">
+      <h3><span class="manual-chapnum">12</span> Удирдлагын нэмэлт хэрэгсэл</h3>
+      <ul style="font-size:13px; color:var(--text-dim); margin:0; padding-left:20px; line-height:1.9">
+        <li><b style="color:var(--text)">🎂 Upcoming Birthdays</b> — Dashboard дээр ойрын 7 хоногт төрсөн өдөртэй харилцагчдыг жагсаана; тэндээс шууд «✉️ Message» дарж мэндчилгээ илгээж болно.</li>
+        <li><b style="color:var(--text)">⚠️ Давхардсан харилцагч (Duplicate)</b> — ижил утасны дугаартай хэд хэдэн бичлэг байвал Customers хуудасны дээд хэсэгт шар хүрээтэй анхааруулга харагдана — нэгтгэх шаардлагатай эсэхийг шалгана уу.</li>
+        <li><b style="color:var(--text)">⬇ Export CSV</b> — Customers хуудасны дээд товчлуураар бүх харилцагчийн жагсаалтыг Excel-д нээгддэг CSV файлаар татаж авч болно.</li>
+      </ul>
+    </div>
+
+    <div class="panel manual-section" id="m-ch13">
+      <h3><span class="manual-chapnum">13</span> Түгээмэл асуулт</h3>
       <div class="manual-callout"><span class="ic">❓</span><div><b>Яагаад ижил үйлчлүүлэгчийн сануулга өдөр бүр ирсээр байна вэ?</b><p>«＋ Add Entry» хийгээгүй байна. Утсаар ярьсны дараа шууд тэмдэглэлээ нэм — сануулга шууд арилна.</p></div></div>
       <div class="manual-callout"><span class="ic">❓</span><div><b>Имэйл хэн хүлээж авдаг вэ?</b><p>Хариуцсан ажилтан голлон авна, бусад бүх ажилтан хуулбар (CC) авна.</p></div></div>
       <div class="manual-callout"><span class="ic">❓</span><div><b>Хэдэн цагт имэйл ирдэг вэ?</b><p>Ням гарагаас бусад өдөр өглөө 8 цагт (Улаанбаатарын цагаар) автоматаар илгээгдэнэ.</p></div></div>
