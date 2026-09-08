@@ -887,6 +887,7 @@ function renderDashboard(){
   const s = stats();
   const recentDeals = [...deals].sort((a,b)=>latestDealTime(b)-latestDealTime(a)).slice(0,6);
   const dueCustomers = customers.filter(c=>serviceDue(c.nextServiceDate)).sort((a,b)=>new Date(a.nextServiceDate)-new Date(b.nextServiceDate));
+  const upcomingBirthdays = getUpcomingBirthdays();
   const cr = contactReminders();
   return `
     <div class="topbar">
@@ -922,6 +923,19 @@ function renderDashboard(){
             <span class="badge b-sold">🔔 ${fmtDate(c.nextServiceDate)}</span>
             <div class="name">${esc(c.name)}</div>
             <div class="meta">${esc(c.phone||'No phone on file')}</div>
+          </div>
+        `).join('')}
+      </div>`}
+    </div>
+    <div class="panel">
+      <h3>🎂 Upcoming Birthdays</h3>
+      ${upcomingBirthdays.length===0 ? `<div class="empty" style="padding:20px">No birthdays in the next 7 days</div>` : `
+      <div class="grid">
+        ${upcomingBirthdays.map(x=>`
+          <div class="card" onclick="openCustomerDetail('${x.c.id}')">
+            <span class="badge b-delivered">🎂 ${x.daysUntil===0?'Today!':x.daysUntil===1?'Tomorrow':`In ${x.daysUntil} days`}</span>
+            <div class="name">${esc(x.c.name)}</div>
+            <div class="meta">${esc(x.c.phone||'No phone on file')}</div>
           </div>
         `).join('')}
       </div>`}
@@ -1080,16 +1094,62 @@ async function moveCustomer(id, neighborId){
 const CUSTOMER_TYPE_LABELS_EN = {'自社客':'In-House Customer', '他社客':'Other Dealer Customer'};
 function customerTypeLabel(t){ return CUSTOMER_TYPE_LABELS_EN[t] || t; }
 function customerTypeBadgeClass(t){ return t==='自社客'?'b-stock':t==='他社客'?'b-tradein':''; }
+function findDuplicateCustomerGroups(){
+  const byPhone = {};
+  for(const c of customers){
+    const np = (c.phone||'').replace(/\D/g,'');
+    if(!np) continue;
+    (byPhone[np] = byPhone[np] || []).push(c);
+  }
+  return Object.values(byPhone).filter(arr=>arr.length>1);
+}
+function csvEscape(v){
+  const s = (v===undefined||v===null) ? '' : String(v);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+}
+function exportCustomersCSV(){
+  const headers = ['Name','Name (Mongolian)','Phone','Facebook','Address','Birthday','Occupation','Referred By','Customer Type','Sales Staff','Next Inspection','Lead Source','Desired Vehicle','Budget','Has Responded','Chatted','Notes','Registered'];
+  const rows = customers.map(c => [
+    c.name, c.nameMn, c.phone, c.fb, c.address, c.birthday, c.job, c.referrer,
+    c.customerType?customerTypeLabel(c.customerType):'', c.salesStaff, c.nextServiceDate,
+    c.leadSource, c.desiredVehicle, c.budget, c.hasResponded?'Yes':'', c.hasChatted?'Yes':'',
+    c.note, fmtDate(c.createdAt)
+  ]);
+  const csv = [headers, ...rows].map(row => row.map(csvEscape).join(',')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `deed_motors_customers_${todayStr()}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 function renderCustomers(){
   const q = custFilter.trim().toLowerCase();
   let list = customers.filter(c => !q || (c.name+c.nameMn+c.phone+c.address).toLowerCase().includes(q));
   if(custTypeFilter!=='all') list = list.filter(c => custTypeFilter==='none' ? !c.customerType : c.customerType===custTypeFilter);
   list = sortCustomerList(list);
+  const dupGroups = findDuplicateCustomerGroups();
   return `
     <div class="topbar">
       <div class="pagetitle">👤 Customers <span class="sub">${customers.length} registered</span></div>
-      <button class="btn" onclick="openCustomerForm()">＋ New Customer</button>
+      <div style="display:flex; gap:8px">
+        <button class="btn ghost" onclick="exportCustomersCSV()">⬇ Export CSV</button>
+        <button class="btn" onclick="openCustomerForm()">＋ New Customer</button>
+      </div>
     </div>
+    ${dupGroups.length>0?`
+    <div class="panel" style="border:2px solid var(--amber); background:var(--amber-soft)">
+      <h3 style="color:var(--amber)">⚠️ Possible Duplicate Customers <span style="font-weight:400; color:var(--text-dim)">(same phone number)</span></h3>
+      ${dupGroups.map(group=>`
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
+          <span class="meta mono">${esc(group[0].phone)}</span>
+          ${group.map(c=>`<span class="staff-tag" style="cursor:pointer" onclick="openCustomerDetail('${c.id}')">👤 ${esc(c.name)}</span>`).join('')}
+        </div>
+      `).join('')}
+    </div>`:''}
     <div class="toolbar">
       <input type="text" placeholder="🔍 Search by name, phone, or address…" value="${esc(custFilter)}" oninput="custFilter=this.value; renderView()">
       <select onchange='custSort=this.value; renderView()'>
@@ -1550,6 +1610,23 @@ function serviceDue(dateStr){
   if(!dateStr) return false;
   const diff = (new Date(dateStr) - new Date()) / 86400000;
   return diff <= 30;
+}
+const BIRTHDAY_LOOKAHEAD_DAYS = 7;
+function getUpcomingBirthdays(){
+  const today = new Date();
+  const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const results = [];
+  for(const c of customers){
+    if(!c.birthday) continue;
+    const b = new Date(c.birthday+'T00:00:00');
+    if(isNaN(b)) continue;
+    let next = new Date(todayMid.getFullYear(), b.getMonth(), b.getDate());
+    if(next < todayMid) next = new Date(todayMid.getFullYear()+1, b.getMonth(), b.getDate());
+    const daysUntil = Math.round((next - todayMid) / 86400000);
+    if(daysUntil <= BIRTHDAY_LOOKAHEAD_DAYS) results.push({c, daysUntil});
+  }
+  results.sort((a,b)=>a.daysUntil-b.daysUntil);
+  return results;
 }
 
 /* ---------------- 連絡リマインド判定ロジック ----------------
