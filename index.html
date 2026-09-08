@@ -625,7 +625,7 @@ function customerToRow(c){
     customer_type: c.customerType||null, negotiation_history: c.negotiationHistory||[],
     lead_source: c.leadSource||'', desired_vehicle: c.desiredVehicle||'', budget: c.budget||null,
     has_responded: !!c.hasResponded, has_chatted: !!c.hasChatted,
-    claim: c.claim||null, other_dealer_status: c.otherDealerStatus||null,
+    claim: c.claim||null, other_dealer_status: c.otherDealerStatus||null, converted_at: c.convertedAt||null,
     sort_order: c.sortOrder||0, deleted_at: c.deletedAt||null, created_at: c.createdAt||Date.now()
   };
 }
@@ -637,7 +637,7 @@ function rowToCustomer(r){
     negotiationHistory: r.negotiation_history||[], sortOrder: r.sort_order,
     leadSource: r.lead_source, desiredVehicle: r.desired_vehicle, budget: r.budget,
     hasResponded: !!r.has_responded, hasChatted: !!r.has_chatted,
-    claim: r.claim||null, otherDealerStatus: r.other_dealer_status||null,
+    claim: r.claim||null, otherDealerStatus: r.other_dealer_status||null, convertedAt: r.converted_at||null,
     deletedAt: r.deleted_at, createdAt: r.created_at
   };
 }
@@ -889,6 +889,7 @@ function renderDashboard(){
   const dueCustomers = customers.filter(c=>serviceDue(c.nextServiceDate)).sort((a,b)=>new Date(a.nextServiceDate)-new Date(b.nextServiceDate));
   const upcomingBirthdays = getUpcomingBirthdays();
   const cr = contactReminders();
+  const convertedThisMonth = customers.filter(c=>c.convertedAt && sameMonth(c.convertedAt)).length;
   return `
     <div class="topbar">
       <div>
@@ -913,6 +914,9 @@ function renderDashboard(){
           <div><div style="font-size:20px; font-weight:800; color:var(--text)">${s.monthlySales.orderSales}</div><div style="font-size:12px; color:var(--text-dim)">Orders</div></div>
         </div>
       </div>
+      <div class="stat-card" style="--accent:var(--violet)">
+        <div class="k">🎉 Converted to In-House</div><div class="v">${convertedThisMonth}<span>this month</span></div>
+      </div>
     </div>
     <div class="panel">
       <h3>🔔 Inspection Reminders (AI21 style)</h3>
@@ -923,6 +927,7 @@ function renderDashboard(){
             <span class="badge b-sold">🔔 ${fmtDate(c.nextServiceDate)}</span>
             <div class="name">${esc(c.name)}</div>
             <div class="meta">${esc(c.phone||'No phone on file')}</div>
+            <span class="mv" style="margin-top:8px; display:inline-block" onclick="event.stopPropagation(); openMessageTemplateModal('${c.id}','inspection')">✉️ Message</span>
           </div>
         `).join('')}
       </div>`}
@@ -936,6 +941,7 @@ function renderDashboard(){
             <span class="badge b-delivered">🎂 ${x.daysUntil===0?'Today!':x.daysUntil===1?'Tomorrow':`In ${x.daysUntil} days`}</span>
             <div class="name">${esc(x.c.name)}</div>
             <div class="meta">${esc(x.c.phone||'No phone on file')}</div>
+            <span class="mv" style="margin-top:8px; display:inline-block" onclick="event.stopPropagation(); openMessageTemplateModal('${x.c.id}','birthday')">✉️ Message</span>
           </div>
         `).join('')}
       </div>`}
@@ -1176,6 +1182,7 @@ function renderCustomers(){
           <div class="meta">${esc(c.nameMn||'')} ${c.nameMn?'・':''}${esc(c.phone||'No phone on file')}</div>
           <div class="meta" style="margin-top:-6px;">📍 ${esc(c.address||'No address on file')}</div>
           ${c.salesStaff?`<span class="staff-tag" style="margin-top:4px">👤 ${esc(c.salesStaff)}</span>`:''}
+          ${c.convertedAt?`<span class="staff-tag" style="margin-top:4px; background:var(--green-soft); color:var(--green)">🎉 Converted ${fmtDate(c.convertedAt)}</span>`:''}
           ${custSort==='custom' ? `<div style="display:flex; gap:6px; margin-top:6px;">
             <span class="mv" style="${i===0?'opacity:.3; pointer-events:none;':''}" onclick="event.stopPropagation(); moveCustomer('${c.id}',${list[i-1]?`'${list[i-1].id}'`:'null'})">↑ Up</span>
             <span class="mv" style="${i===list.length-1?'opacity:.3; pointer-events:none;':''}" onclick="event.stopPropagation(); moveCustomer('${c.id}',${list[i+1]?`'${list[i+1].id}'`:'null'})">↓ Down</span>
@@ -1342,7 +1349,11 @@ async function saveCustomer(id){
   let c;
   if(id){
     c = customers.find(x=>x.id===id);
+    const wasOtherDealer = c.customerType==='他社客';
     Object.assign(c, data);
+    if(data.customerType==='自社客' && wasOtherDealer && !c.convertedAt){
+      c.convertedAt = Date.now();
+    }
   }else{
     const maxOrder = customers.reduce((m,x)=>Math.max(m, x.sortOrder||0), -1);
     c = {id:uid('C'), ...data, sortOrder: maxOrder+1, createdAt:Date.now()};
@@ -1399,10 +1410,14 @@ function openCustomerDetail(id){
             ${esc(c.name)}
             ${c.customerType?`<span class="badge ${customerTypeBadgeClass(c.customerType)}" style="position:static; margin-left:8px; vertical-align:middle;">${esc(customerTypeLabel(c.customerType))}</span>`:''}
             ${c.customerType==='他社客'?`<span style="margin-left:8px; vertical-align:middle; display:inline-block">${otherDealerStatusSelectHtml(c)}</span>`:''}
+            ${c.convertedAt?`<span class="badge" style="position:static; margin-left:8px; vertical-align:middle; background:var(--green-soft); color:var(--green)">🎉 Converted ${fmtDate(c.convertedAt)}</span>`:''}
           </div>
           <div class="detail-id">${esc(c.id)} ・ ${esc(c.nameMn||'')}</div>
         </div>
-        <button class="btn ghost sm" onclick='openCustomerForm(${JSON.stringify(c).replace(/'/g,"&#39;")})'>✎ Edit</button>
+        <div style="display:flex; gap:8px">
+          <button class="btn ghost sm" onclick="openMessageTemplateModal('${c.id}')">✉️ Message</button>
+          <button class="btn ghost sm" onclick='openCustomerForm(${JSON.stringify(c).replace(/'/g,"&#39;")})'>✎ Edit</button>
+        </div>
       </div>
       <div class="kv-grid">
         <div class="kv"><span class="k">Phone Number</span><span class="v mono">${esc(c.phone||'—')}</span></div>
@@ -3705,6 +3720,54 @@ async function permanentlyDeleteDeal(id){
   if(!confirm('This will permanently delete it. This cannot be undone. Are you sure?')) return;
   await deleteDealRow(id);
   loadAndRenderTrash();
+}
+
+/* ---------------- message templates (draft Mongolian — have a Mongolian-speaking
+   staff member review wording before relying on it for real customer messages) ---------------- */
+const MESSAGE_TEMPLATES = {
+  birthday: (c) => `Сайн байна уу, ${c.name}!\n\nӨнөөдөр бол Таны төрсөн өдөр байна. DEED MOTORS баг танд эрүүл энх, амжилт хүсье! 🎉\n\nDEED MOTORS`,
+  inspection: (c) => `Сайн байна уу, ${c.name}.\n\nТаны машины улсын үзлэг/засвар үйлчилгээний хугацаа ойртож байгааг сануулж байна. Цаг тохиролцох бол бидэнтэй холбогдоно уу.\n\nDEED MOTORS`,
+  outreach: (c) => `Сайн байна уу, ${c.name}.\n\nDEED MOTORS-с мэндчилж байна. Шинэ машин сонголт, урамшуулал зэрэгтэй холбоотой мэдээлэл авахыг хүсвэл бидэнтэй холбогдоно уу.\n\nDEED MOTORS`,
+};
+function openMessageTemplateModal(customerId, presetType){
+  const c = customers.find(x=>x.id===customerId);
+  if(!c) return;
+  const type = presetType || 'outreach';
+  showModal(`
+    <div class="modal-head"><h3>✉️ Message Template</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Template</label>
+        <select id="f_msgtype" onchange="applyMessageTemplate('${c.id}')">
+          <option value="birthday" ${type==='birthday'?'selected':''}>🎂 Birthday Greeting</option>
+          <option value="inspection" ${type==='inspection'?'selected':''}>🔧 Inspection Reminder</option>
+          <option value="outreach" ${type==='outreach'?'selected':''}>📣 General Outreach</option>
+        </select>
+      </div>
+      <div class="field"><label>Message (edit before copying)</label><textarea id="f_msgtext" style="min-height:130px">${esc(MESSAGE_TEMPLATES[type](c))}</textarea></div>
+      <div style="font-size:11px; color:var(--text-dim2); line-height:1.6">⚠️ Draft Mongolian wording — please have a Mongolian-speaking staff member review before relying on it for real messages.</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">Close</button>
+      <button class="btn" onclick="copyMessageTemplateText(this)">📋 Copy to Clipboard</button>
+    </div>
+  `);
+}
+function applyMessageTemplate(customerId){
+  const c = customers.find(x=>x.id===customerId);
+  if(!c) return;
+  const type = document.getElementById('f_msgtype').value;
+  document.getElementById('f_msgtext').value = MESSAGE_TEMPLATES[type](c);
+}
+async function copyMessageTemplateText(btnEl){
+  const text = document.getElementById('f_msgtext').value;
+  const originalText = btnEl.textContent;
+  try{
+    await navigator.clipboard.writeText(text);
+    btnEl.textContent = '✅ Copied!';
+  }catch(e){
+    btnEl.textContent = '⚠️ Copy failed — select the text manually';
+  }
+  setTimeout(()=>{ if(document.body.contains(btnEl)) btnEl.textContent = originalText; }, 1800);
 }
 
 /* ---------------- modal helpers ---------------- */
