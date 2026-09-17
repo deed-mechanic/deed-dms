@@ -1157,7 +1157,7 @@ function renderCustomers(){
       `).join('')}
     </div>`:''}
     <div class="toolbar">
-      <input type="text" placeholder="🔍 Search by name, phone, or address…" value="${esc(custFilter)}" oninput="custFilter=this.value; renderView()">
+      <input type="text" id="custFilterInput" placeholder="🔍 Search by name, phone, or address…" value="${esc(custFilter)}" oninput="custFilter=this.value; keepFocusAcrossRender('custFilterInput')">
       <select onchange='custSort=this.value; renderView()'>
         ${Object.entries(CUST_SORT_OPTIONS).map(([k,l])=>`<option value="${k}" ${custSort===k?'selected':''}>${l}</option>`).join('')}
       </select>
@@ -1932,7 +1932,7 @@ function renderVehicles(){
       <button class="btn" onclick="openVehicleForm()">＋ New Vehicle</button>
     </div>
     <div class="toolbar">
-      <input type="text" placeholder="🔍 Search by make, model, color, or VIN…" value="${esc(vehFilter.q)}" oninput="vehFilter.q=this.value; renderView()">
+      <input type="text" id="vehFilterInput" placeholder="🔍 Search by make, model, color, VIN, or plate number…" value="${esc(vehFilter.q)}" oninput="vehFilter.q=this.value; keepFocusAcrossRender('vehFilterInput')">
       <select onchange='vehFilter.sort=this.value; renderView()'>
         ${Object.entries(VEH_SORT_OPTIONS).map(([k,l])=>`<option value="${k}" ${vehFilter.sort===k?'selected':''}>${l}</option>`).join('')}
       </select>
@@ -3831,6 +3831,19 @@ function showModal(html){
 function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
 
 /* ---------------- router ---------------- */
+// renderView() replaces the whole #view innerHTML, which recreates search <input>
+// elements from scratch and drops focus/cursor position on every keystroke. Search
+// boxes call this instead of renderView() directly so typing feels continuous.
+function keepFocusAcrossRender(inputId){
+  const el = document.getElementById(inputId);
+  const pos = el ? el.selectionStart : null;
+  renderView();
+  const newEl = document.getElementById(inputId);
+  if(newEl){
+    newEl.focus();
+    if(pos!==null) newEl.setSelectionRange(pos, pos);
+  }
+}
 function renderView(){
   window.__activeVehId = window.__activeVehId; // no-op, kept for detail re-render calls
   const el = document.getElementById('view');
