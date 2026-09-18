@@ -3457,6 +3457,18 @@ function renderManual(){
         <span class="ic">✅</span>
         <div><b>Дүрэм товчоор</b><p>Ярилцсан, уулзсан, утсаар холбогдсон болгонд — тэр даруй «＋ Add Entry» дар. Дараа нь хийе гэж хойшлуулбал мартагдана.</p></div>
       </div>
+      <p style="font-size:13px; margin:16px 0 8px"><b style="color:var(--text)">Details хэсэгт юу бичих вэ:</b></p>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+        <div class="card" style="cursor:default; border-color:var(--red); background:var(--red-soft)">
+          <div style="font-weight:700; font-size:12.5px; color:var(--red); margin-bottom:6px">✕ Хэтэрхий цөөн</div>
+          <div style="font-size:12.5px; color:var(--text-dim)">"ok"</div>
+        </div>
+        <div class="card" style="cursor:default; border-color:var(--green); background:var(--green-soft)">
+          <div style="font-weight:700; font-size:12.5px; color:var(--green); margin-bottom:6px">✓ Хангалттай</div>
+          <div style="font-size:12.5px; color:var(--text-dim)">"Үнийн саналыг харуулсан. 20 сая хүртэл хэлэлцэх боломжтой гэв. Даваа гарагт эргэж холбогдоно."</div>
+        </div>
+      </div>
+      <p style="font-size:12px; color:var(--text-dim2); margin:8px 0 0">Урт тайлбар хэрэггүй — <b style="color:var(--text-dim)">хэн, юу хэлсэн, дараагийн алхам юу вэ</b> гэдгийг өөр хүн уншаад ойлгохоор л бичихэд хангалттай.</p>
     </div>
 
     <div class="panel manual-section" id="m-ch3">
@@ -3554,6 +3566,7 @@ function renderManual(){
     <div class="panel manual-section" id="m-ch13">
       <h3><span class="manual-chapnum">13</span> Түгээмэл асуулт</h3>
       <div class="manual-callout"><span class="ic">❓</span><div><b>Яагаад ижил үйлчлүүлэгчийн сануулга өдөр бүр ирсээр байна вэ?</b><p>«＋ Add Entry» хийгээгүй байна. Утсаар ярьсны дараа шууд тэмдэглэлээ нэм — сануулга шууд арилна.</p></div></div>
+      <div class="manual-callout"><span class="ic">❓</span><div><b>Юу ч тохиролцоогүй, зүгээр л дуудлага аваагүй бол яах вэ?</b><p>Тэр ч бас тэмдэглэл — жишээ нь "Дуудлага аваагүй, дараа дахин оролдоно" гэж бичихэд л тоолуур 0 болно.</p></div></div>
       <div class="manual-callout"><span class="ic">❓</span><div><b>Имэйл хэн хүлээж авдаг вэ?</b><p>Хариуцсан ажилтан голлон авна, бусад бүх ажилтан хуулбар (CC) авна.</p></div></div>
       <div class="manual-callout"><span class="ic">❓</span><div><b>Хэдэн цагт имэйл ирдэг вэ?</b><p>Ням гарагаас бусад өдөр өглөө 8 цагт (Улаанбаатарын цагаар) автоматаар илгээгдэнэ.</p></div></div>
       <div class="manual-callout"><span class="ic">💡</span><div><b>Зөвлөмж</b><p>Харилцагчтай ярилцах бүрдээ "тэмдэглэл оруулъя" гэдгээ санаарай. Энэ л хамгийн найдвартай арга.</p></div></div>
