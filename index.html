@@ -859,7 +859,7 @@ function sameMonth(ts){
   return d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth();
 }
 function custName(id){ const c=customers.find(x=>x.id===id); return c?c.name:'(Unknown customer)'; }
-function vehName(id){ const v=vehicles.find(x=>x.id===id); return v? `${v.maker} ${v.model} (${v.year})`:'(Unknown vehicle)'; }
+function vehName(id){ const v=vehicles.find(x=>x.id===id); return v? `${v.maker} ${v.model}${v.year?` (${v.year})`:''}`:'(Unknown vehicle)'; }
 
 /* ============================================================
    RENDER: NAV
@@ -1959,7 +1959,7 @@ function vehicleCardHtml(v){
       <span class="badge ${badgeClass(isTradeIn?'tradein':(isOrder?'order':v.status))}">${badgeLabel}</span>
       ${isOrder?`<div style="font-size:10px; font-weight:700; letter-spacing:.5px; color:var(--violet); margin-bottom:6px; padding-right:100px;">🔍 NO VEHICLE YET — TARGET SPEC ONLY</div>`:''}
       <div class="name">${esc(v.maker)} ${esc(v.model)}</div>
-      <div class="meta">${v.year} ・ ${esc(v.color)} ・ ${(v.mileage||0).toLocaleString()}km</div>
+      <div class="meta">${v.year||'—'} ・ ${esc(v.color)} ・ ${(v.mileage||0).toLocaleString()}km</div>
       ${(hasImage||hasAppraisal||notArrived) ? `<div style="display:flex; gap:5px; margin:4px 0; flex-wrap:wrap;">
         ${hasImage?`<span class="mini-tag mini-tag-img">🖼 Photos</span>`:''}
         ${hasAppraisal?`<span class="mini-tag mini-tag-appr">✅ Appraised</span>`:''}
@@ -2344,7 +2344,7 @@ function openVehicleDetail(id){
         </div>
       </div>
       <div class="kv-grid">
-        <div class="kv"><span class="k">Year</span><span class="v">${v.year}</span></div>
+        <div class="kv"><span class="k">Year</span><span class="v">${v.year||'—'}</span></div>
         <div class="kv"><span class="k">Color</span><span class="v">${esc(v.color)}</span></div>
         <div class="kv"><span class="k">Mileage</span><span class="v mono">${(v.mileage||0).toLocaleString()} km</span></div>
         ${isTradeIn?`
@@ -3178,7 +3178,7 @@ function openDealForm(){
         <select id="f_cust">${customers.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
       </div>
       <div class="field"><label>Vehicle</label>
-        <select id="f_veh">${vehicles.map(v=>`<option value="${v.id}">${esc(v.maker)} ${esc(v.model)} (${v.year})</option>`).join('')}</select>
+        <select id="f_veh">${vehicles.map(v=>`<option value="${v.id}">${esc(v.maker)} ${esc(v.model)} (${v.year||'-'})</option>`).join('')}</select>
       </div>
       <div class="field-row">
         <div class="field"><label>Assigned Staff</label>
