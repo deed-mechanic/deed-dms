@@ -1132,9 +1132,20 @@ function exportCustomersCSV(){
   a.remove();
   URL.revokeObjectURL(url);
 }
+// Vehicles tied to a customer: those in their deals (buyer side, cancelled deals excluded) plus
+// vehicles they consign (owner side). Mirrors the customer name shown on each vehicle card.
+function customerVehicleLinks(c){
+  const rows = [];
+  deals.filter(d=>d.customerId===c.id && d.stage!=='キャンセル').forEach(d=>{
+    const v = vehicles.find(x=>x.id===d.vehicleId);
+    if(v && !rows.some(r=>r.v.id===v.id)) rows.push({v, label:stageLabel(d.stage)});
+  });
+  vehicles.filter(v=>v.ownerCustomerId===c.id && !rows.some(r=>r.v.id===v.id)).forEach(v=>rows.push({v, label:'Consignor'}));
+  return rows;
+}
 function renderCustomers(){
   const q = custFilter.trim().toLowerCase();
-  let list = customers.filter(c => !q || (c.name+c.nameMn+c.phone+c.address).toLowerCase().includes(q));
+  let list = customers.filter(c => !q || (c.name+c.nameMn+c.phone+c.address+' '+customerVehicleLinks(c).map(r=>r.v.maker+' '+r.v.model).join(' ')).toLowerCase().includes(q));
   if(custTypeFilter!=='all') list = list.filter(c => custTypeFilter==='none' ? !c.customerType : c.customerType===custTypeFilter);
   list = sortCustomerList(list);
   const dupGroups = findDuplicateCustomerGroups();
@@ -1157,7 +1168,7 @@ function renderCustomers(){
       `).join('')}
     </div>`:''}
     <div class="toolbar">
-      <input type="text" id="custFilterInput" placeholder="🔍 Search by name, phone, or address…" value="${esc(custFilter)}" oninput="custFilter=this.value; keepFocusAcrossRender('custFilterInput')">
+      <input type="text" id="custFilterInput" placeholder="🔍 Search by name, phone, address, or vehicle…" value="${esc(custFilter)}" oninput="custFilter=this.value; keepFocusAcrossRender('custFilterInput')">
       <select onchange='custSort=this.value; renderView()'>
         ${Object.entries(CUST_SORT_OPTIONS).map(([k,l])=>`<option value="${k}" ${custSort===k?'selected':''}>${l}</option>`).join('')}
       </select>
@@ -1170,6 +1181,7 @@ function renderCustomers(){
       ${list.map((c,i)=>{
         const dealCount = deals.filter(d=>d.customerId===c.id).length;
         const due = serviceDue(c.nextServiceDate);
+        const vehRows = customerVehicleLinks(c);
         return `
         <div class="card" onclick="openCustomerDetail('${c.id}')">
           <div style="display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; margin-bottom:2px;">
@@ -1181,6 +1193,8 @@ function renderCustomers(){
           <div class="name">${esc(c.name)}</div>
           <div class="meta">${esc(c.nameMn||'')} ${c.nameMn?'・':''}${esc(c.phone||'No phone on file')}</div>
           <div class="meta" style="margin-top:-6px;">📍 ${esc(c.address||'No address on file')}</div>
+          ${vehRows.slice(0,3).map(r=>`<div class="meta" style="color:var(--teal); margin-top:-6px">${r.label==='Consignor'?'🔑':'🚗'} ${esc(vehName(r.v.id))} ・ ${esc(r.label)}</div>`).join('')}
+          ${vehRows.length>3?`<div class="meta" style="color:var(--teal); margin-top:-6px">+${vehRows.length-3} more</div>`:''}
           ${c.salesStaff?`<span class="staff-tag" style="margin-top:4px">👤 ${esc(c.salesStaff)}</span>`:''}
           ${c.convertedAt?`<span class="staff-tag" style="margin-top:4px; background:var(--green-soft); color:var(--green)">🎉 Converted ${fmtDate(c.convertedAt)}</span>`:''}
           ${custSort==='custom' ? `<div style="display:flex; gap:6px; margin-top:6px;">
@@ -1432,6 +1446,7 @@ function openCustomerDetail(id){
         <div class="kv"><span class="k">Occupation / Workplace</span><span class="v">${esc(c.job||'—')}</span></div>
         <div class="kv"><span class="k">Referred By</span><span class="v">${esc(c.referrer||'—')}</span></div>
         <div class="kv"><span class="k">Sales Staff</span><span class="v" style="color:var(--teal)">${esc(c.salesStaff||'—')}</span></div>
+        <div class="kv" style="grid-column:1/-1"><span class="k">Vehicles</span><span class="v" style="display:flex; flex-wrap:wrap; gap:6px">${customerVehicleLinks(c).map(r=>`<span class="staff-tag" style="cursor:pointer" onclick="openVehicleDetail('${r.v.id}')">${r.label==='Consignor'?'🔑':'🚗'} ${esc(vehName(r.v.id))} ・ ${esc(r.label)}</span>`).join('') || '—'}</span></div>
       </div>
       ${c.note? `<div class="field" style="margin-top:10px"><label>Notes</label><div class="panel" style="padding:10px 12px; background:var(--panel2)">${esc(c.note)}</div></div>`:''}
       <div class="kv-grid" style="margin-top:14px; padding-top:14px; border-top:1px solid var(--line)">
@@ -1946,9 +1961,14 @@ function sortVehicleList(list){
   }
   return sorted;
 }
+function vehicleCustomerNames(v){
+  const names = deals.filter(d=>d.vehicleId===v.id && d.stage!=='キャンセル').map(d=>custName(d.customerId));
+  if(v.ownerCustomerId) names.push(custName(v.ownerCustomerId));
+  return names.join(' ');
+}
 function renderVehicles(){
   const q = vehFilter.q.trim().toLowerCase();
-  let list = vehicles.filter(v => (!q || (v.maker+v.model+v.color+v.vin+(v.regNum||'')).toLowerCase().includes(q)));
+  let list = vehicles.filter(v => (!q || (v.maker+v.model+v.color+v.vin+(v.regNum||'')+' '+vehicleCustomerNames(v)).toLowerCase().includes(q)));
   if(vehFilter.status!=='all') list = list.filter(v => (v.kind==='tradein' ? 'tradein' : v.status) === vehFilter.status);
   list = sortVehicleList(list);
   return `
@@ -1957,7 +1977,7 @@ function renderVehicles(){
       <button class="btn" onclick="openVehicleForm()">＋ New Vehicle</button>
     </div>
     <div class="toolbar">
-      <input type="text" id="vehFilterInput" placeholder="🔍 Search by make, model, color, VIN, or plate number…" value="${esc(vehFilter.q)}" oninput="vehFilter.q=this.value; keepFocusAcrossRender('vehFilterInput')">
+      <input type="text" id="vehFilterInput" placeholder="🔍 Search by make, model, color, VIN, plate number, or customer…" value="${esc(vehFilter.q)}" oninput="vehFilter.q=this.value; keepFocusAcrossRender('vehFilterInput')">
       <select onchange='vehFilter.sort=this.value; renderView()'>
         ${Object.entries(VEH_SORT_OPTIONS).map(([k,l])=>`<option value="${k}" ${vehFilter.sort===k?'selected':''}>${l}</option>`).join('')}
       </select>
@@ -1990,7 +2010,8 @@ function vehicleCardHtml(v){
         ${hasAppraisal?`<span class="mini-tag mini-tag-appr">✅ Appraised</span>`:''}
         ${notArrived?`<span class="mini-tag" style="background:var(--amber-soft); color:var(--amber)">🚢 In Transit</span>`:''}
       </div>`:''}
-      ${deal && deal.stage!=='キャンセル' ? `<div class="meta" style="color:var(--teal); margin-top:-6px">🙋 ${esc(custName(deal.customerId))} ・ ${esc(stageLabel(deal.stage))}</div>`:''}
+      ${deal && deal.stage!=='キャンセル' ? `<div class="meta" style="color:var(--teal); margin-top:-6px">🙋 ${esc(custName(deal.customerId))} ・ ${esc(stageLabel(deal.stage))}</div>`
+        : (v.ownerCustomerId ? `<div class="meta" style="color:var(--teal); margin-top:-6px">🔑 ${esc(custName(v.ownerCustomerId))} ・ Consignor</div>`:'')}
       <div class="row2">
         <span class="price">${fmtMoney(v.priceSale)}</span>
         <span class="score">Score ${score}/100</span>
