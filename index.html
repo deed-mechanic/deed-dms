@@ -1766,8 +1766,19 @@ const CATEGORY_META = {
   inquiry:  {label:'④ New Inquiry',                color:'var(--violet)'},
   order:    {label:'⑤ Order In Progress',          color:'var(--amber)'},
   owned:    {label:'⑥ In-House Check-in',          color:'var(--green)'},
+  arrival:  {label:'🚢 Vehicle Arrival (UB)',        color:'#d6528f'},
 };
-const CATEGORY_ORDER = ['claim','hot','delivery','prospect','inquiry','order','owned'];
+const CATEGORY_ORDER = ['claim','hot','delivery','prospect','inquiry','order','owned','arrival'];
+// Vehicles in transit from Japan whose ETA (arrival in Ulaanbaatar) is entered show on the
+// calendar on that date, and the daily email tells this person 7 days ahead.
+// Keep in sync with ARRIVAL_NOTIFY_STAFF_NAME in supabase/functions/daily-reminder-digest/index.ts.
+const ARRIVAL_NOTIFY_STAFF_NAME = 'Maeda';
+function parseEtaDate(s){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((s||'').trim());
+  if(!m) return null;
+  const d = new Date(+m[1], +m[2]-1, +m[3]);
+  return (d.getMonth()===+m[2]-1) ? d.getTime() : null;
+}
 function allReminderItemsWithDueDate(){
   const DAY = 86400000;
   const activeCustomers = customers.filter(c=>!c.deletedAt);
@@ -1808,6 +1819,15 @@ function allReminderItemsWithDueDate(){
       const dueDate = noActionSinceDelivery ? dd+reminderSettings.deliveryFirstFollowupDays*DAY : lastHistDate+reminderSettings.deliveryRepeatFollowupDays*DAY;
       items.push({category:'delivery', dueDate, customerId:c.id, staff:c.salesStaff, name:c.name});
     }
+  });
+  const arrivalStaff = staffList.find(s=>s.name===ARRIVAL_NOTIFY_STAFF_NAME);
+  vehicles.forEach(v=>{
+    if(v.deletedAt || v.kind==='order' || v.kind==='tradein' || v.arrived!==false) return;
+    const eta = parseEtaDate(v.eta);
+    if(eta===null) return;
+    const deal = activeDeals.find(d=>d.vehicleId===v.id);
+    const buyer = deal ? activeCustomers.find(c=>c.id===deal.customerId) : null;
+    items.push({category:'arrival', dueDate:eta, vehicleId:v.id, staff:arrivalStaff?staffLabel(arrivalStaff):'', name:`${v.maker} ${v.model}${v.year?` (${v.year})`:''}${buyer?` — ${buyer.name}`:''}`});
   });
   return items;
 }
@@ -1892,7 +1912,7 @@ function openCalendarDay(k){
         <h3>👤 ${esc(g.staff)} <span class="sub">${g.list.length} item(s) due ${k}</span></h3>
         <div class="grid">
           ${g.list.map(it=>`
-            <div class="card" onclick="${it.dealId?`openDealDetail('${it.dealId}')`:`openCustomerDetail('${it.customerId}')`}">
+            <div class="card" onclick="${it.vehicleId?`openVehicleDetail('${it.vehicleId}')`:(it.dealId?`openDealDetail('${it.dealId}')`:`openCustomerDetail('${it.customerId}')`)}">
               <span class="badge" style="background:${CATEGORY_META[it.category].color}; color:#fff">${CATEGORY_META[it.category].label}</span>
               <div class="name">${esc(it.name)}</div>
             </div>
@@ -2100,7 +2120,7 @@ function openVehicleForm(existing){
         <div class="field-row3">
           <div class="field"><label>Purchased Date</label><input id="f_purchaseddate" value="${esc(v.purchasedDate)}" placeholder="2026-07-28"></div>
           <div class="field"><label>ETD (Leaving Japan)</label><input id="f_etd" value="${esc(v.etd)}" placeholder="2026-08-01"></div>
-          <div class="field"><label>ETA (Arrives UB)</label><input id="f_eta" value="${esc(v.eta)}" placeholder="2026-08-20"></div>
+          <div class="field"><label>ETA (Arrives UB) <span style="color:var(--text-dim2)">— shows on Calendar; Maeda is emailed 7 days before</span></label><input id="f_eta" value="${esc(v.eta)}" placeholder="2026-08-20"></div>
         </div>
         <div class="field">
           <label>Owner / Consignor</label>
@@ -2298,6 +2318,7 @@ async function saveVehicle(id){
     fbBoosted: document.getElementById('f_fbboosted').checked,
   };
   if(!data.maker || !data.model){ alert('Please enter the make and model'); return; }
+  if(data.eta && parseEtaDate(data.eta)===null){ alert('Please enter ETA as YYYY-MM-DD (e.g. 2026-10-05) so it appears on the Calendar and triggers the arrival email'); return; }
   let v;
   if(id){
     v = vehicles.find(x=>x.id===id);
@@ -3542,6 +3563,7 @@ function renderManual(){
       <ul style="font-size:13px; color:var(--text-dim); margin:0; padding-left:20px; line-height:1.8">
         <li>Өдрийн нүдэн дэх өнгөт тоо нь <b style="color:var(--text)">тухайн өдөр анх удаа хугацаа дуусах</b> сануулгын тоо.</li>
         <li>Өдөр дээр дарахад <b style="color:var(--text)">бүх ажилтны</b> тухайн өдрийн сануулгыг ажилтнаар нь ангилж жагсаана.</li>
+        <li><b style="color:var(--text)">🚢 Vehicle Arrival (UB)</b> — Японоос тээвэрлэгдэж буй машины <b style="color:var(--text)">ETA (Arrives UB)</b>-г машины дэлгэрэнгүйд <b style="color:var(--text)">YYYY-MM-DD</b> хэлбэрээр оруулбал Улаанбаатарт ирэх өдөр Календарьт гарна. Мөн ирэхээс <b style="color:var(--text)">7 хоногийн өмнө Maeda-д</b> автомат имэйл очно.</li>
       </ul>
     </div>
 
