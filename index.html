@@ -2120,7 +2120,7 @@ function openVehicleForm(existing){
         <div class="field-row3">
           <div class="field"><label>Purchased Date</label><input id="f_purchaseddate" value="${esc(v.purchasedDate)}" placeholder="2026-07-28"></div>
           <div class="field"><label>ETD (Leaving Japan)</label><input id="f_etd" value="${esc(v.etd)}" placeholder="2026-08-01"></div>
-          <div class="field"><label>ETA (Arrives UB) <span style="color:var(--text-dim2)">— shows on Calendar; Maeda is emailed 7 days before</span></label><input id="f_eta" value="${esc(v.eta)}" placeholder="2026-08-20"></div>
+          <div class="field"><label>ETA (Arrives UB) <span style="color:var(--text-dim2)">— shows on Calendar; Maeda is emailed 7 and 3 days before</span></label><input id="f_eta" value="${esc(v.eta)}" placeholder="2026-08-20"></div>
         </div>
         <div class="field">
           <label>Owner / Consignor</label>
@@ -3563,7 +3563,7 @@ function renderManual(){
       <ul style="font-size:13px; color:var(--text-dim); margin:0; padding-left:20px; line-height:1.8">
         <li>Өдрийн нүдэн дэх өнгөт тоо нь <b style="color:var(--text)">тухайн өдөр анх удаа хугацаа дуусах</b> сануулгын тоо.</li>
         <li>Өдөр дээр дарахад <b style="color:var(--text)">бүх ажилтны</b> тухайн өдрийн сануулгыг ажилтнаар нь ангилж жагсаана.</li>
-        <li><b style="color:var(--text)">🚢 Vehicle Arrival (UB)</b> — Японоос тээвэрлэгдэж буй машины <b style="color:var(--text)">ETA (Arrives UB)</b>-г машины дэлгэрэнгүйд <b style="color:var(--text)">YYYY-MM-DD</b> хэлбэрээр оруулбал Улаанбаатарт ирэх өдөр Календарьт гарна. Мөн ирэхээс <b style="color:var(--text)">7 хоногийн өмнө Maeda-д</b> автомат имэйл очно.</li>
+        <li><b style="color:var(--text)">🚢 Vehicle Arrival (UB)</b> — Японоос тээвэрлэгдэж буй машины <b style="color:var(--text)">ETA (Arrives UB)</b>-г машины дэлгэрэнгүйд <b style="color:var(--text)">YYYY-MM-DD</b> хэлбэрээр оруулбал Улаанбаатарт ирэх өдөр Календарьт гарна. Мөн ирэхээс <b style="color:var(--text)">7 болон 3 хоногийн өмнө Maeda-д</b> автомат имэйл очно.</li>
       </ul>
     </div>
 
