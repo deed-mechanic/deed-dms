@@ -1347,8 +1347,10 @@ async function saveCustomer(id){
   if(data.birthday && !datePattern.test(data.birthday)){ alert('Please enter Birthday as YYYY-MM-DD (e.g. 1990-05-15)'); return; }
   if(data.nextServiceDate && !datePattern.test(data.nextServiceDate)){ alert('Please enter Next Inspection Due Date as YYYY-MM-DD (e.g. 2026-09-01)'); return; }
   let c;
+  let prevStaff = '';
   if(id){
     c = customers.find(x=>x.id===id);
+    prevStaff = c.salesStaff||'';
     const wasOtherDealer = c.customerType==='他社客';
     Object.assign(c, data);
     if(data.customerType==='自社客' && wasOtherDealer && !c.convertedAt){
@@ -1359,9 +1361,12 @@ async function saveCustomer(id){
     c = {id:uid('C'), ...data, sortOrder: maxOrder+1, createdAt:Date.now()};
     customers.push(c);
   }
+  const followDeals = (c.salesStaff || prevStaff) ? deals.filter(d=>d.customerId===c.id && (d.staff||'')!==(c.salesStaff||'')) : [];
+  followDeals.forEach(d=>{ d.staff = c.salesStaff||''; });
   closeModal();
   renderView();
   await upsertCustomerRow(c);
+  for(const d of followDeals) await upsertDealRow(d);
   if(linkedTradeInVehicleId){
     const v = vehicles.find(x=>x.id===linkedTradeInVehicleId);
     if(v){
@@ -2690,7 +2695,7 @@ function openStartDeal(vehicleId){
     <div class="modal-head"><h3>＋ Start Deal</h3><button class="close-x" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
       <div class="field"><label>Select Customer</label>
-        <select id="f_dealcust" onchange="document.getElementById('newCustFields').style.display=this.value?'none':'block'">
+        <select id="f_dealcust" onchange="document.getElementById('newCustFields').style.display=this.value?'none':'block'; prefillDealStaff('f_dealcust','f_dealstaff')">
           <option value="">-- Register as new customer --</option>
           ${customers.map(c=>`<option value="${c.id}">${esc(c.name)} (${esc(c.phone||'No phone on file')})</option>`).join('')}
         </select>
@@ -2702,7 +2707,7 @@ function openStartDeal(vehicleId){
         </div>
       </div>
       <div class="field-row">
-        <div class="field"><label>Assigned Staff</label>
+        <div class="field"><label>Assigned Staff <span style="color:var(--text-dim2)">(= customer's Sales Staff)</span></label>
           <select id="f_dealstaff">${sortedStaff().map(s=>`<option value="${esc(staffLabel(s))}">${esc(staffLabel(s))}</option>`).join('')}</select>
         </div>
         <div class="field"><label>Initial Status</label>
@@ -2734,8 +2739,11 @@ async function startDealForVehicle(vehicleId){
   if(v && v.status==='stock'){ v.status='nego'; await upsertVehicleRow(v); }
   const deal = {id:uid('D'), customerId, vehicleId, staff, stage, createdAt:Date.now(), history:[{date:Date.now(), note:`Deal started (${stageLabel(stage)})`}]};
   deals.push(deal);
+  const customer = customers.find(x=>x.id===customerId);
+  const syncing = customer ? assignCustomerStaff(customer, staff) : Promise.resolve();
   closeModal();
   openVehicleDetail(vehicleId);
+  await syncing;
   await upsertDealRow(deal);
 }
 async function addDealNoteInline(dealId, vehicleId){
@@ -3175,13 +3183,13 @@ function openDealForm(){
     <div class="modal-head"><h3>＋ New Deal</h3><button class="close-x" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
       <div class="field"><label>Customer</label>
-        <select id="f_cust">${customers.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
+        <select id="f_cust" onchange="prefillDealStaff('f_cust','f_staff')">${customers.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
       </div>
       <div class="field"><label>Vehicle</label>
         <select id="f_veh">${vehicles.map(v=>`<option value="${v.id}">${esc(v.maker)} ${esc(v.model)} (${v.year||'-'})</option>`).join('')}</select>
       </div>
       <div class="field-row">
-        <div class="field"><label>Assigned Staff</label>
+        <div class="field"><label>Assigned Staff <span style="color:var(--text-dim2)">(= customer's Sales Staff)</span></label>
           <select id="f_staff">${sortedStaff().map(s=>`<option value="${esc(staffLabel(s))}">${esc(staffLabel(s))}</option>`).join('')}</select>
         </div>
         <div class="field"><label>Initial Status</label>
@@ -3195,6 +3203,22 @@ function openDealForm(){
       <button class="btn" onclick="saveDeal()">Register</button>
     </div>
   `);
+  prefillDealStaff('f_cust','f_staff');
+}
+// The customer's Sales Staff is the single source of truth: every deal of that customer follows it,
+// so the pipeline lanes, customer list and reminder emails always name the same person.
+function prefillDealStaff(custSelId, staffSelId){
+  const c = customers.find(x=>x.id===document.getElementById(custSelId).value);
+  const sel = document.getElementById(staffSelId);
+  if(c && c.salesStaff && [...sel.options].some(o=>o.value===c.salesStaff)) sel.value = c.salesStaff;
+}
+async function assignCustomerStaff(c, staff){
+  const changedCustomer = (c.salesStaff||'')!==staff;
+  if(changedCustomer) c.salesStaff = staff;
+  const followDeals = deals.filter(d=>d.customerId===c.id && (d.staff||'')!==staff);
+  followDeals.forEach(d=>{ d.staff = staff; });
+  if(changedCustomer) await upsertCustomerRow(c);
+  for(const d of followDeals) await upsertDealRow(d);
 }
 async function saveDeal(){
   const customerId = document.getElementById('f_cust').value;
@@ -3205,8 +3229,11 @@ async function saveDeal(){
   const deal = {id:uid('D'), customerId, vehicleId, staff, stage, createdAt:Date.now(),
     history:[{date:Date.now(), note: memo || `Deal started (${stageLabel(stage)})`}]};
   deals.push(deal);
+  const customer = customers.find(x=>x.id===customerId);
+  const syncing = customer ? assignCustomerStaff(customer, staff) : Promise.resolve();
   closeModal();
   renderView();
+  await syncing;
   await upsertDealRow(deal);
 }
 
@@ -3539,6 +3566,7 @@ function renderManual(){
     <div class="panel manual-section" id="m-ch9">
       <h3><span class="manual-chapnum">09</span> Ажилтан тус бүрийн худалдааны эгнээ</h3>
       <p style="font-size:13px; margin:0 0 10px">💬 Deal Pipeline хуудсан дээр бүртгэлтэй ажилтан <b>тус бүрд өөрийн эгнээ (lane)</b> автоматаар үүсдэг — шинэ ажилтан нэмэгдэх, хуучин нь гарах бүрд эгнээ өөрөө шинэчлэгдэнэ, тусад нь тохируулах шаардлагагүй. Эгнээний дарааллыг Staff хуудсан дэх ↑/↓ товчлуурын адилаар өөрчилж болно (эгнээний баруун дээд буланд ↑/↓ товчлуур байна).</p>
+      <div class="manual-callout"><span class="ic">👤</span><div><b>Хариуцсан ажилтан (Sales Staff) нэг л газар</b><p>Худалдааны эгнээ нь харилцагчийн <b>Sales Staff</b>-аар тодорхойлогдоно. Ажилтныг солих бол Customers дотор тухайн харилцагчийн «✎ Edit» → <b>Sales Staff</b> дээр сольвол тэр харилцагчийн бүх худалдааны явц (Deal Pipeline) болон сануулгын имэйл ч хамт шинэчлэгдэнэ.</p></div></div>
       <div class="manual-callout warn"><span class="ic">⚠</span><div><b>«交渉決裂・中止」/ Negotiation Failed &amp; Cancel товч</b><p>Тохиролцоо амжилтгүй болсон, худалдан авалт хийгдэхгүй болсон тохиолдолд картыг устгах биш, <b>«Negotiation Failed / Cancel»</b> товчийг дар. Ингэснээр стадиа «Cancelled» болж хадгалагдана — түүх, тоо баримтаас алдагдахгүй. Ердийн <b>Delete</b> (устгах) нь зөвхөн буруу оруулсан/давхардсан бичлэгийг бүрмөсөн арилгах зориулалттай.</p></div></div>
     </div>
 
