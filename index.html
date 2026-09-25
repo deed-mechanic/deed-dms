@@ -2981,7 +2981,7 @@ function serviceHistoryPanel(v){
           </select>
         </div>
         <div class="field" style="margin-bottom:0"><label>Date</label><input id="f_svcdate" type="date" value="${todayStr()}"></div>
-        <div class="field" style="margin-bottom:0"><label>Mileage (km)</label><input id="f_svcmileage" type="number" placeholder="${v.mileage||''}"></div>
+        <div class="field" style="margin-bottom:0"><label>Mileage (km) <span style="color:var(--text-dim2)">— updates the vehicle's mileage</span></label><input id="f_svcmileage" type="number" placeholder="${v.mileage||''}"></div>
       </div>
       <div class="field-row" style="margin-top:10px">
         <div class="field"><label>Staff</label>
@@ -3015,6 +3015,24 @@ function toggleSvcNoteRequired(){
   const isGeneral = document.getElementById('f_svctype').value==='general_repair';
   document.getElementById('f_svcnote_label').textContent = isGeneral ? 'Details / Notes (required)' : 'Details / Notes';
 }
+// The vehicle's own Mileage follows the most recent (by date) service-history entry that recorded
+// one, so it never stays stuck at the km figure from the original appraisal. A drop is asked about
+// first, since an odometer reading going down is almost always a typo (e.g. 298,239 vs 198,239).
+function latestServiceMileage(v){
+  let best = null;
+  (v.serviceHistory||[]).forEach(h=>{
+    if(!h.mileageKm) return;
+    if(!best || (h.date||0)>(best.date||0) || ((h.date||0)===(best.date||0) && (h.createdAt||0)>(best.createdAt||0))) best = h;
+  });
+  return best;
+}
+function applyHistoryMileage(v){
+  const h = latestServiceMileage(v);
+  if(!h || h.mileageKm===v.mileage) return;
+  if(v.mileage && h.mileageKm < v.mileage &&
+     !confirm(`The latest service entry records ${Number(h.mileageKm).toLocaleString()} km, which is LOWER than the vehicle's current ${Number(v.mileage).toLocaleString()} km.\n\nUpdate the vehicle's mileage to ${Number(h.mileageKm).toLocaleString()} km anyway?\n(Cancel = keep ${Number(v.mileage).toLocaleString()} km — check the entry for a typo.)`)) return;
+  v.mileage = h.mileageKm;
+}
 async function addServiceHistory(vehicleId){
   const category = document.getElementById('f_svctype').value;
   const dateStr = document.getElementById('f_svcdate').value;
@@ -3031,6 +3049,7 @@ async function addServiceHistory(vehicleId){
     mileageKm: mileage ? Number(mileage) : null,
     staff, notes, createdAt: Date.now()
   });
+  applyHistoryMileage(v);
   openVehicleDetail(vehicleId);
   await upsertVehicleRow(v);
 }
@@ -3039,6 +3058,7 @@ async function deleteServiceHistory(vehicleId, entryId){
   const v = vehicles.find(x=>x.id===vehicleId);
   if(!v) return;
   v.serviceHistory = (v.serviceHistory||[]).filter(h=>h.id!==entryId);
+  applyHistoryMileage(v);
   openVehicleDetail(vehicleId);
   await upsertVehicleRow(v);
 }
@@ -3099,6 +3119,7 @@ async function saveServiceHistoryEntry(vehicleId, entryId){
   h.mileageKm = mileage ? Number(mileage) : null;
   h.staff = staff;
   h.notes = notes;
+  applyHistoryMileage(v);
   openVehicleDetail(vehicleId);
   await upsertVehicleRow(v);
 }
