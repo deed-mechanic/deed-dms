@@ -828,9 +828,10 @@ function seedDemoData(){
 
 /* ---------------- derived stats ---------------- */
 function stats(){
-  const stock = vehicles.filter(v=>v.status==='stock').length;
+  // Cars still in transit from Japan (arrived===false) are neither "in stock" nor appraisable yet.
+  const stock = vehicles.filter(v=>v.status==='stock' && v.arrived!==false).length;
   const nego = deals.filter(d=>!['契約','納車','キャンセル'].includes(d.stage)).length;
-  const appraisalPending = vehicles.filter(v=>!v.appraisal || Object.values(v.appraisal).every(x=>!x)).length;
+  const appraisalPending = vehicles.filter(v=>v.arrived!==false && (!v.appraisal || Object.values(v.appraisal).every(x=>!x))).length;
   const deliveredThisMonth = vehicles.filter(v=>v.status==='delivered' && sameMonth(v.createdAt)).length;
   const totalProfit = vehicles.filter(v=>v.status==='sold'||v.status==='delivered').reduce((s,v)=>s+((v.priceSale||0)-(v.priceCost||0)),0);
   const monthlySales = monthlySalesCount();
@@ -1044,9 +1045,9 @@ function renderDashboard(){
     </div>
     <div class="panel">
       <h3>🔧 Stock Vehicles Needing Appraisal</h3>
-      ${vehicles.filter(v=>v.status==='stock' && lowAppraisal(v)).length===0 ? `<div class="empty" style="padding:20px">No vehicles to show</div>` : `
+      ${vehicles.filter(v=>v.status==='stock' && v.arrived!==false && lowAppraisal(v)).length===0 ? `<div class="empty" style="padding:20px">No vehicles to show</div>` : `
       <div class="grid">
-        ${vehicles.filter(v=>v.status==='stock' && lowAppraisal(v)).map(v=>vehicleCardHtml(v)).join('')}
+        ${vehicles.filter(v=>v.status==='stock' && v.arrived!==false && lowAppraisal(v)).map(v=>vehicleCardHtml(v)).join('')}
       </div>`}
     </div>
   `;
@@ -1134,13 +1135,19 @@ function exportCustomersCSV(){
 }
 // Vehicles tied to a customer: those in their deals (buyer side, cancelled deals excluded) plus
 // vehicles they consign (owner side). Mirrors the customer name shown on each vehicle card.
+// The company's own placeholder customer ("Deed Motors") holds cars bought ahead of any order in
+// its name — it is a nominal owner, not a consignor.
+function ownerRoleLabel(customerId){
+  const c = customers.find(x=>x.id===customerId);
+  return c && /^deed motors$/i.test((c.name||'').trim()) ? 'Nominal owner' : 'Consignor';
+}
 function customerVehicleLinks(c){
   const rows = [];
   deals.filter(d=>d.customerId===c.id && d.stage!=='キャンセル').forEach(d=>{
     const v = vehicles.find(x=>x.id===d.vehicleId);
-    if(v && !rows.some(r=>r.v.id===v.id)) rows.push({v, label:stageLabel(d.stage)});
+    if(v && !rows.some(r=>r.v.id===v.id)) rows.push({v, label:stageLabel(d.stage), owner:false});
   });
-  vehicles.filter(v=>v.ownerCustomerId===c.id && !rows.some(r=>r.v.id===v.id)).forEach(v=>rows.push({v, label:'Consignor'}));
+  vehicles.filter(v=>v.ownerCustomerId===c.id && !rows.some(r=>r.v.id===v.id)).forEach(v=>rows.push({v, label:ownerRoleLabel(c.id), owner:true}));
   return rows;
 }
 function renderCustomers(){
@@ -1193,7 +1200,7 @@ function renderCustomers(){
           <div class="name">${esc(c.name)}</div>
           <div class="meta">${esc(c.nameMn||'')} ${c.nameMn?'・':''}${esc(c.phone||'No phone on file')}</div>
           <div class="meta" style="margin-top:-6px;">📍 ${esc(c.address||'No address on file')}</div>
-          ${vehRows.slice(0,3).map(r=>`<div class="meta" style="color:var(--teal); margin-top:-6px">${r.label==='Consignor'?'🔑':'🚗'} ${esc(vehName(r.v.id))} ・ ${esc(r.label)}</div>`).join('')}
+          ${vehRows.slice(0,3).map(r=>`<div class="meta" style="color:var(--teal); margin-top:-6px">${r.owner?'🔑':'🚗'} ${esc(vehName(r.v.id))} ・ ${esc(r.label)}</div>`).join('')}
           ${vehRows.length>3?`<div class="meta" style="color:var(--teal); margin-top:-6px">+${vehRows.length-3} more</div>`:''}
           ${c.salesStaff?`<span class="staff-tag" style="margin-top:4px">👤 ${esc(c.salesStaff)}</span>`:''}
           ${c.convertedAt?`<span class="staff-tag" style="margin-top:4px; background:var(--green-soft); color:var(--green)">🎉 Converted ${fmtDate(c.convertedAt)}</span>`:''}
@@ -1446,7 +1453,7 @@ function openCustomerDetail(id){
         <div class="kv"><span class="k">Occupation / Workplace</span><span class="v">${esc(c.job||'—')}</span></div>
         <div class="kv"><span class="k">Referred By</span><span class="v">${esc(c.referrer||'—')}</span></div>
         <div class="kv"><span class="k">Sales Staff</span><span class="v" style="color:var(--teal)">${esc(c.salesStaff||'—')}</span></div>
-        <div class="kv" style="grid-column:1/-1"><span class="k">Vehicles</span><span class="v" style="display:flex; flex-wrap:wrap; gap:6px">${customerVehicleLinks(c).map(r=>`<span class="staff-tag" style="cursor:pointer" onclick="openVehicleDetail('${r.v.id}')">${r.label==='Consignor'?'🔑':'🚗'} ${esc(vehName(r.v.id))} ・ ${esc(r.label)}</span>`).join('') || '—'}</span></div>
+        <div class="kv" style="grid-column:1/-1"><span class="k">Vehicles</span><span class="v" style="display:flex; flex-wrap:wrap; gap:6px">${customerVehicleLinks(c).map(r=>`<span class="staff-tag" style="cursor:pointer" onclick="openVehicleDetail('${r.v.id}')">${r.owner?'🔑':'🚗'} ${esc(vehName(r.v.id))} ・ ${esc(r.label)}</span>`).join('') || '—'}</span></div>
       </div>
       ${c.note? `<div class="field" style="margin-top:10px"><label>Notes</label><div class="panel" style="padding:10px 12px; background:var(--panel2)">${esc(c.note)}</div></div>`:''}
       <div class="kv-grid" style="margin-top:14px; padding-top:14px; border-top:1px solid var(--line)">
@@ -1969,7 +1976,10 @@ function vehicleCustomerNames(v){
 function renderVehicles(){
   const q = vehFilter.q.trim().toLowerCase();
   let list = vehicles.filter(v => (!q || (v.maker+v.model+v.color+v.vin+(v.regNum||'')+' '+vehicleCustomerNames(v)).toLowerCase().includes(q)));
-  if(vehFilter.status!=='all') list = list.filter(v => (v.kind==='tradein' ? 'tradein' : v.status) === vehFilter.status);
+  const inTransit = v => v.kind!=='tradein' && v.kind!=='order' && v.arrived===false;
+  if(vehFilter.status==='transit') list = list.filter(inTransit);
+  else if(vehFilter.status==='stock') list = list.filter(v => v.status==='stock' && v.kind!=='tradein' && !inTransit(v));
+  else if(vehFilter.status!=='all') list = list.filter(v => (v.kind==='tradein' ? 'tradein' : v.status) === vehFilter.status);
   list = sortVehicleList(list);
   return `
     <div class="topbar">
@@ -1981,8 +1991,8 @@ function renderVehicles(){
       <select onchange='vehFilter.sort=this.value; renderView()'>
         ${Object.entries(VEH_SORT_OPTIONS).map(([k,l])=>`<option value="${k}" ${vehFilter.sort===k?'selected':''}>${l}</option>`).join('')}
       </select>
-      ${['stock','tradein','nego','order','sold','delivered','all'].map(s=>`
-        <span class="chip ${vehFilter.status===s?'on':''}" style="${s==='order' && vehFilter.status!==s ? 'background:var(--violet-soft); color:var(--violet); border-color:#9c7bea55;' : ''}" onclick='vehFilter.status="${s}"; renderView()'>${s==='all'?'All':(s==='tradein'?'📋 Appraisal Vehicle':(s==='order'?'🔍 On Order (no vehicle yet)':VSTATUS[s]))}</span>
+      ${['stock','tradein','nego','order','transit','sold','delivered','all'].map(s=>`
+        <span class="chip ${vehFilter.status===s?'on':''}" style="${s==='order' && vehFilter.status!==s ? 'background:var(--violet-soft); color:var(--violet); border-color:#9c7bea55;' : ''}" onclick='vehFilter.status="${s}"; renderView()'>${s==='all'?'All':(s==='tradein'?'📋 Appraisal Vehicle':(s==='order'?'🔍 On Order (no vehicle yet)':(s==='transit'?'🚢 In Transit':VSTATUS[s])))}</span>
       `).join('')}
     </div>
     ${list.length===0 ? `<div class="empty"><b>No matching vehicles</b>Change the search criteria or register a new vehicle</div>` : `
@@ -2011,7 +2021,7 @@ function vehicleCardHtml(v){
         ${notArrived?`<span class="mini-tag" style="background:var(--amber-soft); color:var(--amber)">🚢 In Transit</span>`:''}
       </div>`:''}
       ${deal && deal.stage!=='キャンセル' ? `<div class="meta" style="color:var(--teal); margin-top:-6px">🙋 ${esc(custName(deal.customerId))} ・ ${esc(stageLabel(deal.stage))}</div>`
-        : (v.ownerCustomerId ? `<div class="meta" style="color:var(--teal); margin-top:-6px">🔑 ${esc(custName(v.ownerCustomerId))} ・ Consignor</div>`:'')}
+        : (v.ownerCustomerId ? `<div class="meta" style="color:var(--teal); margin-top:-6px">🔑 ${esc(custName(v.ownerCustomerId))} ・ ${esc(ownerRoleLabel(v.ownerCustomerId))}</div>`:'')}
       <div class="row2">
         <span class="price">${fmtMoney(v.priceSale)}</span>
         <span class="score">Score ${score}/100</span>
@@ -3625,6 +3635,7 @@ function renderManual(){
       <div class="manual-cat"><div class="ic">🔍</div><div><div class="name">On Order — Захиалгаар</div><div class="cond">Машин бодитойгоор ХАРАЙХАН ирээгүй — зөвхөн спек/захиалга</div></div></div>
       <div class="manual-callout warn"><span class="ic">🔍</span><div><b>On Order картын ялгаа</b><p>«On Order» төрлийн карт нь ягаан зурвасжсан хүрээ, тод дэвсгэртэй бөгөөд <b>«🔍 NO VEHICLE YET — TARGET SPEC ONLY»</b> гэсэн тэмдэглэгээтэй харагдана — учир нь энэ бол бодит машин биш, зөвхөн харилцагчийн хүсэлт дээр үндэслэсэн зорилтот спек. «All»-ээр харахад бусад машинтай андуурахгүйн тулд ийм зорилготойгоор өөр өнгөөр ялгасан.</p></div></div>
       <p style="font-size:12.5px; color:var(--text-dim); margin:10px 0 0">Мөн Японоос тээвэрлэгдэж буй (худалдан авсан ч хараахан ирээгүй) машин дээр <b>«🚢 In Transit»</b> гэсэн жижиг тэмдэг харагдана. Анхны шүүлтүүр «In Stock» дээр байхаар тохируулагдсан.</p>
+      <div class="manual-callout"><span class="ic">🚢</span><div><b>Ирээгүй (тээвэрлэгдэж буй) машин</b><p>Улаанбаатарт хараахан ирээгүй машин «In Stock»-ийн тоо болон «Not Yet Appraised»-д <b>тооцогдохгүй</b>, «🚢 In Transit» шүүлтүүрээр тусад нь харагдана. Захиалга ирвэл машины дэлгэрэнгүйгээс «Start Deal» хийж хэрэглэгчид оноож болно. Машин ирмэгц машины засах цонхонд <b>«Arrived in Ulaanbaatar»</b>-г идэвхжүүлээд, ирсэн үеийн үзлэг/үнэлгээгээ бүртгэнэ. Нэр дээр нь түр «Deed Motors» (🔑 Nominal owner) гэж бичигдсэн байдаг.</p></div></div>
     </div>
 
     <div class="panel manual-section" id="m-ch9">
