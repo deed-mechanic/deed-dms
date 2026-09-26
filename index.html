@@ -1135,11 +1135,11 @@ function exportCustomersCSV(){
 }
 // Vehicles tied to a customer: those in their deals (buyer side, cancelled deals excluded) plus
 // vehicles they consign (owner side). Mirrors the customer name shown on each vehicle card.
-// The company's own placeholder customer ("Deed Motors") holds cars bought ahead of any order in
-// its name — it is a nominal owner, not a consignor.
+// The company's own placeholder customers ("Deed Motors", "Deed Motors - Umnugovi Branch", …) hold
+// cars bought ahead of any order in their name — nominal owners, not consignors.
 function ownerRoleLabel(customerId){
   const c = customers.find(x=>x.id===customerId);
-  return c && /^deed motors$/i.test((c.name||'').trim()) ? 'Nominal owner' : 'Consignor';
+  return c && /^deed motors\b/i.test((c.name||'').trim()) ? 'Nominal owner' : 'Consignor';
 }
 function customerVehicleLinks(c){
   const rows = [];
