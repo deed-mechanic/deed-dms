@@ -2022,7 +2022,7 @@ function vehicleCardHtml(v){
       <span class="badge ${badgeClass(isTradeIn?'tradein':(isField?'field':(isOrder?'order':v.status)))}">${badgeLabel}</span>
       ${isField?`<div style="margin-bottom:6px"><span class="mini-tag" style="background:${v.status==='custody'?'var(--teal-soft)':'var(--amber-soft)'}; color:${v.status==='custody'?'var(--teal)':'var(--amber)'}">${v.status==='custody'?'📦':'⏸'} ${esc(FIELD_STATUS_SHORT[v.status]||v.status||'')}</span></div>`:''}
       ${isOrder?`<div style="font-size:10px; font-weight:700; letter-spacing:.5px; color:var(--violet); margin-bottom:6px; padding-right:100px;">🔍 NO VEHICLE YET — TARGET SPEC ONLY</div>`:''}
-      <div class="name">${esc(v.maker)} ${esc(v.model)}</div>
+      <div class="name"><div style="font-size:12px; font-weight:600; color:var(--text-dim); line-height:1.3">${esc(v.maker)||'&nbsp;'}</div><div style="line-height:1.3">${esc(v.model)||'&nbsp;'}</div></div>
       <div class="meta">${v.year||'—'} ・ ${esc(v.color)} ・ ${(v.mileage||0).toLocaleString()}km</div>
       ${(hasImage||hasAppraisal||notArrived) ? `<div style="display:flex; gap:5px; margin:4px 0; flex-wrap:wrap;">
         ${hasImage?`<span class="mini-tag mini-tag-img">🖼 Photos</span>`:''}
