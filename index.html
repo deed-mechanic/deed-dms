@@ -436,6 +436,11 @@ const STAGE_LABELS_EN = {
 };
 function stageLabel(stage){ return STAGE_LABELS_EN[stage] || stage; }
 const VSTATUS = {stock:'In Stock', nego:'In Negotiation', sold:'Sold', delivered:'Delivered'};
+// "Field Appraisal" (kind 'field'): a customer's car appraised on a trip. Like an Appraisal Vehicle it is
+// not our stock; its status says what we do with it — keep it in our custody, or just keep the data on hold.
+const FIELD_STATUS = {custody:'In Custody (we hold the vehicle)', hold:'On Hold (data kept only)'};
+const FIELD_STATUS_SHORT = {custody:'In Custody', hold:'On Hold'};
+const isAppraisalOnly = v => v.kind==='tradein' || v.kind==='field';
 const DEFECT_OPTIONS = ['バンパー傷','フェンダー凹み','飛び石','シート汚れ','タイヤ摩耗','オイル漏れ','異音','修復歴あり','ガラス傷','塗装剥がれ'];
 const DEFECT_LABELS_EN = {
   'バンパー傷':'Bumper scratch', 'フェンダー凹み':'Fender dent', '飛び石':'Stone chip', 'シート汚れ':'Seat stain',
@@ -850,7 +855,7 @@ function monthlySalesCount(){
     const contractDate = stageChangeDate(d, '契約');
     if(!contractDate || !sameMonth(contractDate)) return;
     const v = vehicles.find(x=>x.id===d.vehicleId);
-    if(!v || v.kind==='tradein') return;
+    if(!v || isAppraisalOnly(v)) return;
     if(v.kind==='order') orderSales++; else stockSales++;
   });
   return {stockSales, orderSales, total: stockSales+orderSales};
@@ -1137,7 +1142,8 @@ function exportCustomersCSV(){
 // vehicles they consign (owner side). Mirrors the customer name shown on each vehicle card.
 // The company's own placeholder customers ("Deed Motors", "Deed Motors - Umnugovi Branch", …) hold
 // cars bought ahead of any order in their name — nominal owners, not consignors.
-function ownerRoleLabel(customerId){
+function ownerRoleLabel(customerId, v){
+  if(v && isAppraisalOnly(v)) return 'Owner';
   const c = customers.find(x=>x.id===customerId);
   return c && /^deed motors\b/i.test((c.name||'').trim()) ? 'Nominal owner' : 'Consignor';
 }
@@ -1147,7 +1153,7 @@ function customerVehicleLinks(c){
     const v = vehicles.find(x=>x.id===d.vehicleId);
     if(v && !rows.some(r=>r.v.id===v.id)) rows.push({v, label:stageLabel(d.stage), owner:false});
   });
-  vehicles.filter(v=>v.ownerCustomerId===c.id && !rows.some(r=>r.v.id===v.id)).forEach(v=>rows.push({v, label:ownerRoleLabel(c.id), owner:true}));
+  vehicles.filter(v=>v.ownerCustomerId===c.id && !rows.some(r=>r.v.id===v.id)).forEach(v=>rows.push({v, label:ownerRoleLabel(c.id, v), owner:true}));
   return rows;
 }
 function renderCustomers(){
@@ -1312,7 +1318,7 @@ function searchLinkableVehicle(){
   const resultsEl = document.getElementById('linkSearchResults');
   if(!qDigits){ resultsEl.innerHTML = ''; return; }
   const matches = vehicles.filter(v=>{
-    if(v.kind!=='tradein' || v.ownerCustomerId) return false;
+    if(!isAppraisalOnly(v) || v.ownerCustomerId) return false;
     const regDigits = (v.regNum||'').replace(/\D/g,'');
     return regDigits && regDigits.includes(qDigits);
   }).slice(0,5);
@@ -1844,7 +1850,7 @@ function allReminderItemsWithDueDate(){
   });
   const arrivalStaff = staffList.find(s=>s.name===ARRIVAL_NOTIFY_STAFF_NAME);
   vehicles.forEach(v=>{
-    if(v.deletedAt || v.kind==='order' || v.kind==='tradein' || v.arrived!==false) return;
+    if(v.deletedAt || v.kind==='order' || isAppraisalOnly(v) || v.arrived!==false) return;
     const eta = parseEtaDate(v.eta);
     if(eta===null) return;
     const deal = activeDeals.find(d=>d.vehicleId===v.id);
@@ -1976,9 +1982,10 @@ function vehicleCustomerNames(v){
 function renderVehicles(){
   const q = vehFilter.q.trim().toLowerCase();
   let list = vehicles.filter(v => (!q || (v.maker+v.model+v.color+v.vin+(v.regNum||'')+' '+vehicleCustomerNames(v)).toLowerCase().includes(q)));
-  const inTransit = v => v.kind!=='tradein' && v.kind!=='order' && v.arrived===false;
+  const inTransit = v => !isAppraisalOnly(v) && v.kind!=='order' && v.arrived===false;
   if(vehFilter.status==='transit') list = list.filter(inTransit);
-  else if(vehFilter.status==='stock') list = list.filter(v => v.status==='stock' && v.kind!=='tradein' && !inTransit(v));
+  else if(vehFilter.status==='field') list = list.filter(v => v.kind==='field');
+  else if(vehFilter.status==='stock') list = list.filter(v => v.status==='stock' && !isAppraisalOnly(v) && !inTransit(v));
   else if(vehFilter.status!=='all') list = list.filter(v => (v.kind==='tradein' ? 'tradein' : v.status) === vehFilter.status);
   list = sortVehicleList(list);
   return `
@@ -1991,27 +1998,29 @@ function renderVehicles(){
       <select onchange='vehFilter.sort=this.value; renderView()'>
         ${Object.entries(VEH_SORT_OPTIONS).map(([k,l])=>`<option value="${k}" ${vehFilter.sort===k?'selected':''}>${l}</option>`).join('')}
       </select>
-      ${['stock','tradein','nego','order','transit','sold','delivered','all'].map(s=>`
-        <span class="chip ${vehFilter.status===s?'on':''}" style="${s==='order' && vehFilter.status!==s ? 'background:var(--violet-soft); color:var(--violet); border-color:#9c7bea55;' : ''}" onclick='vehFilter.status="${s}"; renderView()'>${s==='all'?'All':(s==='tradein'?'📋 Appraisal Vehicle':(s==='order'?'🔍 On Order (no vehicle yet)':(s==='transit'?'🚢 In Transit':VSTATUS[s])))}</span>
+      ${['stock','tradein','field','nego','order','transit','sold','delivered','all'].map(s=>`
+        <span class="chip ${vehFilter.status===s?'on':''}" style="${s==='order' && vehFilter.status!==s ? 'background:var(--violet-soft); color:var(--violet); border-color:#9c7bea55;' : ''}" onclick='vehFilter.status="${s}"; renderView()'>${s==='all'?'All':(s==='tradein'?'📋 Appraisal Vehicle':(s==='field'?'🧭 Field Appraisal':(s==='order'?'🔍 On Order (no vehicle yet)':(s==='transit'?'🚢 In Transit':VSTATUS[s]))))}</span>
       `).join('')}
     </div>
     ${list.length===0 ? `<div class="empty"><b>No matching vehicles</b>Change the search criteria or register a new vehicle</div>` : `
     <div class="grid">${list.map(v=>vehicleCardHtml(v)).join('')}</div>`}
   `;
 }
-function badgeClass(status){ return {stock:'b-stock', nego:'b-nego', sold:'b-sold', delivered:'b-delivered', tradein:'b-tradein', order:'b-tradein'}[status]||'b-stock'; }
+function badgeClass(status){ return {stock:'b-stock', nego:'b-nego', sold:'b-sold', delivered:'b-delivered', tradein:'b-tradein', order:'b-tradein', custody:'b-tradein', hold:'b-tradein'}[status]||'b-stock'; }
 function vehicleCardHtml(v){
   const score = appraisalScore(v);
   const deal = dealForVehicle(v.id);
   const isTradeIn = v.kind==='tradein';
+  const isField = v.kind==='field';
   const isOrder = v.kind==='order';
-  const badgeLabel = isTradeIn ? '📋 Appraisal Vehicle' : (isOrder ? '🔍 On Order' : VSTATUS[v.status]);
+  const badgeLabel = isTradeIn ? '📋 Appraisal Vehicle' : (isField ? '🧭 Field Appraisal' : (isOrder ? '🔍 On Order' : VSTATUS[v.status]));
   const hasImage = (v.files||[]).some(f=>isImageFile(f.name));
   const hasAppraisal = (v.serviceHistory||[]).some(h=>h.category==='appraisal');
-  const notArrived = !isTradeIn && !isOrder && v.arrived===false;
+  const notArrived = !isTradeIn && !isField && !isOrder && v.arrived===false;
   return `
     <div class="card" style="${isOrder?'background:var(--violet-soft); border:2px dashed var(--violet);':''}" onclick="openVehicleDetail('${v.id}')">
-      <span class="badge ${badgeClass(isTradeIn?'tradein':(isOrder?'order':v.status))}">${badgeLabel}</span>
+      <span class="badge ${badgeClass(isTradeIn?'tradein':(isField?'field':(isOrder?'order':v.status)))}">${badgeLabel}</span>
+      ${isField?`<div style="margin-bottom:6px"><span class="mini-tag" style="background:${v.status==='custody'?'var(--teal-soft)':'var(--amber-soft)'}; color:${v.status==='custody'?'var(--teal)':'var(--amber)'}">${v.status==='custody'?'📦':'⏸'} ${esc(FIELD_STATUS_SHORT[v.status]||v.status||'')}</span></div>`:''}
       ${isOrder?`<div style="font-size:10px; font-weight:700; letter-spacing:.5px; color:var(--violet); margin-bottom:6px; padding-right:100px;">🔍 NO VEHICLE YET — TARGET SPEC ONLY</div>`:''}
       <div class="name">${esc(v.maker)} ${esc(v.model)}</div>
       <div class="meta">${v.year||'—'} ・ ${esc(v.color)} ・ ${(v.mileage||0).toLocaleString()}km</div>
@@ -2021,7 +2030,7 @@ function vehicleCardHtml(v){
         ${notArrived?`<span class="mini-tag" style="background:var(--amber-soft); color:var(--amber)">🚢 In Transit</span>`:''}
       </div>`:''}
       ${deal && deal.stage!=='キャンセル' ? `<div class="meta" style="color:var(--teal); margin-top:-6px">🙋 ${esc(custName(deal.customerId))} ・ ${esc(stageLabel(deal.stage))}</div>`
-        : (v.ownerCustomerId ? `<div class="meta" style="color:var(--teal); margin-top:-6px">🔑 ${esc(custName(v.ownerCustomerId))} ・ ${esc(ownerRoleLabel(v.ownerCustomerId))}</div>`:'')}
+        : (v.ownerCustomerId ? `<div class="meta" style="color:var(--teal); margin-top:-6px">🔑 ${esc(custName(v.ownerCustomerId))} ・ ${esc(ownerRoleLabel(v.ownerCustomerId, v))}</div>`:'')}
       <div class="row2">
         <span class="price">${fmtMoney(v.priceSale)}</span>
         <span class="score">Score ${score}/100</span>
@@ -2082,10 +2091,12 @@ function openVehicleForm(existing){
   const v = existing || {};
   const vKind = existing ? (v.kind||'stock') : 'tradein';
   linkedOwnerCustomerId = v.ownerCustomerId || null;
-  const costDisplay = (vKind==='tradein' || vKind==='order') ? 'display:none' : '';
-  const statusDisplay = (vKind==='tradein' || vKind==='order') ? 'display:none' : '';
+  const noCostStatus = (vKind==='tradein' || vKind==='order' || vKind==='field');
+  const costDisplay = noCostStatus ? 'display:none' : '';
+  const statusDisplay = noCostStatus ? 'display:none' : '';
+  const fieldStatusDisplay = vKind==='field' ? '' : 'display:none';
   const trackingDisplay = (vKind==='stock' || vKind==='order') ? '' : 'display:none';
-  const saleLabel = vKind==='tradein' ? 'Estimated Appraisal Value (₮)' : (vKind==='order' ? 'Target Price (₮)' : 'Sale Price (₮)');
+  const saleLabel = (vKind==='tradein' || vKind==='field') ? 'Estimated Appraisal Value (₮)' : (vKind==='order' ? 'Target Price (₮)' : 'Sale Price (₮)');
   const owner = linkedOwnerCustomerId ? customers.find(c=>c.id===linkedOwnerCustomerId) : null;
   showModal(`
     <div class="modal-head"><h3>${existing?'Edit Vehicle':'＋ New Vehicle'}</h3><button class="close-x" onclick="closeModal()">✕</button></div>
@@ -2094,6 +2105,7 @@ function openVehicleForm(existing){
         <label>Registration Type</label>
         <select id="f_kind" onchange="toggleVehicleKindFields()">
           <option value="tradein" ${vKind==='tradein'?'selected':''}>📋 Appraisal Vehicle (customer's current vehicle, appraisal only)</option>
+          <option value="field" ${vKind==='field'?'selected':''}>🧭 Field Appraisal (appraised on a trip — kept in our custody or on hold)</option>
           <option value="stock" ${vKind==='stock'?'selected':''}>🚗 Stock Vehicle (for sale)</option>
           <option value="order" ${vKind==='order'?'selected':''}>🔍 On Order (target spec, not yet purchased)</option>
         </select>
@@ -2139,6 +2151,11 @@ function openVehicleForm(existing){
       <div class="field" id="f_status_wrap" style="${statusDisplay}"><label>Status</label>
         <select id="f_status">
           ${Object.entries(VSTATUS).map(([k,v2])=>`<option value="${k}" ${v.status===k?'selected':''}>${v2}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field" id="f_fieldstatus_wrap" style="${fieldStatusDisplay}"><label>Handling</label>
+        <select id="f_fieldstatus">
+          ${Object.entries(FIELD_STATUS).map(([k,l])=>`<option value="${k}" ${v.status===k?'selected':''}>${l}</option>`).join('')}
         </select>
       </div>
       <details class="panel" id="f_tracking_wrap" style="background:var(--panel2); margin-bottom:16px; ${trackingDisplay}" ${(v.purchasedDate||v.etd||v.eta||owner||v.ownerPayout||v.minSellPrice||v.negotiationCeiling||v.hasDocuments||v.stateInspectionStatus||v.fbBoosted||v.arrived===false)?'open':''}>
@@ -2232,11 +2249,13 @@ function unselectLinkOwner(){
 function toggleVehicleKindFields(){
   const kind = document.getElementById('f_kind').value;
   const isTradeIn = kind==='tradein';
+  const isField = kind==='field';
   const isOrder = kind==='order';
-  document.getElementById('f_cost_wrap').style.display = (isTradeIn||isOrder) ? 'none' : '';
-  document.getElementById('f_status_wrap').style.display = (isTradeIn||isOrder) ? 'none' : '';
-  document.getElementById('f_tracking_wrap').style.display = isTradeIn ? 'none' : '';
-  document.getElementById('f_sale_label').textContent = isTradeIn ? 'Estimated Appraisal Value (₮)' : (isOrder ? 'Target Price (₮)' : 'Sale Price (₮)');
+  document.getElementById('f_cost_wrap').style.display = (isTradeIn||isOrder||isField) ? 'none' : '';
+  document.getElementById('f_status_wrap').style.display = (isTradeIn||isOrder||isField) ? 'none' : '';
+  document.getElementById('f_fieldstatus_wrap').style.display = isField ? '' : 'none';
+  document.getElementById('f_tracking_wrap').style.display = (isTradeIn||isField) ? 'none' : '';
+  document.getElementById('f_sale_label').textContent = (isTradeIn||isField) ? 'Estimated Appraisal Value (₮)' : (isOrder ? 'Target Price (₮)' : 'Sale Price (₮)');
 }
 // 査定ツールJSONのうち、DMSに専用入力欄が無い項目を備考欄へ整形して追記する。
 // 再読み込みしても同じブロックが積み重ならないよう、マーカーで囲んだ既存ブロックは
@@ -2329,14 +2348,14 @@ async function saveVehicle(id){
     mileage: Number(document.getElementById('f_mileage').value)||0,
     vin: document.getElementById('f_vin').value.trim(),
     regNum: document.getElementById('f_regnum').value.trim(),
-    priceCost: (kind==='tradein'||kind==='order') ? 0 : (Number(document.getElementById('f_cost').value)||0),
+    priceCost: (kind==='tradein'||kind==='order'||kind==='field') ? 0 : (Number(document.getElementById('f_cost').value)||0),
     priceSale: Number(document.getElementById('f_sale').value)||0,
-    status: kind==='tradein' ? 'tradein' : (kind==='order' ? 'order' : document.getElementById('f_status').value),
+    status: kind==='tradein' ? 'tradein' : (kind==='order' ? 'order' : (kind==='field' ? document.getElementById('f_fieldstatus').value : document.getElementById('f_status').value)),
     notes: document.getElementById('f_notes').value.trim(),
     externalGrade: document.getElementById('f_extgrade').value.trim(),
     externalAppraisalPrice: document.getElementById('f_extprice').value.trim(),
     externalReportText: document.getElementById('f_importtext').value.trim(),
-    arrived: kind==='tradein' ? true : document.getElementById('f_arrived').checked,
+    arrived: (kind==='tradein'||kind==='field') ? true : document.getElementById('f_arrived').checked,
     purchasedDate: document.getElementById('f_purchaseddate').value.trim(),
     etd: document.getElementById('f_etd').value.trim(),
     eta: document.getElementById('f_eta').value.trim(),
@@ -2376,7 +2395,8 @@ function openVehicleDetail(id){
   if(!v) return;
   const a = v.appraisal || {exterior:0,interior:0,engine:0,undercarriage:0,electrical:0};
   const score = appraisalScore(v);
-  const isTradeIn = v.kind==='tradein';
+  const isField = v.kind==='field';
+  const isTradeIn = v.kind==='tradein' || isField;   // both are appraisal-only records, not stock for sale
   const isOrder = v.kind==='order';
   const owner = v.ownerCustomerId ? customers.find(c=>c.id===v.ownerCustomerId) : null;
   const hasTrackingInfo = !isTradeIn && (v.purchasedDate || v.etd || v.eta || owner || v.ownerPayout || v.minSellPrice || v.negotiationCeiling || v.hasDocuments || v.stateInspectionStatus || v.fbBoosted || v.arrived===false);
@@ -2388,11 +2408,12 @@ function openVehicleDetail(id){
     <div class="panel">
       <div class="detail-head">
         <div>
-          <div class="detail-title">${esc(v.maker)} ${esc(v.model)} ${isTradeIn?'<span style="font-size:13px; color:var(--teal); font-weight:500">(Appraisal Vehicle)</span>':''}${isOrder?'<span style="font-size:13px; color:var(--amber); font-weight:500">(On Order)</span>':''}</div>
+          <div class="detail-title">${esc(v.maker)} ${esc(v.model)} ${isField?'<span style="font-size:13px; color:var(--teal); font-weight:500">(Field Appraisal)</span>':(isTradeIn?'<span style="font-size:13px; color:var(--teal); font-weight:500">(Appraisal Vehicle)</span>':'')}${isOrder?'<span style="font-size:13px; color:var(--amber); font-weight:500">(On Order)</span>':''}</div>
           <div class="detail-id">${esc(v.id)} ・ Plate No.: ${esc(v.regNum||'—')} ・ VIN: ${esc(v.vin||'—')}</div>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap">
-          ${isTradeIn?`<span class="badge" style="position:static; background:var(--teal-soft); color:var(--teal)">📋 Appraisal Vehicle</span>`
+          ${isField?`<span class="badge" style="position:static; background:var(--teal-soft); color:var(--teal)">🧭 Field Appraisal</span><span class="badge" style="position:static; background:${v.status==='custody'?'var(--teal-soft)':'var(--amber-soft)'}; color:${v.status==='custody'?'var(--teal)':'var(--amber)'}">${v.status==='custody'?'📦':'⏸'} ${esc(FIELD_STATUS_SHORT[v.status]||v.status||'')}</span>`
+            :isTradeIn?`<span class="badge" style="position:static; background:var(--teal-soft); color:var(--teal)">📋 Appraisal Vehicle</span>`
             :isOrder?`<span class="badge" style="position:static; background:var(--violet-soft); color:var(--violet)">🔍 On Order</span>`
             :`<span class="badge ${badgeClass(v.status)}" style="position:static">${VSTATUS[v.status]}</span>`}
           ${(!isTradeIn && !isOrder && v.arrived===false)?`<span class="badge" style="position:static; background:var(--amber-soft); color:var(--amber)">🚢 In Transit</span>`:''}
@@ -2459,8 +2480,32 @@ function openVehicleDetail(id){
 
     ${serviceHistoryPanel(v)}
 
-    ${isTradeIn ? tradeInInfoPanel(v) : dealPanelHtml(v)}
+    ${isField ? fieldInfoPanel(v) : (isTradeIn ? tradeInInfoPanel(v) : dealPanelHtml(v))}
   `;
+}
+async function setFieldStatus(vehicleId, status){
+  const v = vehicles.find(x=>x.id===vehicleId);
+  if(!v || v.kind!=='field') return;
+  v.status = status;
+  openVehicleDetail(vehicleId);
+  await upsertVehicleRow(v);
+}
+function fieldInfoPanel(v){
+  const owner = customers.find(c=>c.id===v.ownerCustomerId);
+  return `
+    <div class="panel">
+      <h3>🧭 About This Field Appraisal Vehicle</h3>
+      <div class="empty" style="padding:20px; text-align:left; color:var(--text-dim)">
+        A vehicle appraised on a trip${owner?`, owned by <strong style="color:var(--text)">${esc(owner.name)}</strong>`:''}. It is not our stock for sale — record what we do with it below.
+        If we later sell it, change <b>Registration Type</b> to Stock Vehicle via ✎ Edit.
+      </div>
+      <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; align-items:center">
+        <span style="font-size:12px; color:var(--text-dim)">Handling:</span>
+        <button class="btn sm ${v.status==='custody'?'':'ghost'}" onclick="setFieldStatus('${v.id}','custody')">📦 In Custody</button>
+        <button class="btn sm ${v.status==='hold'?'':'ghost'}" onclick="setFieldStatus('${v.id}','hold')">⏸ On Hold (data only)</button>
+        ${owner?`<button class="btn ghost sm" onclick="openCustomerDetail('${owner.id}')">👤 Go to ${esc(owner.name)}'s customer page</button>`:''}
+      </div>
+    </div>`;
 }
 function printQuote(vehicleId){
   const v = vehicles.find(x=>x.id===vehicleId);
@@ -2470,7 +2515,7 @@ function printQuote(vehicleId){
   const logoSrc = document.querySelector('.brand-logo')?.src || '';
   const today = todayStr();
   const quoteNo = 'Q-' + v.id.replace('V-','');
-  const priceLabel = v.kind==='tradein' ? 'Тооцоолсон үнэ' : 'Худалдааны үнэ';
+  const priceLabel = isAppraisalOnly(v) ? 'Тооцоолсон үнэ' : 'Худалдааны үнэ';
   const rows = [
     ['Марк', v.maker],
     ['Загвар', v.model],
@@ -3418,7 +3463,7 @@ function openChangeDealVehicleForm(dealId, returnTo){
       </div>
       <div class="field"><label>Select Vehicle</label>
         <select id="f_changeveh">
-          ${vehicles.filter(v=>v.kind!=='tradein').map(v=>`<option value="${v.id}" ${v.id===d.vehicleId?'selected':''}>${esc(v.maker)} ${esc(v.model)} (${v.year||'-'})</option>`).join('')}
+          ${vehicles.filter(v=>!isAppraisalOnly(v)).map(v=>`<option value="${v.id}" ${v.id===d.vehicleId?'selected':''}>${esc(v.maker)} ${esc(v.model)} (${v.year||'-'})</option>`).join('')}
         </select>
       </div>
     </div>
@@ -3634,6 +3679,7 @@ function renderManual(){
       <p style="font-size:13px; margin:0 0 10px">Vehicles &amp; Appraisal хуудсан дээрх шүүлтүүр дараах дарааллаар, дараах утгатай харагдана:</p>
       <div class="manual-cat"><div class="ic">📦</div><div><div class="name">In Stock — Бэлэн байгаа</div><div class="cond">Худалдаанд бэлэн, харилцагч хараахан тодорхойгүй</div></div></div>
       <div class="manual-cat"><div class="ic">📋</div><div><div class="name">Appraisal Vehicle — Үнэлгээний машин</div><div class="cond">Trade-in байдлаар авсан, үнэлгээ хийгдэж буй машин</div></div></div>
+      <div class="manual-cat"><div class="ic">🧭</div><div><div class="name">Field Appraisal — Томилолтоор үнэлсэн машин</div><div class="cond">Гадуур очиж үнэлсэн машин. <b>📦 In Custody</b> — манайд хадгалж байгаа, <b>⏸ On Hold</b> — хойшлуулсан, зөвхөн мэдээллийг хадгална. Худалдаанд гаргавал засах цонхонд «Stock Vehicle» болгож солино.</div></div></div>
       <div class="manual-cat"><div class="ic">🤝</div><div><div class="name">In Negotiation — Тохиролцож буй</div><div class="cond">Тодорхой харилцагчтай худалдааны яриа явж байгаа</div></div></div>
       <div class="manual-cat"><div class="ic">🔍</div><div><div class="name">On Order — Захиалгаар</div><div class="cond">Машин бодитойгоор ХАРАЙХАН ирээгүй — зөвхөн спек/захиалга</div></div></div>
       <div class="manual-callout warn"><span class="ic">🔍</span><div><b>On Order картын ялгаа</b><p>«On Order» төрлийн карт нь ягаан зурвасжсан хүрээ, тод дэвсгэртэй бөгөөд <b>«🔍 NO VEHICLE YET — TARGET SPEC ONLY»</b> гэсэн тэмдэглэгээтэй харагдана — учир нь энэ бол бодит машин биш, зөвхөн харилцагчийн хүсэлт дээр үндэслэсэн зорилтот спек. «All»-ээр харахад бусад машинтай андуурахгүйн тулд ийм зорилготойгоор өөр өнгөөр ялгасан.</p></div></div>
