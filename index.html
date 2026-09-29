@@ -2934,9 +2934,12 @@ function vehicleFilesPanel(v){
               <div class="meta" style="color:var(--text)">${esc(FILE_CATEGORIES[f.category]||f.category)}</div>
               <div class="meta" style="font-size:11px">${esc(f.name)}</div>
             </a>
+            ${f.note?`<div class="meta" style="font-size:11.5px; color:var(--amber); margin-top:2px; white-space:pre-wrap">💬 ${esc(f.note)}</div>`:''}
+            <div id="fileNoteEdit-${v.id}-${i}"></div>
             <div style="display:flex; gap:6px; margin-top:8px">
               <span class="mv" style="${i===0?'opacity:.3; pointer-events:none;':''}" onclick="moveVehicleFile('${v.id}',${i},-1)">↑</span>
               <span class="mv" style="${i===files.length-1?'opacity:.3; pointer-events:none;':''}" onclick="moveVehicleFile('${v.id}',${i},1)">↓</span>
+              <span class="mv" title="${f.note?'Edit comment':'Add comment'}" onclick="toggleFileNoteEdit('${v.id}',${i})">${f.note?'✎':'💬'}</span>
               <span class="mv" style="background:var(--teal-soft); border-color:#48c2d666; color:var(--teal)" onclick="downloadVehicleFile('${esc(f.url)}','${esc(f.name).replace(/'/g,"&#39;")}', this)" title="Download">💾</span>
               <button class="btn danger sm" style="flex:1" onclick="deleteVehicleFile('${v.id}','${esc(f.path)}')">Delete</button>
             </div>
@@ -3005,6 +3008,33 @@ async function deleteVehicleFile(vehicleId, path){
   await sb.storage.from('vehicle-files').remove([path]);
   const v = vehicles.find(x=>x.id===vehicleId);
   v.files = (v.files||[]).filter(f=>f.path!==path);
+  openVehicleDetail(vehicleId);
+  await upsertVehicleRow(v);
+}
+// Lets staff add or edit a short note on a photo/document after the fact — e.g. pointing out
+// which part of the car a photo shows, added later once damage or a defect is confirmed.
+function toggleFileNoteEdit(vehicleId, index){
+  const v = vehicles.find(x=>x.id===vehicleId);
+  const f = v && v.files && v.files[index];
+  if(!f) return;
+  const el = document.getElementById(`fileNoteEdit-${vehicleId}-${index}`);
+  if(!el) return;
+  if(el.innerHTML){ el.innerHTML=''; return; }
+  el.innerHTML = `
+    <div style="margin-top:6px">
+      <textarea id="fileNoteInput-${vehicleId}-${index}" placeholder="e.g. Scratch on rear bumper" style="min-height:50px; font-size:12px">${esc(f.note||'')}</textarea>
+      <div style="display:flex; gap:6px; margin-top:6px">
+        <button class="btn sm" style="flex:1" onclick="saveFileNote('${vehicleId}',${index})">Save</button>
+        <button class="btn ghost sm" onclick="toggleFileNoteEdit('${vehicleId}',${index})">Cancel</button>
+      </div>
+    </div>`;
+  document.getElementById(`fileNoteInput-${vehicleId}-${index}`).focus();
+}
+async function saveFileNote(vehicleId, index){
+  const v = vehicles.find(x=>x.id===vehicleId);
+  const f = v && v.files && v.files[index];
+  if(!f) return;
+  f.note = document.getElementById(`fileNoteInput-${vehicleId}-${index}`).value.trim();
   openVehicleDetail(vehicleId);
   await upsertVehicleRow(v);
 }
