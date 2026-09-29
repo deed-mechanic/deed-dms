@@ -1119,6 +1119,36 @@ function csvEscape(v){
   const s = (v===undefined||v===null) ? '' : String(v);
   return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
 }
+function downloadCSV(rows, filename){
+  const csv = rows.map(row => row.map(csvEscape).join(',')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+// Sales destinations: one row per contracted or delivered deal — who bought which car, for how much.
+function exportSalesListCSV(){
+  const sold = deals.filter(d=>d.stage==='契約' || d.stage==='納車');
+  if(sold.length===0){ alert('There are no contracted or delivered deals to export yet.'); return; }
+  const rowsData = sold.map(d=>{
+    const c = customers.find(x=>x.id===d.customerId) || {};
+    const v = vehicles.find(x=>x.id===d.vehicleId) || {};
+    return {d, c, v, contractTs: stageChangeDate(d,'契約') || d.createdAt || 0};
+  }).sort((a,b)=>b.contractTs-a.contractTs);
+  const headers = ['Contract Date','Customer','Phone','Customer Type','Sales Staff','Maker','Model','Year','Color','Mileage (km)','VIN','Sale Price (MNT)','Deal Status','Delivery Date','Vehicle Location','ETA (Arrives UB)'];
+  const rows = rowsData.map(({d,c,v,contractTs})=>{
+    const delivered = d.stage==='納車' ? stageChangeDate(d,'納車') : null;
+    return [
+      contractTs ? fmtDate(contractTs) : '', c.name||'', c.phone||'', c.customerType?customerTypeLabel(c.customerType):'', d.staff||c.salesStaff||'',
+      v.maker||'', v.model||'', v.year||'', v.color||'', v.mileage||'', v.vin||'', v.priceSale||'',
+      stageLabel(d.stage), delivered ? fmtDate(delivered) : '',
+      v.arrived===false ? 'In transit from Japan' : (d.stage==='納車' ? 'Delivered' : 'In Ulaanbaatar'), v.arrived===false ? (v.eta||'') : ''
+    ];
+  });
+  downloadCSV([headers, ...rows], `deed_motors_sales_list_${todayStr()}.csv`);
+}
 function exportCustomersCSV(){
   const headers = ['Name','Name (Mongolian)','Phone','Facebook','Address','Birthday','Occupation','Referred By','Customer Type','Sales Staff','Next Inspection','Lead Source','Desired Vehicle','Budget','Has Responded','Chatted','Notes','Registered'];
   const rows = customers.map(c => [
@@ -1159,13 +1189,15 @@ function customerVehicleLinks(c){
 function renderCustomers(){
   const q = custFilter.trim().toLowerCase();
   let list = customers.filter(c => !q || (c.name+c.nameMn+c.phone+c.address+' '+customerVehicleLinks(c).map(r=>r.v.maker+' '+r.v.model).join(' ')).toLowerCase().includes(q));
-  if(custTypeFilter!=='all') list = list.filter(c => custTypeFilter==='none' ? !c.customerType : c.customerType===custTypeFilter);
+  if(custTypeFilter==='leads') list = list.filter(c => c.customerType==='他社客' && (c.otherDealerStatus==='hot' || c.otherDealerStatus==='prospect'));
+  else if(custTypeFilter!=='all') list = list.filter(c => custTypeFilter==='none' ? !c.customerType : c.customerType===custTypeFilter);
   list = sortCustomerList(list);
   const dupGroups = findDuplicateCustomerGroups();
   return `
     <div class="topbar">
       <div class="pagetitle">👤 Customers <span class="sub">${customers.length} registered</span></div>
       <div style="display:flex; gap:8px">
+        <button class="btn ghost" onclick="exportSalesListCSV()" title="Contracted / delivered deals: who bought which car — opens in Excel">⬇ Sales List (Excel)</button>
         <button class="btn ghost" onclick="exportCustomersCSV()">⬇ Export CSV</button>
         <button class="btn" onclick="openCustomerForm()">＋ New Customer</button>
       </div>
@@ -1185,8 +1217,8 @@ function renderCustomers(){
       <select onchange='custSort=this.value; renderView()'>
         ${Object.entries(CUST_SORT_OPTIONS).map(([k,l])=>`<option value="${k}" ${custSort===k?'selected':''}>${l}</option>`).join('')}
       </select>
-      ${['自社客','他社客','none','all'].map(t=>`
-        <span class="chip ${custTypeFilter===t?'on':''}" onclick='custTypeFilter="${t}"; renderView()'>${t==='all'?'All':(t==='none'?'No Type Set':customerTypeLabel(t))}</span>
+      ${['自社客','他社客','leads','none','all'].map(t=>`
+        <span class="chip ${custTypeFilter===t?'on':''}" onclick='custTypeFilter="${t}"; renderView()'>${t==='all'?'All':(t==='none'?'No Type Set':(t==='leads'?`🔥 Hot / 👀 Prospect (${customers.filter(c=>c.customerType==='他社客' && (c.otherDealerStatus==='hot'||c.otherDealerStatus==='prospect')).length})`:customerTypeLabel(t)))}</span>
       `).join('')}
     </div>
     ${list.length===0 ? `<div class="empty"><b>No matching customers</b>Use "＋ New Customer" to register one</div>` : `
