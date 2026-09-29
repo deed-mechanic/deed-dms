@@ -2023,14 +2023,14 @@ function vehicleCardHtml(v){
       ${isField?`<div style="margin-bottom:6px"><span class="mini-tag" style="background:${v.status==='custody'?'var(--teal-soft)':'var(--amber-soft)'}; color:${v.status==='custody'?'var(--teal)':'var(--amber)'}">${v.status==='custody'?'📦':'⏸'} ${esc(FIELD_STATUS_SHORT[v.status]||v.status||'')}</span></div>`:''}
       ${isOrder?`<div style="font-size:10px; font-weight:700; letter-spacing:.5px; color:var(--violet); margin-bottom:6px; padding-right:100px;">🔍 NO VEHICLE YET — TARGET SPEC ONLY</div>`:''}
       <div class="name"><div style="font-size:12px; font-weight:600; color:var(--text-dim); line-height:1.3">${esc(v.maker)||'&nbsp;'}</div><div style="line-height:1.3">${esc(v.model)||'&nbsp;'}</div></div>
-      <div class="meta">${v.year||'—'} ・ ${esc(v.color)} ・ ${(v.mileage||0).toLocaleString()}km</div>
-      ${(hasImage||hasAppraisal||notArrived) ? `<div style="display:flex; gap:5px; margin:4px 0; flex-wrap:wrap;">
+      <div class="meta" style="margin-bottom:6px">${v.year||'—'} ・ ${esc(v.color)} ・ ${(v.mileage||0).toLocaleString()}km</div>
+      ${deal && deal.stage!=='キャンセル' ? `<div style="color:var(--teal); font-size:13px; font-weight:700; margin-bottom:6px">🙋 ${esc(custName(deal.customerId))} <span style="font-weight:500; font-size:11.5px">・ ${esc(stageLabel(deal.stage))}</span></div>`
+        : (v.ownerCustomerId ? `<div style="color:var(--teal); font-size:13px; font-weight:700; margin-bottom:6px">🔑 ${esc(custName(v.ownerCustomerId))} <span style="font-weight:500; font-size:11.5px">・ ${esc(ownerRoleLabel(v.ownerCustomerId, v))}</span></div>`:'')}
+      ${(hasImage||hasAppraisal||notArrived) ? `<div style="display:flex; gap:5px; margin:0 0 10px; flex-wrap:wrap;">
         ${hasImage?`<span class="mini-tag mini-tag-img">🖼 Photos</span>`:''}
         ${hasAppraisal?`<span class="mini-tag mini-tag-appr">✅ Appraised</span>`:''}
         ${notArrived?`<span class="mini-tag" style="background:var(--amber-soft); color:var(--amber)">🚢 In Transit</span>`:''}
       </div>`:''}
-      ${deal && deal.stage!=='キャンセル' ? `<div class="meta" style="color:var(--teal); margin-top:-6px">🙋 ${esc(custName(deal.customerId))} ・ ${esc(stageLabel(deal.stage))}</div>`
-        : (v.ownerCustomerId ? `<div class="meta" style="color:var(--teal); margin-top:-6px">🔑 ${esc(custName(v.ownerCustomerId))} ・ ${esc(ownerRoleLabel(v.ownerCustomerId, v))}</div>`:'')}
       <div class="row2">
         <span class="price">${fmtMoney(v.priceSale)}</span>
         <span class="score">Score ${score}/100</span>
@@ -2425,6 +2425,11 @@ function openVehicleDetail(id){
         <div class="kv"><span class="k">Year</span><span class="v">${v.year||'—'}</span></div>
         <div class="kv"><span class="k">Color</span><span class="v">${esc(v.color)}</span></div>
         <div class="kv"><span class="k">Mileage</span><span class="v mono">${(v.mileage||0).toLocaleString()} km</span></div>
+        ${(()=>{ const dl = dealForVehicle(v.id); const live = dl && dl.stage!=='キャンセル' ? dl : null;
+          const cid = live ? live.customerId : v.ownerCustomerId;
+          if(!cid) return '';
+          const label = live ? 'Customer' : (isAppraisalOnly(v) ? 'Owner' : ownerRoleLabel(cid, v));
+          return `<div class="kv"><span class="k">${label}</span><span class="v" style="color:var(--teal)"><a href="#" onclick="event.preventDefault(); openCustomerDetail('${cid}')">${esc(custName(cid))}</a>${live?` <span style="color:var(--text-dim); font-weight:400">・ ${esc(stageLabel(live.stage))}</span>`:''}</span></div>`; })()}
         ${isTradeIn?`
         <div class="kv"><span class="k">Estimated Appraisal Value</span><span class="v mono" style="color:var(--amber)">${fmtMoney(v.priceSale)}</span></div>
         `:isOrder?`
