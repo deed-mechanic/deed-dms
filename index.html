@@ -2092,8 +2092,16 @@ function changeCalendarMonth(delta){
   if(calMonth>11){ calMonth=0; calYear++; }
   renderView();
 }
+// Reminders whose first due date has passed and that are still open (no contact recorded yet) keep
+// alerting every day — they just aren't on the calendar's later dates. Vehicle arrivals are events, not reminders.
+function overdueReminderItems(items){
+  const startOfToday = new Date(); startOfToday.setHours(0,0,0,0);
+  return items.filter(it=>it.category!=='arrival' && it.dueDate < startOfToday.getTime())
+    .map(it=>({...it, overdueDays: Math.floor((startOfToday.getTime()-it.dueDate)/86400000)+1}));
+}
 function renderCalendar(){
   const items = allReminderItemsWithDueDate();
+  const overdueCount = overdueReminderItems(items).length;
   const byDay = {};
   items.forEach(it=>{
     const k = dateKey(it.dueDate);
@@ -2137,6 +2145,7 @@ function renderCalendar(){
                 <span style="font-size:10px; padding:1px 5px; border-radius:8px; background:${CATEGORY_META[cat].color}; color:#fff">${counts[cat]}</span>
               `).join('')}
             </div>
+            ${isToday && overdueCount>0 ? `<div style="margin-top:5px"><span style="font-size:10px; font-weight:700; padding:2px 6px; border-radius:8px; background:var(--red); color:#fff; display:inline-block" title="Open reminders past their due date — still alerting every day until contact is recorded">⏳ ${overdueCount} overdue</span></div>` : ''}
           </div>`;
         }).join('')}
       </div>
@@ -2144,7 +2153,10 @@ function renderCalendar(){
   `;
 }
 function openCalendarDay(k){
-  const items = allReminderItemsWithDueDate().filter(it=>dateKey(it.dueDate)===k);
+  const all = allReminderItemsWithDueDate();
+  const isTodayView = k===dateKey(Date.now());
+  // On today's page, also list the still-open overdue reminders (they are in today's email too).
+  const items = all.filter(it=>dateKey(it.dueDate)===k).concat(isTodayView ? overdueReminderItems(all) : []);
   const staffNames = [...new Set(items.map(it=>it.staff||'Unassigned'))].sort((a,b)=>{
     if(a==='Unassigned') return 1;
     if(b==='Unassigned') return -1;
@@ -2159,14 +2171,15 @@ function openCalendarDay(k){
     <div class="topbar">
       <button class="btn ghost sm" onclick="go('calendar')">← Back to Calendar</button>
     </div>
-    ${byStaff.length===0 ? `<div class="panel"><h3>📅 ${k} — Reminders for everyone</h3><div class="empty" style="padding:20px">No reminders first come due on this day</div></div>` : byStaff.map(g=>`
+    ${byStaff.length===0 ? `<div class="panel"><h3>📅 ${k} — Reminders for everyone</h3><div class="empty" style="padding:20px">${isTodayView?'No open reminders today':'No reminders first come due on this day'}</div></div>` : byStaff.map(g=>`
       <div class="panel">
-        <h3>👤 ${esc(g.staff)} <span class="sub">${g.list.length} item(s) due ${k}</span></h3>
+        <h3>👤 ${esc(g.staff)} <span class="sub">${g.list.length} item(s)${isTodayView?` · ${g.list.filter(it=>it.overdueDays).length} overdue`:` due ${k}`}</span></h3>
         <div class="grid">
           ${g.list.map(it=>`
-            <div class="card" onclick="${it.vehicleId?`openVehicleDetail('${it.vehicleId}')`:(it.dealId?`openDealDetail('${it.dealId}')`:`openCustomerDetail('${it.customerId}')`)}">
+            <div class="card" style="${it.overdueDays?'border-color:var(--red)':''}" onclick="${it.vehicleId?`openVehicleDetail('${it.vehicleId}')`:(it.dealId?`openDealDetail('${it.dealId}')`:`openCustomerDetail('${it.customerId}')`)}">
               <span class="badge" style="background:${CATEGORY_META[it.category].color}; color:#fff">${CATEGORY_META[it.category].label}</span>
               <div class="name">${esc(it.name)}</div>
+              ${it.overdueDays?`<div class="meta" style="color:var(--red); font-weight:600">⏳ Overdue — due ${it.overdueDays} day(s) ago</div>`:''}
             </div>
           `).join('')}
         </div>
