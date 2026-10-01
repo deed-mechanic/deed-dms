@@ -901,7 +901,10 @@ function renderDashboard(){
       <div>
         <div class="pagetitle">🏠 Dashboard <span class="sub">Today ${fmtDate(Date.now())}</span></div>
       </div>
-      <span id="saveIndicator"></span>
+      <div style="display:flex; gap:10px; align-items:center">
+        <button class="btn" style="background:var(--teal); color:#06222a" onclick="exportReminderListXLSX(this)" title="Everyone shown in the reminder panels below (inspections, birthdays, claims, contact reminders) as a print-ready call sheet with room for memos">📋 Reminder List (Excel)</button>
+        <span id="saveIndicator"></span>
+      </div>
     </div>
     <div class="stats-row">
       <div class="stat-card" style="--accent:var(--teal)">
@@ -1222,6 +1225,72 @@ function contactVehicleStatus(r, c){
   if(d && d.stage==='契約') return {text:'In UB · awaiting delivery', transit:false};
   return {text: r.label, transit:false};
 }
+function richName(name, dms){
+  return {richText:[{text:name||'', font:{name:'Calibri', size:13, bold:true, color:{argb:'FF1F2A44'}}}].concat((dms&&dms.length)?[{text:`\n(${dms.join(' / ')})`, font:{name:'Calibri', size:10, color:{argb:'FF5C6B7D'}}}]:[])};
+}
+// Builds a print-ready call sheet workbook (an "All" sheet + one sheet per sales staff) and downloads it.
+// spec: {title, unit, note, cols:[{h,w,left,phone,memo,done,name}], rows:[{staff, vals, lines, highlight, tag:{col,fill,color,bold}}], filename}
+// vals exclude the leading "No." column, which is added here.
+async function exportCallSheet(spec){
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'DEED MOTORS DMS'; wb.created = new Date();
+  const NAVY='FF1F2A44', LINE='FFC9CFDA', ZEBRA='FFF4F6FA', HILITE='FFFFE9B8';
+  const thin = {style:'thin', color:{argb:LINE}};
+  const border = {top:thin, left:thin, bottom:thin, right:thin};
+  const solid = argb => ({type:'pattern', pattern:'solid', fgColor:{argb}});
+  const COLS = [{h:'No.', w:5}].concat(spec.cols);
+  const dateStr = todayStr();
+  const addSheet = (name, data, title)=>{
+    const ws = wb.addWorksheet(name.replace(/[\\/\?\*\[\]:]/g,'').slice(0,31), {
+      views:[{state:'frozen', ySplit:3, showGridLines:false}],
+      pageSetup:{orientation:'landscape', paperSize:9, fitToPage:true, fitToWidth:1, fitToHeight:0, margins:{left:.3,right:.3,top:.5,bottom:.5,header:.2,footer:.2}},
+      headerFooter:{oddFooter:'&LDEED MOTORS&CPage &P / &N&R'+dateStr},
+    });
+    ws.columns = COLS.map(c=>({width:c.w}));
+    ws.mergeCells(1,1,1,COLS.length);
+    const t = ws.getCell(1,1); t.value = `${title}   ·   ${data.length} ${spec.unit}   ·   ${dateStr}`;
+    t.font = {name:'Calibri', size:15, bold:true, color:{argb:'FFFFFFFF'}}; t.alignment = {vertical:'middle', horizontal:'left', indent:1};
+    t.fill = solid(NAVY); ws.getRow(1).height = 30;
+    ws.mergeCells(2,1,2,COLS.length);
+    const s2 = ws.getCell(2,1); s2.value = spec.note;
+    s2.font = {name:'Calibri', size:10, italic:true, color:{argb:'FF5C6B7D'}}; s2.alignment = {vertical:'middle', indent:1}; ws.getRow(2).height = 18;
+    const hr = ws.getRow(3); hr.height = 34;
+    COLS.forEach((c,i)=>{ const cell = hr.getCell(i+1); cell.value = c.h;
+      cell.font = {name:'Calibri', size:11, bold:true, color:{argb:'FFFFFFFF'}};
+      cell.fill = solid('FF3B4A6B');
+      cell.alignment = {vertical:'middle', horizontal:c.left?'left':'center', wrapText:true, indent:c.left?1:0};
+      cell.border = border; });
+    data.forEach((r,idx)=>{
+      const row = ws.getRow(4+idx);
+      row.height = Math.max(40, (r.lines||1)*19 + 8);
+      const base = r.highlight ? HILITE : (idx%2 ? ZEBRA : 'FFFFFFFF');
+      [idx+1].concat(r.vals).forEach((v,i)=>{
+        const c = COLS[i], cell = row.getCell(i+1);
+        cell.value = v; cell.border = border;
+        cell.font = {name:'Calibri', size:(c.phone?13:11), bold:!!c.phone, color:{argb:'FF1F2A44'}};
+        cell.alignment = {vertical:'middle', horizontal:c.left?'left':'center', wrapText:true, indent:(c.left&&!c.memo)?1:0};
+        cell.fill = solid((c.memo||c.done) ? (r.highlight?'FFFFF6DF':'FFFFFFFF') : base);
+        if(c.done) cell.dataValidation = {type:'list', allowBlank:true, formulae:['"✓"']};
+      });
+      if(r.tag && r.tag.fill){
+        const tc = row.getCell(r.tag.col+2);   // +1 for "No.", +1 for 1-based
+        tc.fill = solid(r.tag.fill);
+        if(r.tag.color) tc.font = {name:'Calibri', size:11, bold:!!r.tag.bold, color:{argb:r.tag.color}};
+      }
+    });
+    ws.pageSetup.printTitlesRow = '3:3';
+    ws.autoFilter = {from:{row:3, column:1}, to:{row:3, column:COLS.length}};
+  };
+  addSheet('All', spec.rows, spec.title);
+  const staffNames = [...new Set(spec.rows.map(r=>r.staff))].sort((a,b)=>a==='Unassigned'?1:b==='Unassigned'?-1:a.localeCompare(b));
+  if(staffNames.length>1) staffNames.forEach(n=>addSheet(n, spec.rows.filter(r=>r.staff===n), `${n} · ${spec.title.replace(/^DEED MOTORS · /,'')}`));
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = spec.filename;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  return {rows: spec.rows.length, sheets: wb.worksheets.map(w=>w.name), buf};
+}
 async function exportContactListXLSX(btn){
   const label = btn ? btn.textContent : '';
   if(btn){ btn.textContent = '⏳ Preparing…'; btn.disabled = true; }
@@ -1240,68 +1309,72 @@ async function exportContactListXLSX(btn){
       return {c, staff:staffName(c), dms, vehicles: links.map(r=>`${r.v.maker||''} ${r.v.model||''}${r.v.year?` (${r.v.year})`:''}`.trim()), status: stat.map(s=>s.text), transit: stat.some(s=>s.transit), last: hist?fmtDate(hist):'', type};
     }).sort((a,b)=>(b.transit-a.transit) || (a.c.name||'').localeCompare(b.c.name||''));
 
-    const wb = new ExcelJS.Workbook();
-    wb.creator = 'DEED MOTORS DMS'; wb.created = new Date();
-    const NAVY='FF1F2A44', LINE='FFC9CFDA', ZEBRA='FFF4F6FA', AMBER='FFFFE9B8', GREEN='FFDDF3E4', BLUE='FFE3ECFB', MEMO='FFFFFFFF';
-    const thin = {style:'thin', color:{argb:LINE}};
-    const border = {top:thin, left:thin, bottom:thin, right:thin};
-    const COLS = [
-      {h:'No.', w:5}, {h:'Customer\n(DM No.)', w:30}, {h:'Phone', w:15}, {h:'Type', w:11},
-      {h:'Vehicle', w:26}, {h:'Status', w:27}, {h:'Last\nContact', w:11},
-      {h:'Contact\nDate', w:12}, {h:'Contact Memo', w:56}, {h:'Done', w:7},
-    ];
-    const dateStr = todayStr();
-    const addSheet = (name, data, title)=>{
-      const ws = wb.addWorksheet(name.replace(/[\\\/\?\*\[\]:]/g,'').slice(0,31), {
-        views:[{state:'frozen', ySplit:3, showGridLines:false}],
-        pageSetup:{orientation:'landscape', paperSize:9, fitToPage:true, fitToWidth:1, fitToHeight:0, margins:{left:.3,right:.3,top:.5,bottom:.5,header:.2,footer:.2}},
-        headerFooter:{oddFooter:'&LDEED MOTORS&CPage &P / &N&R'+dateStr},
-      });
-      ws.columns = COLS.map(c=>({width:c.w}));
-      ws.mergeCells(1,1,1,COLS.length);
-      const t = ws.getCell(1,1); t.value = `${title}   ·   ${data.length} customers   ·   ${dateStr}`;
-      t.font = {name:'Calibri', size:15, bold:true, color:{argb:'FFFFFFFF'}}; t.alignment = {vertical:'middle', horizontal:'left', indent:1};
-      t.fill = {type:'pattern', pattern:'solid', fgColor:{argb:NAVY}}; ws.getRow(1).height = 30;
-      ws.mergeCells(2,1,2,COLS.length);
-      const s2 = ws.getCell(2,1); s2.value = 'Amber rows = vehicle still in transit — contact about shipping status.   Write what you discussed in "Contact Memo".';
-      s2.font = {name:'Calibri', size:10, italic:true, color:{argb:'FF5C6B7D'}}; s2.alignment = {vertical:'middle', indent:1}; ws.getRow(2).height = 18;
-      const hr = ws.getRow(3); hr.height = 34;
-      COLS.forEach((c,i)=>{ const cell = hr.getCell(i+1); cell.value = c.h;
-        cell.font = {name:'Calibri', size:11, bold:true, color:{argb:'FFFFFFFF'}};
-        cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF3B4A6B'}};
-        cell.alignment = {vertical:'middle', horizontal:(i===1||i===4||i===5||i===8)?'left':'center', wrapText:true, indent:(i===1||i===4||i===5||i===8)?1:0};
-        cell.border = border; });
-      data.forEach((r,idx)=>{
-        const lines = Math.max(1, r.vehicles.length);
-        const row = ws.getRow(4+idx);
-        row.height = Math.max(40, lines*19 + 8);
-        const base = r.transit ? AMBER : (idx%2 ? ZEBRA : 'FFFFFFFF');
-        const nameRich = {richText:[{text:r.c.name||'', font:{name:'Calibri', size:13, bold:true, color:{argb:'FF1F2A44'}}}].concat(r.dms.length?[{text:`\n(${r.dms.join(' / ')})`, font:{name:'Calibri', size:10, color:{argb:'FF5C6B7D'}}}]:[])};
-        const vals = [idx+1, nameRich, r.c.phone||'—', r.type, r.vehicles.join('\n')||'—', r.status.join('\n')||'—', r.last, '', '', ''];
-        vals.forEach((v,i)=>{
-          const cell = row.getCell(i+1); cell.value = v; cell.border = border;
-          cell.font = {name:'Calibri', size:(i===2?13:11), bold:(i===2), color:{argb:'FF1F2A44'}};
-          cell.alignment = {vertical:'middle', horizontal:(i===1||i===4||i===5||i===8)?'left':'center', wrapText:true, indent:(i===1||i===4||i===5)?1:0};
-          cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb: (i===8||i===7||i===9) ? (r.transit?'FFFFF6DF':MEMO) : base}};
-        });
-        const tc = row.getCell(4);
-        if(r.type==='In-House'){ tc.fill = {type:'pattern', pattern:'solid', fgColor:{argb:GREEN}}; }
-        else if(r.type==='Hot'){ tc.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FFFAD4D4'}}; tc.font = {name:'Calibri', size:11, bold:true, color:{argb:'FFB3261E'}}; }
-        else if(r.type==='Prospect'){ tc.fill = {type:'pattern', pattern:'solid', fgColor:{argb:BLUE}}; }
-        row.getCell(10).dataValidation = {type:'list', allowBlank:true, formulae:['"✓"']};
-      });
-      ws.pageSetup.printTitlesRow = '3:3';
-      ws.autoFilter = {from:{row:3, column:1}, to:{row:3, column:COLS.length}};
+    const AMBER_ROW = 'FFFFE9B8', GREEN='FFDDF3E4', BLUE='FFE3ECFB';
+    const specRows = rows.map(r=>({
+      staff: r.staff, lines: Math.max(1, r.vehicles.length), highlight: r.transit,
+      vals: [richName(r.c.name, r.dms), r.c.phone||'—', r.type, r.vehicles.join('\n')||'—', r.status.join('\n')||'—', r.last, '', '', ''],
+      tag: {col:2, fill: r.type==='In-House'?GREEN : (r.type==='Hot'?'FFFAD4D4' : (r.type==='Prospect'?BLUE:null)), color: r.type==='Hot'?'FFB3261E':null, bold: r.type==='Hot'},
+    }));
+    return await exportCallSheet({
+      title: 'DEED MOTORS · Contact List', unit: 'customers',
+      note: 'Amber rows = vehicle still in transit — contact about shipping status.   Write what you discussed in "Contact Memo".',
+      cols: [
+        {h:'Customer\n(DM No.)', w:30, left:true, name:true}, {h:'Phone', w:15, phone:true}, {h:'Type', w:11},
+        {h:'Vehicle', w:26, left:true}, {h:'Status', w:27, left:true}, {h:'Last\nContact', w:11},
+        {h:'Contact\nDate', w:12, memo:true}, {h:'Contact Memo', w:56, left:true, memo:true}, {h:'Done', w:7, done:true},
+      ],
+      rows: specRows, filename: `deed_motors_contact_list_${todayStr()}.xlsx`,
+    });
+  }catch(e){
+    alert('Could not create the Excel file: ' + e.message);
+  }finally{
+    if(btn){ btn.textContent = label; btn.disabled = false; }
+  }
+}
+/* ---- Reminder List (Excel): everything shown in the Dashboard's reminder panels, as a call sheet ---- */
+async function exportReminderListXLSX(btn){
+  const label = btn ? btn.textContent : '';
+  if(btn){ btn.textContent = '⏳ Preparing…'; btn.disabled = true; }
+  try{
+    await loadExcelJS();
+    const cr = contactReminders();
+    const staffName = s => ((s||'').split('（')[0]) || 'Unassigned';
+    const items = [];
+    const push = (cat, c, d, reason, staff, vehicles) => {
+      if(!c) return;
+      const vlist = vehicles || customerVehicleLinks(c).filter(r=>!isAppraisalOnly(r.v) || r.owner===false).map(r=>r.v);
+      items.push({cat, c, reason, staff: staffName(staff || (d&&d.staff) || c.salesStaff),
+        vehicles: vlist.map(v=>`${v.maker||''} ${v.model||''}${v.year?` (${v.year})`:''}`.trim()),
+        dms: [...new Set(vlist.map(vehicleStockNo).filter(Boolean))]});
     };
-    addSheet('All', rows, 'DEED MOTORS · Contact List');
-    const staffNames = [...new Set(rows.map(r=>r.staff))].sort((a,b)=>a==='Unassigned'?1:b==='Unassigned'?-1:a.localeCompare(b));
-    if(staffNames.length>1) staffNames.forEach(n=>addSheet(n, rows.filter(r=>r.staff===n), `${n} · Contact List`));
-    const buf = await wb.xlsx.writeBuffer();
-    const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `deed_motors_contact_list_${dateStr}.xlsx`;
-    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    return {rows: rows.length, sheets: wb.worksheets.map(w=>w.name), buf};
+    const dealVeh = d => { const v = vehicles.find(x=>x.id===d.vehicleId); return v ? [v] : []; };
+    cr.claims.forEach(x=>push('claim', x.c, null, `CLAIM open ${x.days} day(s): ${x.c.claim.note||''}`, x.c.salesStaff));
+    cr.hot.forEach(x=>push('hot', x.c, x.d, `Hot lead · no contact ${x.days} days (${stageLabel(x.d.stage)})`, x.d.staff, dealVeh(x.d)));
+    cr.deliveryFollowups.forEach(x=>push('delivery', x.c, null, `Post-delivery follow-up · ${x.days} days since last contact`, x.c.salesStaff));
+    cr.prospects.forEach(x=>push('prospect', x.c, x.d, `Prospect · no contact ${x.days} days (${stageLabel(x.d.stage)})`, x.d.staff, dealVeh(x.d)));
+    cr.inquiries.forEach(x=>push('inquiry', x.c, x.d, `New inquiry · no contact ${x.days} days`, x.d.staff, dealVeh(x.d)));
+    cr.orders.forEach(x=>push('order', x.c, x.d, `Order in progress · ${x.days} days since last update`, x.d.staff, dealVeh(x.d)));
+    cr.ownedFollowups.forEach(x=>push('owned', x.c, null, `In-house check-in · ${x.days} days since last contact`, x.c.salesStaff));
+    customers.filter(c=>serviceDue(c.nextServiceDate)).sort((a,b)=>new Date(a.nextServiceDate)-new Date(b.nextServiceDate))
+      .forEach(c=>push('inspection', c, null, `Inspection due ${fmtDate(c.nextServiceDate)}`, c.salesStaff));
+    getUpcomingBirthdays().forEach(x=>push('birthday', x.c, null, `Birthday ${x.daysUntil===0?'today':x.daysUntil===1?'tomorrow':`in ${x.daysUntil} days`}`, x.c.salesStaff));
+    if(items.length===0){ alert('There are no reminders right now.'); return; }
+    const FILL = {claim:'FFFAD4D4', hot:'FFFFE9B8', delivery:'FFD8F1F6', prospect:'FFE3ECFB', inquiry:'FFECE4FA', order:'FFFDE3C8', owned:'FFDDF3E4', inspection:'FFFFF3C4', birthday:'FFFBE0EE'};
+    const rows = items.map(r=>({
+      staff: r.staff, lines: Math.max(1, r.vehicles.length), highlight: false,
+      vals: [richName(r.c.name, r.dms), r.c.phone||'—', r.reason, r.vehicles.join('\n')||'—', r.staff, '', '', ''],
+      tag: {col:2, fill: FILL[r.cat], color: r.cat==='claim'?'FFB3261E':null, bold: r.cat==='claim'},
+    }));
+    return await exportCallSheet({
+      title: 'DEED MOTORS · Reminder List', unit: 'reminders',
+      note: 'Everyone on the Dashboard reminder panels. Colors show the reminder type (red = claim).   After contacting, write it in "Contact Memo" — and add the entry in the DMS so the reminder clears.',
+      cols: [
+        {h:'Customer\n(DM No.)', w:30, left:true, name:true}, {h:'Phone', w:15, phone:true}, {h:'Reminder', w:40, left:true},
+        {h:'Vehicle', w:26, left:true}, {h:'Sales\nStaff', w:12},
+        {h:'Contact\nDate', w:12, memo:true}, {h:'Contact Memo', w:50, left:true, memo:true}, {h:'Done', w:7, done:true},
+      ],
+      rows, filename: `deed_motors_reminder_list_${todayStr()}.xlsx`,
+    });
   }catch(e){
     alert('Could not create the Excel file: ' + e.message);
   }finally{
@@ -3910,6 +3983,7 @@ function renderManual(){
         <li><b style="color:var(--text)">🎂 Upcoming Birthdays</b> — Dashboard дээр ойрын 7 хоногт төрсөн өдөртэй харилцагчдыг жагсаана; тэндээс шууд «✉️ Message» дарж мэндчилгээ илгээж болно.</li>
         <li><b style="color:var(--text)">⚠️ Давхардсан харилцагч (Duplicate)</b> — ижил утасны дугаартай хэд хэдэн бичлэг байвал Customers хуудасны дээд хэсэгт шар хүрээтэй анхааруулга харагдана — нэгтгэх шаардлагатай эсэхийг шалгана уу.</li>
         <li><b style="color:var(--text)">📋 Contact List (Excel)</b> — Customers хуудасны дээд товчоор <b style="color:var(--text)">борлуулагчийн залгах жагсаалт</b>-ыг Excel-ээр татна: харилцагчийн нэр (DM дугаар), утас, машин ба тээвэрлэлтийн төлөв, мөн ярьсан зүйлээ бичих талбартай. Дэлгэцэнд одоо харагдаж буй харилцагчдыг (шүүлтүүрээр сонгосон) хэвлэнэ; бүх ажилтны хуудас + ажилтан тус бүрийн хуудас тусдаа гарна. Машин замдаа яваа харилцагч шар өнгөөр, эхэнд гарна.</li>
+        <li><b style="color:var(--text)">📋 Reminder List (Excel)</b> — Dashboard-ын дээд товчоор, Dashboard дээр харагдаж буй <b style="color:var(--text)">бүх сануулга</b> (улсын үзлэг, төрсөн өдөр, гомдол, 6 төрлийн холбоо барих сануулга)-ыг Contact List-тэй ижил хэлбэрээр Excel-ээр татна. Төрөл бүр өөр өнгөтэй (гомдол — улаан), A4 хэвтээ хэвлэхэд бэлэн, ярьсан зүйлээ бичих талбартай. Холбогдсоны дараа DMS дээр «＋ Add Entry» хийхээ мартуузай — тэгвэл сануулга арилна.</li>
         <li><b style="color:var(--text)">⬇ Export CSV</b> — Customers хуудасны дээд товчлуураар бүх харилцагчийн жагсаалтыг Excel-д нээгддэг CSV файлаар татаж авч болно.</li>
       </ul>
     </div>
