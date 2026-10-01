@@ -1186,19 +1186,137 @@ function customerVehicleLinks(c){
   vehicles.filter(v=>v.ownerCustomerId===c.id && !rows.some(r=>r.v.id===v.id)).forEach(v=>rows.push({v, label:ownerRoleLabel(c.id, v), owner:true}));
   return rows;
 }
-function renderCustomers(){
+// The customers currently shown on the Customers screen (search + type chip + sort).
+function filteredCustomerList(){
   const q = custFilter.trim().toLowerCase();
   let list = customers.filter(c => !q || (c.name+c.nameMn+c.phone+c.address+' '+customerVehicleLinks(c).map(r=>r.v.maker+' '+r.v.model).join(' ')).toLowerCase().includes(q));
   if(custTypeFilter==='leads') list = list.filter(c => c.customerType==='他社客' && (c.otherDealerStatus==='hot' || c.otherDealerStatus==='prospect'));
   else if(custTypeFilter!=='all') list = list.filter(c => custTypeFilter==='none' ? !c.customerType : c.customerType===custTypeFilter);
-  list = sortCustomerList(list);
+  return sortCustomerList(list);
+}
+
+/* ---- Contact List (Excel): a clean call sheet for sales staff ----
+   One row per customer — name + DM stock number(s), phone, vehicle & shipping status, last contact —
+   with blank, roomy columns to write down what was discussed. One sheet per sales staff + "All". */
+async function loadExcelJS(){
+  if(window.ExcelJS) return;
+  await new Promise((res, rej)=>{
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+    s.onload = res; s.onerror = ()=>rej(new Error('Could not load the Excel library (internet connection needed)'));
+    document.head.appendChild(s);
+  });
+}
+function vehicleStockNo(v){ return ((v.notes||'').match(/Stock NO:\s*(DM\d+)/)||[])[1] || ''; }
+function shortMD(s){ // 2026-09-11 -> 9/11
+  const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(s||''); return m ? `${+m[1]}/${+m[2]}` : (s||'');
+}
+function contactVehicleStatus(r, c){
+  const v = r.v;
+  if(v.arrived===false && !isAppraisalOnly(v) && v.kind!=='order'){
+    const when = v.eta ? `arrives UB ${shortMD(v.eta)}` : (v.etd ? `left Japan ${shortMD(v.etd)}` : (v.purchasedDate ? `bought ${shortMD(v.purchasedDate)}` : ''));
+    return {text: 'IN TRANSIT' + (when?` · ${when}`:''), transit:true};
+  }
+  if(r.owner) return {text: r.label==='Nominal owner' ? 'Company stock' : (r.label==='Owner' ? 'Appraised' : 'Consignment (on display)'), transit:false};
+  const d = deals.find(x=>x.customerId===c.id && x.vehicleId===v.id && x.stage!=='キャンセル');
+  if(d && d.stage==='契約') return {text:'In UB · awaiting delivery', transit:false};
+  return {text: r.label, transit:false};
+}
+async function exportContactListXLSX(btn){
+  const label = btn ? btn.textContent : '';
+  if(btn){ btn.textContent = '⏳ Preparing…'; btn.disabled = true; }
+  try{
+    await loadExcelJS();
+    const list = filteredCustomerList().filter(c=>!/^deed motors\b/i.test((c.name||'').trim()));
+    if(list.length===0){ alert('There are no customers in the current list to export.'); return; }
+    const staffName = c => ((c.salesStaff||'').split('（')[0]) || 'Unassigned';
+    const rows = list.map(c=>{
+      const links = customerVehicleLinks(c).filter(r=>!isAppraisalOnly(r.v) || r.owner===false);
+      const stat = links.map(r=>contactVehicleStatus(r, c));
+      const dms = [...new Set(links.map(r=>vehicleStockNo(r.v)).filter(Boolean))];
+      const hist = (c.negotiationHistory||[]).reduce((m,h)=>Math.max(m,h.date||0),0);
+      const type = c.customerType==='自社客' ? 'In-House' : (c.customerType==='他社客' ? (c.otherDealerStatus==='hot'?'Hot':(c.otherDealerStatus==='prospect'?'Prospect':'Other dealer')) : '—');
+      return {c, staff:staffName(c), dms, vehicles: links.map(r=>`${r.v.maker||''} ${r.v.model||''}${r.v.year?` (${r.v.year})`:''}`.trim()), status: stat.map(s=>s.text), transit: stat.some(s=>s.transit), last: hist?fmtDate(hist):'', type};
+    }).sort((a,b)=>(b.transit-a.transit) || (a.c.name||'').localeCompare(b.c.name||''));
+
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'DEED MOTORS DMS'; wb.created = new Date();
+    const NAVY='FF1F2A44', LINE='FFC9CFDA', ZEBRA='FFF4F6FA', AMBER='FFFFE9B8', GREEN='FFDDF3E4', BLUE='FFE3ECFB', MEMO='FFFFFFFF';
+    const thin = {style:'thin', color:{argb:LINE}};
+    const border = {top:thin, left:thin, bottom:thin, right:thin};
+    const COLS = [
+      {h:'No.', w:5}, {h:'Customer\n(DM No.)', w:30}, {h:'Phone', w:15}, {h:'Type', w:11},
+      {h:'Vehicle', w:26}, {h:'Status', w:27}, {h:'Last\nContact', w:11},
+      {h:'Contact\nDate', w:12}, {h:'Contact Memo', w:56}, {h:'Done', w:7},
+    ];
+    const dateStr = todayStr();
+    const addSheet = (name, data, title)=>{
+      const ws = wb.addWorksheet(name.replace(/[\\\/\?\*\[\]:]/g,'').slice(0,31), {
+        views:[{state:'frozen', ySplit:3, showGridLines:false}],
+        pageSetup:{orientation:'landscape', paperSize:9, fitToPage:true, fitToWidth:1, fitToHeight:0, margins:{left:.3,right:.3,top:.5,bottom:.5,header:.2,footer:.2}},
+        headerFooter:{oddFooter:'&LDEED MOTORS&CPage &P / &N&R'+dateStr},
+      });
+      ws.columns = COLS.map(c=>({width:c.w}));
+      ws.mergeCells(1,1,1,COLS.length);
+      const t = ws.getCell(1,1); t.value = `${title}   ·   ${data.length} customers   ·   ${dateStr}`;
+      t.font = {name:'Calibri', size:15, bold:true, color:{argb:'FFFFFFFF'}}; t.alignment = {vertical:'middle', horizontal:'left', indent:1};
+      t.fill = {type:'pattern', pattern:'solid', fgColor:{argb:NAVY}}; ws.getRow(1).height = 30;
+      ws.mergeCells(2,1,2,COLS.length);
+      const s2 = ws.getCell(2,1); s2.value = 'Amber rows = vehicle still in transit — contact about shipping status.   Write what you discussed in "Contact Memo".';
+      s2.font = {name:'Calibri', size:10, italic:true, color:{argb:'FF5C6B7D'}}; s2.alignment = {vertical:'middle', indent:1}; ws.getRow(2).height = 18;
+      const hr = ws.getRow(3); hr.height = 34;
+      COLS.forEach((c,i)=>{ const cell = hr.getCell(i+1); cell.value = c.h;
+        cell.font = {name:'Calibri', size:11, bold:true, color:{argb:'FFFFFFFF'}};
+        cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF3B4A6B'}};
+        cell.alignment = {vertical:'middle', horizontal:(i===1||i===4||i===5||i===8)?'left':'center', wrapText:true, indent:(i===1||i===4||i===5||i===8)?1:0};
+        cell.border = border; });
+      data.forEach((r,idx)=>{
+        const lines = Math.max(1, r.vehicles.length);
+        const row = ws.getRow(4+idx);
+        row.height = Math.max(40, lines*19 + 8);
+        const base = r.transit ? AMBER : (idx%2 ? ZEBRA : 'FFFFFFFF');
+        const nameRich = {richText:[{text:r.c.name||'', font:{name:'Calibri', size:13, bold:true, color:{argb:'FF1F2A44'}}}].concat(r.dms.length?[{text:`\n(${r.dms.join(' / ')})`, font:{name:'Calibri', size:10, color:{argb:'FF5C6B7D'}}}]:[])};
+        const vals = [idx+1, nameRich, r.c.phone||'—', r.type, r.vehicles.join('\n')||'—', r.status.join('\n')||'—', r.last, '', '', ''];
+        vals.forEach((v,i)=>{
+          const cell = row.getCell(i+1); cell.value = v; cell.border = border;
+          cell.font = {name:'Calibri', size:(i===2?13:11), bold:(i===2), color:{argb:'FF1F2A44'}};
+          cell.alignment = {vertical:'middle', horizontal:(i===1||i===4||i===5||i===8)?'left':'center', wrapText:true, indent:(i===1||i===4||i===5)?1:0};
+          cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb: (i===8||i===7||i===9) ? (r.transit?'FFFFF6DF':MEMO) : base}};
+        });
+        const tc = row.getCell(4);
+        if(r.type==='In-House'){ tc.fill = {type:'pattern', pattern:'solid', fgColor:{argb:GREEN}}; }
+        else if(r.type==='Hot'){ tc.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FFFAD4D4'}}; tc.font = {name:'Calibri', size:11, bold:true, color:{argb:'FFB3261E'}}; }
+        else if(r.type==='Prospect'){ tc.fill = {type:'pattern', pattern:'solid', fgColor:{argb:BLUE}}; }
+        row.getCell(10).dataValidation = {type:'list', allowBlank:true, formulae:['"✓"']};
+      });
+      ws.pageSetup.printTitlesRow = '3:3';
+      ws.autoFilter = {from:{row:3, column:1}, to:{row:3, column:COLS.length}};
+    };
+    addSheet('All', rows, 'DEED MOTORS · Contact List');
+    const staffNames = [...new Set(rows.map(r=>r.staff))].sort((a,b)=>a==='Unassigned'?1:b==='Unassigned'?-1:a.localeCompare(b));
+    if(staffNames.length>1) staffNames.forEach(n=>addSheet(n, rows.filter(r=>r.staff===n), `${n} · Contact List`));
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `deed_motors_contact_list_${dateStr}.xlsx`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    return {rows: rows.length, sheets: wb.worksheets.map(w=>w.name), buf};
+  }catch(e){
+    alert('Could not create the Excel file: ' + e.message);
+  }finally{
+    if(btn){ btn.textContent = label; btn.disabled = false; }
+  }
+}
+function renderCustomers(){
+  const list = filteredCustomerList();
   const dupGroups = findDuplicateCustomerGroups();
   return `
     <div class="topbar">
       <div class="pagetitle">👤 Customers <span class="sub">${customers.length} registered</span></div>
       <div style="display:flex; gap:8px">
-        <button class="btn ghost" onclick="exportSalesListCSV()" title="Contracted / delivered deals: who bought which car — opens in Excel">⬇ Sales List (Excel)</button>
-        <button class="btn ghost" onclick="exportCustomersCSV()">⬇ Export CSV</button>
+        <button class="btn" style="background:var(--teal); color:#06222a" onclick="exportContactListXLSX(this)" title="Call sheet for sales staff: name (DM No.), phone, vehicle & shipping status, with room for contact memos. Exports the customers currently shown.">📋 Contact List (Excel)</button>
+        <button class="btn ghost" onclick="exportSalesListCSV()" title="Contracted / delivered deals: who bought which car — opens in Excel">⬇ Sales List (CSV)</button>
+        <button class="btn ghost" onclick="exportCustomersCSV()" title="All customer data as a CSV file">⬇ Export CSV</button>
         <button class="btn" onclick="openCustomerForm()">＋ New Customer</button>
       </div>
     </div>
@@ -3790,6 +3908,7 @@ function renderManual(){
       <ul style="font-size:13px; color:var(--text-dim); margin:0; padding-left:20px; line-height:1.9">
         <li><b style="color:var(--text)">🎂 Upcoming Birthdays</b> — Dashboard дээр ойрын 7 хоногт төрсөн өдөртэй харилцагчдыг жагсаана; тэндээс шууд «✉️ Message» дарж мэндчилгээ илгээж болно.</li>
         <li><b style="color:var(--text)">⚠️ Давхардсан харилцагч (Duplicate)</b> — ижил утасны дугаартай хэд хэдэн бичлэг байвал Customers хуудасны дээд хэсэгт шар хүрээтэй анхааруулга харагдана — нэгтгэх шаардлагатай эсэхийг шалгана уу.</li>
+        <li><b style="color:var(--text)">📋 Contact List (Excel)</b> — Customers хуудасны дээд товчоор <b style="color:var(--text)">борлуулагчийн залгах жагсаалт</b>-ыг Excel-ээр татна: харилцагчийн нэр (DM дугаар), утас, машин ба тээвэрлэлтийн төлөв, мөн ярьсан зүйлээ бичих талбартай. Дэлгэцэнд одоо харагдаж буй харилцагчдыг (шүүлтүүрээр сонгосон) хэвлэнэ; бүх ажилтны хуудас + ажилтан тус бүрийн хуудас тусдаа гарна. Машин замдаа яваа харилцагч шар өнгөөр, эхэнд гарна.</li>
         <li><b style="color:var(--text)">⬇ Export CSV</b> — Customers хуудасны дээд товчлуураар бүх харилцагчийн жагсаалтыг Excel-д нээгддэг CSV файлаар татаж авч болно.</li>
       </ul>
     </div>
