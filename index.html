@@ -1227,7 +1227,8 @@ async function exportContactListXLSX(btn){
   if(btn){ btn.textContent = '⏳ Preparing…'; btn.disabled = true; }
   try{
     await loadExcelJS();
-    const list = filteredCustomerList().filter(c=>!/^deed motors\b/i.test((c.name||'').trim()));
+    // Not people to contact: the company's own placeholder customers, and other-dealer customers marked "No Prospect".
+    const list = filteredCustomerList().filter(c=>!/^deed motors\b/i.test((c.name||'').trim()) && !(c.customerType==='他社客' && c.otherDealerStatus==='no_prospect'));
     if(list.length===0){ alert('There are no customers in the current list to export.'); return; }
     const staffName = c => ((c.salesStaff||'').split('（')[0]) || 'Unassigned';
     const rows = list.map(c=>{
