@@ -675,13 +675,13 @@ function rowToVehicle(r){
 function dealToRow(d){
   return {
     id: d.id, customer_id: d.customerId||null, vehicle_id: d.vehicleId||null, trade_in_vehicle_id: d.tradeInVehicleId||null,
-    stage: d.stage||'', staff: d.staff||'', history: d.history||[], deleted_at: d.deletedAt||null, created_at: d.createdAt||Date.now()
+    stage: d.stage||'', staff: d.staff||'', sold_by: d.soldBy||null, history: d.history||[], deleted_at: d.deletedAt||null, created_at: d.createdAt||Date.now()
   };
 }
 function rowToDeal(r){
   return {
     id: r.id, customerId: r.customer_id, vehicleId: r.vehicle_id, tradeInVehicleId: r.trade_in_vehicle_id,
-    stage: r.stage, staff: r.staff, history: r.history||[], deletedAt: r.deleted_at, createdAt: r.created_at
+    stage: r.stage, staff: r.staff, soldBy: r.sold_by||'', history: r.history||[], deletedAt: r.deleted_at, createdAt: r.created_at
   };
 }
 async function upsertCustomerRow(c){
@@ -1140,11 +1140,11 @@ function exportSalesListCSV(){
     const v = vehicles.find(x=>x.id===d.vehicleId) || {};
     return {d, c, v, contractTs: stageChangeDate(d,'契約') || d.createdAt || 0};
   }).sort((a,b)=>b.contractTs-a.contractTs);
-  const headers = ['Contract Date','Customer','Phone','Customer Type','Sales Staff','Maker','Model','Year','Color','Mileage (km)','VIN','Sale Price (MNT)','Deal Status','Delivery Date','Vehicle Location','ETA (Arrives UB)'];
+  const headers = ['Contract Date','Customer','Phone','Customer Type','Sold By','Current Staff','Maker','Model','Year','Color','Mileage (km)','VIN','Sale Price (MNT)','Deal Status','Delivery Date','Vehicle Location','ETA (Arrives UB)'];
   const rows = rowsData.map(({d,c,v,contractTs})=>{
     const delivered = d.stage==='納車' ? stageChangeDate(d,'納車') : null;
     return [
-      contractTs ? fmtDate(contractTs) : '', c.name||'', c.phone||'', c.customerType?customerTypeLabel(c.customerType):'', d.staff||c.salesStaff||'',
+      contractTs ? fmtDate(contractTs) : '', c.name||'', c.phone||'', c.customerType?customerTypeLabel(c.customerType):'', d.soldBy||'', d.staff||c.salesStaff||'',
       v.maker||'', v.model||'', v.year||'', v.color||'', v.mileage||'', v.vin||'', v.priceSale||'',
       stageLabel(d.stage), delivered ? fmtDate(delivered) : '',
       v.arrived===false ? 'In transit from Japan' : (d.stage==='納車' ? 'Delivered' : 'In Ulaanbaatar'), v.arrived===false ? (v.eta||'') : ''
@@ -1492,7 +1492,7 @@ function openCustomerForm(existing){
       </div>
       <div class="field-row">
         <div class="field"><label>Referred By</label><input id="f_referrer" value="${esc(c.referrer)}" placeholder="Referrer's name (if any)"></div>
-        <div class="field"><label>Sales Staff</label>
+        <div class="field"><label>Sales Staff <span style="color:var(--text-dim2)">(current person in charge)</span></label>
           <select id="f_salesstaff">
             <option value="">Not set</option>
             ${sortedStaff().map(s=>`<option value="${esc(staffLabel(s))}" ${c.salesStaff===staffLabel(s)?'selected':''}>${esc(staffLabel(s))}</option>`).join('')}
@@ -1682,7 +1682,7 @@ function openCustomerDetail(id){
         <div class="kv"><span class="k">Birthday</span><span class="v mono">${c.birthday?fmtDate(c.birthday):'—'}</span></div>
         <div class="kv"><span class="k">Occupation / Workplace</span><span class="v">${esc(c.job||'—')}</span></div>
         <div class="kv"><span class="k">Referred By</span><span class="v">${esc(c.referrer||'—')}</span></div>
-        <div class="kv"><span class="k">Sales Staff</span><span class="v" style="color:var(--teal)">${esc(c.salesStaff||'—')}</span></div>
+        <div class="kv"><span class="k">Current Staff</span><span class="v" style="color:var(--teal)">${esc(c.salesStaff||'—')}</span></div>
         <div class="kv" style="grid-column:1/-1"><span class="k">Vehicles</span><span class="v" style="display:flex; flex-wrap:wrap; gap:6px">${customerVehicleLinks(c).map(r=>`<span class="staff-tag" style="cursor:pointer" onclick="openVehicleDetail('${r.v.id}')">${r.owner?'🔑':'🚗'} ${esc(vehName(r.v.id))} ・ ${esc(r.label)}</span>`).join('') || '—'}</span></div>
       </div>
       ${c.note? `<div class="field" style="margin-top:10px"><label>Notes</label><div class="panel" style="padding:10px 12px; background:var(--panel2)">${esc(c.note)}</div></div>`:''}
@@ -1743,6 +1743,7 @@ function openCustomerDetail(id){
               <strong>${esc(vehName(d.vehicleId))}</strong>
               <span class="staff-tag">${esc(stageLabel(d.stage))}</span>
             </div>
+            ${sellerLine(d)?`<div class="meta" style="margin:-4px 0 8px; font-size:12px">${sellerLine(d)}</div>`:''}
             <ul class="timeline">
               ${d.history.map(h=>`<li><span class="dot"></span><div><b>${fmtDate(h.date)}</b>${esc(h.note)}</div></li>`).join('')}
             </ul>
@@ -2869,7 +2870,8 @@ function dealPanelHtml(v){
         <div class="kv"><span class="k">Phone Number</span><span class="v mono">${esc(c.phone||'—')}</span></div>
         <div class="kv"><span class="k">Facebook/Messenger</span><span class="v">${esc(c.fb||'—')}</span></div>
         <div class="kv"><span class="k">Address</span><span class="v">${esc(c.address||'—')}</span></div>
-        <div class="kv"><span class="k">Assigned Staff</span><span class="v">${esc(deal.staff||'—')}</span></div>
+        <div class="kv"><span class="k">Sold By</span><span class="v">${esc(deal.soldBy||'—')}</span></div>
+        <div class="kv"><span class="k">Current Staff</span><span class="v" style="color:var(--teal)">${esc(deal.staff||'—')}</span></div>
       </div>
       ${c.note?`<div class="panel" style="background:var(--panel2); margin-top:10px; padding:10px 12px">📝 ${esc(c.note)}</div>`:''}
       <div style="display:flex; gap:8px; margin:16px 0; flex-wrap:wrap">
@@ -3077,6 +3079,7 @@ async function startDealForVehicle(vehicleId){
   const v = vehicles.find(x=>x.id===vehicleId);
   if(v && v.status==='stock'){ v.status='nego'; await upsertVehicleRow(v); }
   const deal = {id:uid('D'), customerId, vehicleId, staff, stage, createdAt:Date.now(), history:[{date:Date.now(), note:`Deal started (${stageLabel(stage)})`}]};
+  recordSeller(deal);
   deals.push(deal);
   const customer = customers.find(x=>x.id===customerId);
   const syncing = customer ? assignCustomerStaff(customer, staff) : Promise.resolve();
@@ -3540,6 +3543,17 @@ function stagePrev(stage){ const i=STAGES.indexOf(stage); return i>0; }
 function stageNext(stage){ const i=STAGES.indexOf(stage); return i<STAGES.length-2; } // exclude moving into キャンセル automatically
 // A customer whose deal reaches Contract (or later) is one of our own customers. Returns the customer
 // if it was changed, so the caller can save it.
+// "Sold by" is the staff member who made the sale and never changes; d.staff / the customer's Sales
+// Staff is the CURRENT person in charge and follows hand-overs. Fixed when the deal first reaches Contract.
+function recordSeller(d){
+  if((d.stage==='契約' || d.stage==='納車') && !d.soldBy) d.soldBy = d.staff || '';
+}
+function sellerLine(d){
+  const sold = d.soldBy || '', cur = d.staff || '';
+  if(!sold && !cur) return '';
+  if(sold && cur && sold!==cur) return `Sold by <b>${esc(sold)}</b> · Now handled by <b>${esc(cur)}</b>`;
+  return sold ? `Sold by <b>${esc(sold)}</b>` : `Handled by <b>${esc(cur)}</b>`;
+}
 function markInHouseIfContracted(customerId){
   const c = customers.find(x=>x.id===customerId);
   if(!c || c.customerType==='自社客') return null;
@@ -3554,6 +3568,7 @@ function advanceDealStage(dealId, dir){
   const ni = Math.min(STAGES.length-1, Math.max(0, i+dir));
   d.stage = STAGES[ni];
   d.history.push({date:Date.now(), note:`Status changed to "${stageLabel(STAGES[ni])}"`});
+  recordSeller(d);
   if(d.stage==='契約' || d.stage==='納車'){ const cc = markInHouseIfContracted(d.customerId); if(cc) upsertCustomerRow(cc); }
   const v = vehicles.find(x=>x.id===d.vehicleId);
   if(v){
@@ -3632,6 +3647,7 @@ async function saveDeal(){
   const memo = document.getElementById('f_memo').value.trim();
   const deal = {id:uid('D'), customerId, vehicleId, staff, stage, createdAt:Date.now(),
     history:[{date:Date.now(), note: memo || `Deal started (${stageLabel(stage)})`}]};
+  recordSeller(deal);
   deals.push(deal);
   const customer = customers.find(x=>x.id===customerId);
   const syncing = customer ? assignCustomerStaff(customer, staff) : Promise.resolve();
@@ -3651,7 +3667,8 @@ function openDealDetail(id){
       <div class="kv-grid" style="margin-bottom:16px">
         <div class="kv"><span class="k">Customer</span><span class="v">${esc(custName(d.customerId))}</span></div>
         <div class="kv"><span class="k">Vehicle</span><span class="v">${esc(vehName(d.vehicleId))} <span class="mv" onclick="openChangeDealVehicleForm('${d.id}',{type:'deal',dealId:'${d.id}'})">🚗 Change</span></span></div>
-        <div class="kv"><span class="k">Assigned To</span><span class="v">${esc(d.staff||'—')}</span></div>
+        <div class="kv"><span class="k">Sold By</span><span class="v">${esc(d.soldBy||'—')}</span></div>
+        <div class="kv"><span class="k">Current Staff</span><span class="v" style="color:var(--teal)">${esc(d.staff||'—')}</span></div>
         <div class="kv"><span class="k">Current Status</span><span class="v" style="color:var(--amber)">${esc(stageLabel(d.stage))}</span></div>
       </div>
       <h3 style="margin-bottom:8px">📅 Deal History</h3>
@@ -3974,7 +3991,7 @@ function renderManual(){
     <div class="panel manual-section" id="m-ch9">
       <h3><span class="manual-chapnum">09</span> Ажилтан тус бүрийн худалдааны эгнээ</h3>
       <p style="font-size:13px; margin:0 0 10px">💬 Deal Pipeline хуудсан дээр бүртгэлтэй ажилтан <b>тус бүрд өөрийн эгнээ (lane)</b> автоматаар үүсдэг — шинэ ажилтан нэмэгдэх, хуучин нь гарах бүрд эгнээ өөрөө шинэчлэгдэнэ, тусад нь тохируулах шаардлагагүй. Эгнээний дарааллыг Staff хуудсан дэх ↑/↓ товчлуурын адилаар өөрчилж болно (эгнээний баруун дээд буланд ↑/↓ товчлуур байна).</p>
-      <div class="manual-callout"><span class="ic">👤</span><div><b>Хариуцсан ажилтан (Sales Staff) нэг л газар</b><p>Худалдааны эгнээ нь харилцагчийн <b>Sales Staff</b>-аар тодорхойлогдоно. Ажилтныг солих бол Customers дотор тухайн харилцагчийн «✎ Edit» → <b>Sales Staff</b> дээр сольвол тэр харилцагчийн бүх худалдааны явц (Deal Pipeline) болон сануулгын имэйл ч хамт шинэчлэгдэнэ.</p></div></div>
+      <div class="manual-callout"><span class="ic">👤</span><div><b>Хариуцсан ажилтан (Sales Staff) нэг л газар</b><p>Худалдааны эгнээ нь харилцагчийн <b>Sales Staff</b> (одоогийн хариуцагч)-аар тодорхойлогдоно. Ажилтныг солих бол Customers дотор тухайн харилцагчийн «✎ Edit» → <b>Sales Staff</b> дээр сольвол тэр харилцагчийн бүх худалдааны явц (Deal Pipeline) болон сануулгын имэйл ч хамт шинэчлэгдэнэ. Харин <b>«Sold By» (худалдсан ажилтан)</b> нь гэрээ хийгдсэн үеийн нэрээр үргэлж хэвээр үлдэнэ — тиймээс «Sold by Essa · Now handled by Temuka» гэж хоёуланг нь харж болно.</p></div></div>
       <div class="manual-callout warn"><span class="ic">⚠</span><div><b>«交渉決裂・中止」/ Negotiation Failed &amp; Cancel товч</b><p>Тохиролцоо амжилтгүй болсон, худалдан авалт хийгдэхгүй болсон тохиолдолд картыг устгах биш, <b>«Negotiation Failed / Cancel»</b> товчийг дар. Ингэснээр стадиа «Cancelled» болж хадгалагдана — түүх, тоо баримтаас алдагдахгүй. Ердийн <b>Delete</b> (устгах) нь зөвхөн буруу оруулсан/давхардсан бичлэгийг бүрмөсөн арилгах зориулалттай.</p></div></div>
     </div>
 
