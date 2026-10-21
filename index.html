@@ -1477,7 +1477,7 @@ function openCustomerForm(existing){
         <label>Customer Type</label>
         <select id="f_custtype">
           <option value="" ${!c.customerType?'selected':''}>Not set</option>
-          <option value="自社客" ${c.customerType==='自社客'?'selected':''}>In-House Customer (purchased from us — for future trade-in &amp; maintenance outreach)</option>
+          <option value="自社客" ${c.customerType==='自社客'?'selected':''}>In-House Customer (purchased from us — for future purchase &amp; maintenance outreach)</option>
           <option value="他社客" ${c.customerType==='他社客'?'selected':''}>Other Dealer Customer (for event/maintenance outreach &amp; converting to our own)</option>
         </select>
       </div>
@@ -1528,7 +1528,7 @@ function openCustomerForm(existing){
         </div>
         </div>
       </details>
-      <div class="field"><label>Notes</label><textarea id="f_note" placeholder="Desired vehicle type, trade-in info, family details, etc.">${esc(c.note)}</textarea></div>
+      <div class="field"><label>Notes</label><textarea id="f_note" placeholder="Desired vehicle type, current vehicle (customer sells it / consignment), family details, etc.">${esc(c.note)}</textarea></div>
     </div>
     <div class="modal-foot">
       ${existing?`<button class="btn danger" onclick="deleteCustomer('${c.id}')">Delete</button>`:''}
@@ -3979,7 +3979,7 @@ function renderManual(){
       <h3><span class="manual-chapnum">08</span> Машины статус ангилал</h3>
       <p style="font-size:13px; margin:0 0 10px">Vehicles &amp; Appraisal хуудсан дээрх шүүлтүүр дараах дарааллаар, дараах утгатай харагдана:</p>
       <div class="manual-cat"><div class="ic">📦</div><div><div class="name">In Stock — Бэлэн байгаа</div><div class="cond">Худалдаанд бэлэн, харилцагч хараахан тодорхойгүй</div></div></div>
-      <div class="manual-cat"><div class="ic">📋</div><div><div class="name">Appraisal Vehicle — Үнэлгээний машин</div><div class="cond">Trade-in байдлаар авсан, үнэлгээ хийгдэж буй машин</div></div></div>
+      <div class="manual-cat"><div class="ic">📋</div><div><div class="name">Appraisal Vehicle — Үнэлгээний машин</div><div class="cond">Үйлчлүүлэгчийн одоо ашиглаж буй машин — зөвхөн үнэлгээ хийнэ. Үйлчлүүлэгч өөрөө зарна эсвэл манайд зуучлалаар (комиссоор) заруулна. Манай компани trade-in буюу шууд худалдан авалт хийдэггүй.</div></div></div>
       <div class="manual-cat"><div class="ic">🧭</div><div><div class="name">Field Appraisal — Томилолтоор үнэлсэн машин</div><div class="cond">Гадуур очиж үнэлсэн машин. <b>📦 In Custody</b> — манайд хадгалж байгаа, <b>⏸ On Hold</b> — хойшлуулсан, зөвхөн мэдээллийг хадгална. Худалдаанд гаргавал засах цонхонд «Stock Vehicle» болгож солино.</div></div></div>
       <div class="manual-cat"><div class="ic">🤝</div><div><div class="name">In Negotiation — Тохиролцож буй</div><div class="cond">Тодорхой харилцагчтай худалдааны яриа явж байгаа</div></div></div>
       <div class="manual-cat"><div class="ic">🔍</div><div><div class="name">On Order — Захиалгаар</div><div class="cond">Машин бодитойгоор ХАРАЙХАН ирээгүй — зөвхөн спек/захиалга</div></div></div>
