@@ -436,7 +436,8 @@ const STAGE_LABELS_EN = {
 };
 function stageLabel(stage){ return STAGE_LABELS_EN[stage] || stage; }
 // 'branch' = sent to / sold by the Umnugovi branch — no longer handled by this store (not stock, not our sale).
-const VSTATUS = {stock:'In Stock', nego:'In Negotiation', sold:'Sold', delivered:'Delivered', branch:'At Branch (not our stock)'};
+// Vehicle flow: In Stock -> Sold (contract = locked, prevents double sale; stays Sold through delivery). Delivery is tracked on the deal (stage 納車), not as a vehicle status.
+const VSTATUS = {stock:'In Stock', nego:'In Negotiation', sold:'Sold', branch:'At Branch (not our stock)'};
 // "Field Appraisal" (kind 'field'): a customer's car appraised on a trip. Like an Appraisal Vehicle it is
 // not our stock; its status says what we do with it — keep it in our custody, or just keep the data on hold.
 const FIELD_STATUS = {custody:'In Custody (we hold the vehicle)', hold:'On Hold (data kept only)'};
@@ -663,7 +664,7 @@ function vehicleToRow(v){
 function rowToVehicle(r){
   return {
     id: r.id, kind: r.kind, maker: r.maker, model: r.model, year: r.year, color: r.color, mileage: r.mileage,
-    vin: r.vin, regNum: r.reg_num, priceCost: r.price_cost, priceSale: r.price_sale, status: r.status, notes: r.notes,
+    vin: r.vin, regNum: r.reg_num, priceCost: r.price_cost, priceSale: r.price_sale, status: r.status==='delivered' ? 'sold' : r.status, notes: r.notes,
     externalGrade: r.external_grade, externalAppraisalPrice: r.external_appraisal_price, externalReportText: r.external_report_text,
     appraisal: r.appraisal||{}, defects: r.defects||[], files: r.files||[], serviceHistory: r.service_history||[],
     ownerCustomerId: r.owner_customer_id,
@@ -838,8 +839,8 @@ function stats(){
   const stock = vehicles.filter(v=>v.status==='stock' && v.arrived!==false).length;
   const nego = deals.filter(d=>!['契約','納車','キャンセル'].includes(d.stage)).length;
   const appraisalPending = vehicles.filter(v=>v.arrived!==false && v.status!=='branch' && (!v.appraisal || Object.values(v.appraisal).every(x=>!x))).length;
-  const deliveredThisMonth = vehicles.filter(v=>v.status==='delivered' && sameMonth(v.createdAt)).length;
-  const totalProfit = vehicles.filter(v=>v.status==='sold'||v.status==='delivered').reduce((s,v)=>s+((v.priceSale||0)-(v.priceCost||0)),0);
+  const deliveredThisMonth = deals.filter(d=>!d.deletedAt && d.stage==='納車' && (()=>{const t=stageChangeDate(d,'納車'); return t && sameMonth(t);})()).length;
+  const totalProfit = vehicles.filter(v=>v.status==='sold').reduce((s,v)=>s+((v.priceSale||0)-(v.priceCost||0)),0);
   const monthlySales = monthlySalesCount();
   return {stock, nego, appraisalPending, deliveredThisMonth, totalProfit, monthlySales, totalVehicles:vehicles.length};
 }
@@ -1478,7 +1479,7 @@ function openCustomerForm(existing){
         <label>Customer Type</label>
         <select id="f_custtype">
           <option value="" ${!c.customerType?'selected':''}>Not set</option>
-          <option value="自社客" ${c.customerType==='自社客'?'selected':''}>In-House Customer (purchased from us — for future purchase &amp; maintenance outreach)</option>
+          <option value="自社客" ${c.customerType==='自社客'?'selected':''}>In-House Customer (vehicle delivered — for future purchase &amp; maintenance outreach)</option>
           <option value="他社客" ${c.customerType==='他社客'?'selected':''}>Other Dealer Customer (for event/maintenance outreach &amp; converting to our own)</option>
         </select>
       </div>
@@ -2237,7 +2238,7 @@ function renderVehicles(){
       <select onchange='vehFilter.sort=this.value; renderView()'>
         ${Object.entries(VEH_SORT_OPTIONS).map(([k,l])=>`<option value="${k}" ${vehFilter.sort===k?'selected':''}>${l}</option>`).join('')}
       </select>
-      ${['stock','tradein','field','nego','order','transit','sold','delivered','branch','all'].map(s=>`
+      ${['stock','tradein','field','nego','order','transit','sold','branch','all'].map(s=>`
         <span class="chip ${vehFilter.status===s?'on':''}" style="${s==='order' && vehFilter.status!==s ? 'background:var(--violet-soft); color:var(--violet); border-color:#9c7bea55;' : ''}" onclick='vehFilter.status="${s}"; renderView()'>${s==='all'?'All':(s==='tradein'?'📋 Appraisal Vehicle':(s==='field'?'🧭 Field Appraisal':(s==='order'?'🔍 On Order (no vehicle yet)':(s==='transit'?'🚢 In Transit':VSTATUS[s]))))}</span>
       `).join('')}
     </div>
@@ -3084,7 +3085,7 @@ async function startDealForVehicle(vehicleId){
   deals.push(deal);
   const customer = customers.find(x=>x.id===customerId);
   const syncing = customer ? assignCustomerStaff(customer, staff) : Promise.resolve();
-  if(stage==='契約' || stage==='納車'){ const cc = markInHouseIfContracted(customerId); if(cc) upsertCustomerRow(cc); }
+  if(stage==='納車'){ const cc = markInHouseIfContracted(customerId); if(cc) upsertCustomerRow(cc); }
   closeModal();
   openVehicleDetail(vehicleId);
   await syncing;
@@ -3542,7 +3543,7 @@ function renderDeals(){
 }
 function stagePrev(stage){ const i=STAGES.indexOf(stage); return i>0; }
 function stageNext(stage){ const i=STAGES.indexOf(stage); return i<STAGES.length-2; } // exclude moving into キャンセル automatically
-// A customer whose deal reaches Contract (or later) is one of our own customers. Returns the customer
+// A customer becomes one of our own (In-House) customers when the vehicle is DELIVERED (deal stage 納車) — not at contract. Returns the customer
 // if it was changed, so the caller can save it.
 // "Sold by" is the staff member who made the sale and never changes; d.staff / the customer's Sales
 // Staff is the CURRENT person in charge and follows hand-overs. Fixed when the deal first reaches Contract.
@@ -3570,11 +3571,11 @@ function advanceDealStage(dealId, dir){
   d.stage = STAGES[ni];
   d.history.push({date:Date.now(), note:`Status changed to "${stageLabel(STAGES[ni])}"`});
   recordSeller(d);
-  if(d.stage==='契約' || d.stage==='納車'){ const cc = markInHouseIfContracted(d.customerId); if(cc) upsertCustomerRow(cc); }
+  if(d.stage==='納車'){ const cc = markInHouseIfContracted(d.customerId); if(cc) upsertCustomerRow(cc); }
   const v = vehicles.find(x=>x.id===d.vehicleId);
   if(v){
     if(d.stage==='契約') v.status='sold';
-    else if(d.stage==='納車') v.status='delivered';
+    else if(d.stage==='納車') v.status='sold';   // delivery is recorded on the deal; the car stays Sold
     else if(v.status==='stock') v.status='nego';
   }
   return d;
@@ -3652,7 +3653,7 @@ async function saveDeal(){
   deals.push(deal);
   const customer = customers.find(x=>x.id===customerId);
   const syncing = customer ? assignCustomerStaff(customer, staff) : Promise.resolve();
-  if(stage==='契約' || stage==='納車'){ const cc = markInHouseIfContracted(customerId); if(cc) upsertCustomerRow(cc); }
+  if(stage==='納車'){ const cc = markInHouseIfContracted(customerId); if(cc) upsertCustomerRow(cc); }
   closeModal();
   renderView();
   await syncing;
@@ -3971,9 +3972,9 @@ function renderManual(){
 
     <div class="panel manual-section" id="m-ch7">
       <h3><span class="manual-chapnum">07</span> Харилцагчийн төрөл</h3>
-      <p style="font-size:13px; margin:0 0 10px">Харилцагч бүр <b>«In-House Customer»</b> (манай өөрийн худалдсан/худалдах харилцагч) эсвэл <b>«Other Dealer Customer»</b> (өөр газраас машин авсан, гэхдээ мэдээллийг нь хадгалж байгаа харилцагч) гэсэн 2 төрлийн аль нэгээр тэмдэглэгдсэн байдаг. Харилцагчийн жагсаалт болон дэлгэрэнгүй хуудсан дээр өнгөт badge-ээр харагдана, дээд талын шүүлтүүрээр төрлөөр нь ялгаж үзэж болно.</p>
+      <p style="font-size:13px; margin:0 0 10px">Харилцагч бүр <b>«In-House Customer»</b> (манайхаас машин авч, машиныг нь хүлээлгэн өгсөн (Delivery) харилцагч) эсвэл <b>«Other Dealer Customer»</b> (өөр газраас машин авсан, гэхдээ мэдээллийг нь хадгалж байгаа харилцагч) гэсэн 2 төрлийн аль нэгээр тэмдэглэгдсэн байдаг. Харилцагчийн жагсаалт болон дэлгэрэнгүй хуудсан дээр өнгөт badge-ээр харагдана, дээд талын шүүлтүүрээр төрлөөр нь ялгаж үзэж болно.</p>
       <div class="manual-callout"><span class="ic">🔥</span><div><b>Other Dealer Customer дээрх Hot / Prospect / No Prospect тэмдэг</b><p>«Other Dealer Customer» төрлийн харилцагчийн badge дээр дарах бүрдээ <b>тэмдэггүй → 🔥Hot → 👀Prospect → 🚫No Prospect → тэмдэггүй</b> гэж дараалан солигдоно. Энэ бол зөвхөн дотоод мэдээлэл хадгалах зорилготой гарын аргаар тэмдэглэдэг зүйл — автомат сануулгын имэйл болон Dashboard-ын сануулганд <b>нөлөөлдөггүй</b>.</p></div></div>
-      <div class="manual-callout"><span class="ic">🎉</span><div><b>Converted badge (Хөрвөсөн харилцагч)</b><p>«Other Dealer Customer» байсан хүн эцэст нь манайхаас машин худалдаж авбал, түүний төрлийг «In-House Customer» болгож өөрчлөхөд систем автоматаар <b>«🎉 Converted [огноо]»</b> гэсэн badge-ийг харилцагчийн профайл дээр байнга харуулна. Энэ нь өөр газрын харилцагчийг манайх руу татсан амжилтыг бүртгэдэг зорилготой.</p></div></div>
+      <div class="manual-callout"><span class="ic">🎉</span><div><b>Converted badge (Хөрвөсөн харилцагч)</b><p>«Other Dealer Customer» байсан хүн манайхаас машин авч, худалдааны явц «Delivery» (хүлээлгэн өгсөн) шатанд хүрмэгц (гэрээ хийгдсэн үед биш) систем төрлийг автоматаар «In-House Customer» болгож, мөн <b>«🎉 Converted [огноо]»</b> гэсэн badge-ийг харилцагчийн профайл дээр байнга харуулна. Энэ нь өөр газрын харилцагчийг манайх руу татсан амжилтыг бүртгэдэг зорилготой.</p></div></div>
     </div>
 
     <div class="panel manual-section" id="m-ch8">
@@ -3983,7 +3984,11 @@ function renderManual(){
       <div class="manual-cat"><div class="ic">📋</div><div><div class="name">Appraisal Vehicle — Үнэлгээний машин</div><div class="cond">Үйлчлүүлэгчийн одоо ашиглаж буй машин — зөвхөн үнэлгээ хийнэ. Үйлчлүүлэгч өөрөө зарна эсвэл манайд зуучлалаар (комиссоор) заруулна. Манай компани trade-in буюу шууд худалдан авалт хийдэггүй.</div></div></div>
       <div class="manual-cat"><div class="ic">🧭</div><div><div class="name">Field Appraisal — Томилолтоор үнэлсэн машин</div><div class="cond">Гадуур очиж үнэлсэн машин. <b>📦 In Custody</b> — манайд хадгалж байгаа, <b>⏸ On Hold</b> — хойшлуулсан, зөвхөн мэдээллийг хадгална. Худалдаанд гаргавал засах цонхонд «Stock Vehicle» болгож солино.</div></div></div>
       <div class="manual-cat"><div class="ic">🤝</div><div><div class="name">In Negotiation — Тохиролцож буй</div><div class="cond">Тодорхой харилцагчтай худалдааны яриа явж байгаа</div></div></div>
-      <div class="manual-cat"><div class="ic">🔍</div><div><div class="name">On Order — Захиалгаар</div><div class="cond">Машин бодитойгоор ХАРАЙХАН ирээгүй — зөвхөн спек/захиалга</div></div></div>
+      <div class="manual-cat"><div class="ic">✅</div><div><div class="name">Sold — Борлуулагдсан (гэрээ хийгдсэн)</div><div class="cond">Гэрээ хийгдмэгц «Sold» болж, давхар зарагдахаас сэргийлнэ. Хүлээлгэн өгөх хүртэл, мөн өгсөний дараа ч «Sold» хэвээр байна. Хүлээлгэн өгсөн эсэхийг Deal Pipeline дээрх <b>«Delivery»</b> шатаар бүртгэнэ — харилцагч энэ үед «In-House Customer» болно.</div></div></div>
+
+<div class="manual-cat"><div class="ic">🏢</div><div><div class="name">At Branch — Салбарт (манай бараа биш)</div><div class="cond">Өмнөговь салбарт шилжүүлсэн эсвэл салбарт зарагдсан машин. «In Stock», «Not Yet Appraised», ашгийн тооцоонд орохгүй.</div></div></div>
+
+<div class="manual-cat"><div class="ic">🔍</div><div><div class="name">On Order — Захиалгаар</div><div class="cond">Машин бодитойгоор ХАРАЙХАН ирээгүй — зөвхөн спек/захиалга</div></div></div>
       <div class="manual-callout warn"><span class="ic">🔍</span><div><b>On Order картын ялгаа</b><p>«On Order» төрлийн карт нь ягаан зурвасжсан хүрээ, тод дэвсгэртэй бөгөөд <b>«🔍 NO VEHICLE YET — TARGET SPEC ONLY»</b> гэсэн тэмдэглэгээтэй харагдана — учир нь энэ бол бодит машин биш, зөвхөн харилцагчийн хүсэлт дээр үндэслэсэн зорилтот спек. «All»-ээр харахад бусад машинтай андуурахгүйн тулд ийм зорилготойгоор өөр өнгөөр ялгасан.</p></div></div>
       <p style="font-size:12.5px; color:var(--text-dim); margin:10px 0 0">Мөн Японоос тээвэрлэгдэж буй (худалдан авсан ч хараахан ирээгүй) машин дээр <b>«🚢 In Transit»</b> гэсэн жижиг тэмдэг харагдана. Анхны шүүлтүүр «In Stock» дээр байхаар тохируулагдсан.</p>
       <div class="manual-callout"><span class="ic">🚢</span><div><b>Ирээгүй (тээвэрлэгдэж буй) машин</b><p>Улаанбаатарт хараахан ирээгүй машин «In Stock»-ийн тоо болон «Not Yet Appraised»-д <b>тооцогдохгүй</b>, «🚢 In Transit» шүүлтүүрээр тусад нь харагдана. Захиалга ирвэл машины дэлгэрэнгүйгээс «Start Deal» хийж хэрэглэгчид оноож болно. Машин ирмэгц машины засах цонхонд <b>«Arrived in Ulaanbaatar»</b>-г идэвхжүүлээд, ирсэн үеийн үзлэг/үнэлгээгээ бүртгэнэ. Нэр дээр нь түр «Deed Motors» (🔑 Nominal owner) гэж бичигдсэн байдаг.</p></div></div>
