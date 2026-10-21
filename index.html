@@ -435,7 +435,8 @@ const STAGE_LABELS_EN = {
   '交渉':'Negotiation', '契約':'Contract', '納車':'Delivery', 'キャンセル':'Cancelled'
 };
 function stageLabel(stage){ return STAGE_LABELS_EN[stage] || stage; }
-const VSTATUS = {stock:'In Stock', nego:'In Negotiation', sold:'Sold', delivered:'Delivered'};
+// 'branch' = sent to / sold by the Umnugovi branch — no longer handled by this store (not stock, not our sale).
+const VSTATUS = {stock:'In Stock', nego:'In Negotiation', sold:'Sold', delivered:'Delivered', branch:'At Branch (not our stock)'};
 // "Field Appraisal" (kind 'field'): a customer's car appraised on a trip. Like an Appraisal Vehicle it is
 // not our stock; its status says what we do with it — keep it in our custody, or just keep the data on hold.
 const FIELD_STATUS = {custody:'In Custody (we hold the vehicle)', hold:'On Hold (data kept only)'};
@@ -836,7 +837,7 @@ function stats(){
   // Cars still in transit from Japan (arrived===false) are neither "in stock" nor appraisable yet.
   const stock = vehicles.filter(v=>v.status==='stock' && v.arrived!==false).length;
   const nego = deals.filter(d=>!['契約','納車','キャンセル'].includes(d.stage)).length;
-  const appraisalPending = vehicles.filter(v=>v.arrived!==false && (!v.appraisal || Object.values(v.appraisal).every(x=>!x))).length;
+  const appraisalPending = vehicles.filter(v=>v.arrived!==false && v.status!=='branch' && (!v.appraisal || Object.values(v.appraisal).every(x=>!x))).length;
   const deliveredThisMonth = vehicles.filter(v=>v.status==='delivered' && sameMonth(v.createdAt)).length;
   const totalProfit = vehicles.filter(v=>v.status==='sold'||v.status==='delivered').reduce((s,v)=>s+((v.priceSale||0)-(v.priceCost||0)),0);
   const monthlySales = monthlySalesCount();
@@ -2236,7 +2237,7 @@ function renderVehicles(){
       <select onchange='vehFilter.sort=this.value; renderView()'>
         ${Object.entries(VEH_SORT_OPTIONS).map(([k,l])=>`<option value="${k}" ${vehFilter.sort===k?'selected':''}>${l}</option>`).join('')}
       </select>
-      ${['stock','tradein','field','nego','order','transit','sold','delivered','all'].map(s=>`
+      ${['stock','tradein','field','nego','order','transit','sold','delivered','branch','all'].map(s=>`
         <span class="chip ${vehFilter.status===s?'on':''}" style="${s==='order' && vehFilter.status!==s ? 'background:var(--violet-soft); color:var(--violet); border-color:#9c7bea55;' : ''}" onclick='vehFilter.status="${s}"; renderView()'>${s==='all'?'All':(s==='tradein'?'📋 Appraisal Vehicle':(s==='field'?'🧭 Field Appraisal':(s==='order'?'🔍 On Order (no vehicle yet)':(s==='transit'?'🚢 In Transit':VSTATUS[s]))))}</span>
       `).join('')}
     </div>
@@ -2244,7 +2245,7 @@ function renderVehicles(){
     <div class="grid">${list.map(v=>vehicleCardHtml(v)).join('')}</div>`}
   `;
 }
-function badgeClass(status){ return {stock:'b-stock', nego:'b-nego', sold:'b-sold', delivered:'b-delivered', tradein:'b-tradein', order:'b-tradein', custody:'b-tradein', hold:'b-tradein'}[status]||'b-stock'; }
+function badgeClass(status){ return {stock:'b-stock', nego:'b-nego', sold:'b-sold', delivered:'b-delivered', tradein:'b-tradein', order:'b-tradein', custody:'b-tradein', hold:'b-tradein', branch:'b-tradein'}[status]||'b-stock'; }
 function vehicleCardHtml(v){
   const score = appraisalScore(v);
   const deal = dealForVehicle(v.id);
