@@ -1191,11 +1191,14 @@ function customerVehicleLinks(c){
   vehicles.filter(v=>v.ownerCustomerId===c.id && !rows.some(r=>r.v.id===v.id)).forEach(v=>rows.push({v, label:ownerRoleLabel(c.id, v), owner:true}));
   return rows;
 }
+// Contracted but not yet delivered: has a live Contract-stage deal. (Delivery moves them to In-House.)
+function awaitingDelivery(c){ return deals.some(d=>d.customerId===c.id && d.stage==='契約'); }
 // The customers currently shown on the Customers screen (search + type chip + sort).
 function filteredCustomerList(){
   const q = custFilter.trim().toLowerCase();
   let list = customers.filter(c => !q || (c.name+c.nameMn+c.phone+c.address+' '+customerVehicleLinks(c).map(r=>r.v.maker+' '+r.v.model).join(' ')).toLowerCase().includes(q));
-  if(custTypeFilter==='leads') list = list.filter(c => c.customerType==='他社客' && (c.otherDealerStatus==='hot' || c.otherDealerStatus==='prospect'));
+  if(custTypeFilter==='contracted') list = list.filter(awaitingDelivery);
+  else if(custTypeFilter==='leads') list = list.filter(c => c.customerType==='他社客' && (c.otherDealerStatus==='hot' || c.otherDealerStatus==='prospect'));
   else if(custTypeFilter!=='all') list = list.filter(c => custTypeFilter==='none' ? !c.customerType : c.customerType===custTypeFilter);
   return sortCustomerList(list);
 }
@@ -1411,8 +1414,8 @@ function renderCustomers(){
       <select onchange='custSort=this.value; renderView()'>
         ${Object.entries(CUST_SORT_OPTIONS).map(([k,l])=>`<option value="${k}" ${custSort===k?'selected':''}>${l}</option>`).join('')}
       </select>
-      ${['自社客','他社客','leads','none','all'].map(t=>`
-        <span class="chip ${custTypeFilter===t?'on':''}" onclick='custTypeFilter="${t}"; renderView()'>${t==='all'?'All':(t==='none'?'No Type Set':(t==='leads'?`🔥 Hot / 👀 Prospect (${customers.filter(c=>c.customerType==='他社客' && (c.otherDealerStatus==='hot'||c.otherDealerStatus==='prospect')).length})`:customerTypeLabel(t)))}</span>
+      ${['自社客','他社客','contracted','leads','none','all'].map(t=>`
+        <span class="chip ${custTypeFilter===t?'on':''}" onclick='custTypeFilter="${t}"; renderView()'>${t==='all'?'All':(t==='none'?'No Type Set':(t==='contracted'?`✅ Contracted · awaiting delivery (${customers.filter(awaitingDelivery).length})`:(t==='leads'?`🔥 Hot / 👀 Prospect (${customers.filter(c=>c.customerType==='他社客' && (c.otherDealerStatus==='hot'||c.otherDealerStatus==='prospect')).length})`:customerTypeLabel(t))))}</span>
       `).join('')}
     </div>
     ${list.length===0 ? `<div class="empty"><b>No matching customers</b>Use "＋ New Customer" to register one</div>` : `
@@ -1426,6 +1429,7 @@ function renderCustomers(){
           <div style="display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; margin-bottom:2px;">
             ${c.claim?`<span class="badge" style="position:static; background:var(--red); color:#fff">🚨 Claim Open</span>`:''}
             ${c.customerType?`<span class="badge ${customerTypeBadgeClass(c.customerType)}" style="position:static">${esc(customerTypeLabel(c.customerType))}</span>`:''}
+            ${awaitingDelivery(c)?`<span class="badge b-sold" style="position:static">✅ Contracted</span>`:''}
             ${c.customerType==='他社客'?otherDealerStatusSelectHtml(c):''}
             ${due?`<span class="badge b-sold" style="position:static">🔔 Inspection Due</span>`:''}
           </div>
