@@ -2116,7 +2116,7 @@ function renderCalendar(){
   });
   const firstOfMonth = new Date(calYear, calMonth, 1);
   const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
-  const startWeekday = firstOfMonth.getDay(); // 0=Sun
+  const startWeekday = (firstOfMonth.getDay()+6)%7; // week starts on Monday (0=Mon … 6=Sun)
   const todayKey = dateKey(Date.now());
   const monthLabel = firstOfMonth.toLocaleDateString('en-US', {year:'numeric', month:'long'});
   const cells = [];
@@ -2133,7 +2133,7 @@ function renderCalendar(){
         <button class="btn ghost sm" onclick="changeCalendarMonth(1)">Next →</button>
       </div>
       <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:6px">
-        ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(w=>`<div style="text-align:center; font-size:11px; color:var(--text-dim); font-weight:600">${w}</div>`).join('')}
+        ${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(w=>`<div style="text-align:center; font-size:11px; color:var(--text-dim); font-weight:600">${w}</div>`).join('')}
       </div>
       <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:6px">
         ${cells.map(d=>{
