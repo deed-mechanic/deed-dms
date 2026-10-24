@@ -2252,7 +2252,6 @@ function renderVehicles(){
 }
 function badgeClass(status){ return {stock:'b-stock', nego:'b-nego', sold:'b-sold', delivered:'b-delivered', tradein:'b-tradein', order:'b-tradein', custody:'b-tradein', hold:'b-tradein', branch:'b-tradein'}[status]||'b-stock'; }
 function vehicleCardHtml(v){
-  const score = appraisalScore(v);
   const deal = dealForVehicle(v.id);
   const isTradeIn = v.kind==='tradein';
   const isField = v.kind==='field';
@@ -2277,7 +2276,6 @@ function vehicleCardHtml(v){
       </div>`:''}
       <div class="row2">
         <span class="price">${fmtMoney(v.priceSale)}</span>
-        <span class="score">Score ${score}/100</span>
       </div>
     </div>
   `;
@@ -2638,7 +2636,6 @@ function openVehicleDetail(id){
   const v = vehicles.find(x=>x.id===id);
   if(!v) return;
   const a = v.appraisal || {exterior:0,interior:0,engine:0,undercarriage:0,electrical:0};
-  const score = appraisalScore(v);
   const isField = v.kind==='field';
   const isTradeIn = v.kind==='tradein' || isField;   // both are appraisal-only records, not stock for sale
   const isOrder = v.kind==='order';
@@ -2711,7 +2708,7 @@ function openVehicleDetail(id){
       <div class="segbars">
         ${segRow('Exterior','exterior',a.exterior)}
         ${segRow('Interior','interior',a.interior)}
-        ${segRow('Engine','engine',a.engine)}
+        ${segRow('Engine / Motor','engine',a.engine)}
         ${segRow('Undercarriage','undercarriage',a.undercarriage)}
         ${segRow('Electrical','electrical',a.electrical)}
       </div>
@@ -2912,7 +2909,6 @@ function dealPanelHtml(v){
 function tradeInMiniCard(vid){
   const v = vehicles.find(x=>x.id===vid);
   if(!v) return '';
-  const score = appraisalScore(v);
   return `
     <div class="card" style="cursor:pointer" onclick="openVehicleDetail('${v.id}')">
       <span class="badge" style="background:var(--teal-soft); color:var(--teal)">📋 Appraisal Vehicle</span>
@@ -2920,7 +2916,6 @@ function tradeInMiniCard(vid){
       <div class="meta">${v.year||'-'} ・ ${esc(v.color||'')} ・ ${(v.mileage||0).toLocaleString()}km</div>
       <div class="row2">
         <span class="price">${fmtMoney(v.priceSale)}</span>
-        <span class="score">Score ${score}/100</span>
       </div>
     </div>`;
 }
@@ -3151,7 +3146,7 @@ async function toggleDefect(vid, defect){
 /* ---------------- vehicle files (photos / shaken docs) ---------------- */
 const FILE_CATEGORIES = {
   front:'Front', rear:'Rear', left:'Left Side', right:'Right Side', interior:'Interior',
-  engine:'Engine', underbody:'Underbody', damage:'Damaged Area',
+  engine:'Engine / Motor', underbody:'Underbody', damage:'Damaged Area',
   registration_document:'Registration Doc.', appraisal_document:'Appraisal Doc.', obd_screenshot:'OBD Screenshot'
 };
 function isImageFile(name){ return /\.(jpe?g|png|gif|webp|heic)$/i.test(name||''); }
