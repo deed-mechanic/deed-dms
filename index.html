@@ -2235,7 +2235,10 @@ function renderVehicles(){
   return `
     <div class="topbar">
       <div class="pagetitle">🚗 Vehicles &amp; Appraisal <span class="sub">${vehicles.length} vehicles</span></div>
-      <button class="btn" onclick="openVehicleForm()">＋ New Vehicle</button>
+      <div style="display:flex; gap:8px; flex-wrap:wrap">
+        <button class="btn ghost" onclick="openSheetSync()">📥 Sheet Sync</button>
+        <button class="btn" onclick="openVehicleForm()">＋ New Vehicle</button>
+      </div>
     </div>
     <div class="toolbar">
       <input type="text" id="vehFilterInput" placeholder="🔍 Search by make, model, color, VIN, plate number, or customer…" value="${esc(vehFilter.q)}" oninput="vehFilter.q=this.value; keepFocusAcrossRender('vehFilterInput')">
@@ -4302,6 +4305,441 @@ function showModal(html){
   document.getElementById('modalRoot').innerHTML = `<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`;
 }
 function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
+
+/* ---------------- Sheet Sync (Google Sheets → DMS) ----------------
+   Staff copy a range (with its header row) from one of the three working sheets
+   and paste it here. Rows are matched to DMS vehicles by Stock NO → VIN → plate,
+   and a field-by-field preview is shown before anything is written.
+   Supported sheets (auto-detected from the header row):
+     stock   … 在庫一覧 (Stock No / Бүртгэгдсэн өдөр / Төлөв)
+     consign … 委託・展示車リスト (Бичиг Баримт / Гэрээ / FB page boost)
+     autocom … Autocom 輸入オーダー (Contract No / Container NO / Leaving day)
+   Safety rules: make/model/mileage are only filled when DMS is empty; status and
+   'arrived' are never downgraded; extra sheet columns live in a marker-delimited
+   notes block that is rewritten in place (never stacked — same lesson as the
+   appraisal-note block). */
+const SHEET_NOTE_START = '——— Sheet Sync ———';
+const SHEET_NOTE_END   = '———————————————';
+const SHEET_COLS = [
+  ['stockNo',   h=>h==='stockno'],
+  ['regDate',   h=>h.startsWith('бүртгэ')],
+  ['carName',   h=>h==='carname'],
+  ['chassis',   h=>h.startsWith('chassis')],
+  ['grade',     h=>h==='grade'],
+  ['year',      h=>h==='year'],
+  ['regYear',   h=>h==='reg/year'||h==='regyear'],
+  ['number',    h=>h==='number'],
+  ['colour',    h=>h==='colour'||h==='color'],
+  ['mileage',   h=>h==='millage'||h==='mileage'],
+  ['condition', h=>h==='condition'],
+  ['sellPrice', h=>h.startsWith('sellprice')],
+  ['minPrice',  h=>h.startsWith('доодзарах')],
+  ['clientName',h=>h==='clientname'],
+  ['phone',     h=>h==="client'sphone"||h==='clientphone'||h==='phone'],
+  ['inspection',h=>h.startsWith('улсыноношилгоо')],
+  ['statusNote',h=>h==='төлөв'],
+  ['documents', h=>h==='бичигбаримт'],
+  ['contract',  h=>h==='гэрээ'],
+  ['comment',   h=>h==='comment'],
+  ['fbBoost',   h=>h.startsWith('fbpageboost')||h==='fbboost'],
+  ['salesName', h=>h==='salesname'],
+  ['contractNo',h=>h==='contractno'],
+  ['social',    h=>h.startsWith('socialacc')],
+  ['bidAccount',h=>h==='bidaccount'],
+  ['website',   h=>h==='website'],
+  ['purchased', h=>h.startsWith('purchased')],
+  ['inYard',    h=>h.startsWith('inyard')],
+  ['port',      h=>h.startsWith('хөдөлсөн')],
+  ['container', h=>h.startsWith('containerno')],
+  ['etd',       h=>h.startsWith('leavingday')],
+  ['chinaArr',  h=>h.startsWith('arrivedinchina')],
+  ['chinaLeave',h=>h.startsWith('chinaleaving')],
+  ['ubEta',     h=>h.startsWith('arrivedinub')],
+  ['shipping',  h=>h.startsWith('shipping')],
+  ['paid',      h=>h.startsWith('paid')],
+  ['done',      h=>h.startsWith('done')],
+  ['deposit',   h=>h.startsWith('урьдчилгаа')],
+  ['roadInfo',  h=>h.startsWith('замынмэдээ')],
+  ['finance',   h=>h.startsWith('санхүү')],
+];
+// Extra sheet columns kept in the notes block (label shown in DMS).
+const SHEET_NOTE_FIELDS = [
+  ['stockNo','Stock NO'], ['regDate','Registered'], ['regYear','Reg Year'], ['condition','Auction Grade'], ['grade','Grade'],
+  ['clientName','Client'], ['phone','Client Phone'], ['social','Social'], ['salesName','Sales'], ['contractNo','Contract No'],
+  ['contract','Гэрээ'], ['statusNote','Төлөв'], ['bidAccount','Bid Account'], ['inYard','In Yard'], ['port','Port'],
+  ['container','Container'], ['chinaArr','Arrived China'], ['chinaLeave','China Leaving'], ['shipping','Shipping'],
+  ['paid','Paid 30%/50%'], ['done','Done (Paid)'], ['deposit','Урьдчилгаа'], ['comment','Comment'],
+];
+const SHEET_MAKERS = [
+  [/^(prius|prado|crown|alphard|vellfire|noah|voxy|harrier|rav ?4|land ?cruiser|lc ?\d|camry|corolla|c-?hr|bz4x|hilux|aqua|sienta|estima|mark ?x)/i,'Toyota'],
+  [/^(rx|nx|lx|gx|ls|es|is|gs|hs|rz|rc|ux|lexus)\b/i,'Lexus'],
+  [/^(leaf|patrol|rogue|x-?trail|note|serena|ariya)/i,'Nissan'],
+  [/^(outlander|pajero|delica)/i,'Mitsubishi'],
+  [/^(trx|ram)\b/i,'Dodge'], [/^(f-?150|ranger|mustang)/i,'Ford'],
+  [/^(sealion|seal|atto|han|tang|song)/i,'BYD'], [/^(shine|forthing|evo|aeolus|huge|nammi|vigo)/i,'Dongfeng'],
+  [/^(model [3sxy])/i,'Tesla'], [/^(m[579]\b|aito)/i,'AITO'], [/^(glc|gle|g ?63|e ?\d{3}|c ?\d{3})/i,'Mercedes-Benz'],
+];
+const SHEET_KNOWN_MAKERS = ['Toyota','Lexus','Nissan','Mitsubishi','Honda','Mazda','Subaru','Suzuki','Daihatsu','Hyundai','Kia','Ford','Dodge','Tesla','BYD','Dongfeng','AITO','Porsche','Cadillac','Peugeot','Mercedes-Benz','Mercedes','BMW','Audi','Volkswagen','Land Rover','Mishibushi'];
+
+function sheetNormHeader(s){ return String(s||'').toLowerCase().replace(/[\s ]+/g,''); }
+// Google Sheets copies as TSV; cells containing tabs/newlines/quotes arrive quoted.
+function parseSheetTSV(text){
+  const rows = []; let row = [], cell = '', i = 0, q = false;
+  text = String(text||'').replace(/\r\n?/g,'\n');
+  while(i < text.length){
+    const ch = text[i];
+    if(q){
+      if(ch==='"'){ if(text[i+1]==='"'){ cell+='"'; i+=2; continue; } q=false; i++; continue; }
+      cell += ch; i++; continue;
+    }
+    if(ch==='"' && cell===''){ q=true; i++; continue; }
+    if(ch==='\t'){ row.push(cell); cell=''; i++; continue; }
+    if(ch==='\n'){ row.push(cell); rows.push(row); row=[]; cell=''; i++; continue; }
+    cell += ch; i++;
+  }
+  if(cell!=='' || row.length){ row.push(cell); rows.push(row); }
+  return rows;
+}
+function sheetDetectHeader(rows){
+  let best = {idx:-1, map:null, hits:0};
+  rows.slice(0, 8).forEach((r, idx)=>{
+    const map = {}; let hits = 0;
+    r.forEach((cell, ci)=>{
+      const h = sheetNormHeader(cell);
+      if(!h) return;
+      const col = SHEET_COLS.find(([, test])=>test(h));
+      if(col && map[col[0]]===undefined){ map[col[0]] = ci; hits++; }
+    });
+    // "Car name" is a merged header over Make|Model in the consignment sheet.
+    if(map.carName!==undefined && !sheetNormHeader(r[map.carName+1]) && map.chassis!==map.carName+1){
+      map.carModel = map.carName+1;
+    }
+    if(hits > best.hits) best = {idx, map, hits};
+  });
+  return best.hits >= 3 ? best : null;
+}
+function sheetDetectType(map){
+  if(map.container!==undefined || map.etd!==undefined || map.contractNo!==undefined) return 'autocom';
+  if(map.documents!==undefined || map.contract!==undefined || map.fbBoost!==undefined) return 'consign';
+  if(map.stockNo!==undefined) return 'stock';
+  return 'generic';
+}
+const SHEET_TYPE_LABEL = {stock:'在庫一覧 / Stock List', consign:'委託・展示車 / Consignment List', autocom:'Autocom 輸入オーダー / Import Orders', generic:'Generic sheet'};
+
+function sheetClean(s){ const t = String(s==null?'':s).replace(/\s+/g,' ').trim(); return (t==='-'||t==='—'||/^false$/i.test(t)) ? '' : t; }
+function sheetNormVin(s){ return String(s||'').toUpperCase().replace(/[\s\-_.]/g,''); }
+function sheetNormPlate(s){ return String(s||'').toUpperCase().replace(/[\s\-]/g,''); }
+function sheetPhoneKey(s){ const d = String(s||'').replace(/\D/g,''); return d.length>=8 ? d.slice(0,8) : ''; }
+function sheetParsePrice(s){
+  const t = sheetClean(s).replace(/,/g,'').replace(/\.$/,'');
+  if(!t) return null;
+  const m = /^(\d+(?:\.\d+)?)\s*(m|сая)?$/i.exec(t);
+  if(!m) return null;
+  const n = parseFloat(m[1]);
+  if(m[2] || n < 100000) return Math.round(n * 1000000);   // "59M" / Autocom "27" = сая ₮
+  return Math.round(n);
+}
+function sheetParseMileage(s){
+  const t = sheetClean(s);
+  if(!t || /^new$/i.test(t)) return null;
+  const km = /([\d,\.]+)\s*km/i.exec(t);
+  const raw = km ? km[1] : (/mile/i.test(t) ? '' : t);
+  const n = parseInt(String(raw).replace(/[,\.\s]/g,''), 10);
+  return Number.isFinite(n) && n>0 ? n : null;
+}
+function sheetParseYear(s){ const m = /(19|20)\d{2}/.exec(sheetClean(s)); return m ? +m[0] : null; }
+// "9/25", "09/30", "10/18" → YYYY-MM-DD. Year assumed current; pushed back a year if that lands >4 months ahead.
+function sheetParseDate(s, today){
+  const t = sheetClean(s);
+  if(!t) return '';
+  let m = /^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})$/.exec(t);
+  let y, mo, d;
+  if(m){ y=+m[1]; mo=+m[2]; d=+m[3]; }
+  else if((m = /^(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?$/.exec(t))){
+    mo=+m[1]; d=+m[2];
+    const now = today || new Date();
+    if(m[3]) y = m[3].length===2 ? 2000+(+m[3]) : +m[3];
+    else{ y = now.getFullYear(); if(new Date(y, mo-1, d) - now > 120*86400000) y--; }
+  } else return '';
+  if(mo<1||mo>12||d<1||d>31) return '';
+  return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+function sheetSplitCarName(make, model){
+  make = sheetClean(make); model = sheetClean(model);
+  if(make && model) return {maker: make, model};
+  const full = make || model;
+  if(!full) return {maker:'', model:''};
+  const km = SHEET_KNOWN_MAKERS.find(k => full.toLowerCase().startsWith(k.toLowerCase()+' '));
+  if(km) return {maker: km==='Mishibushi' ? 'Mitsubishi' : (km==='Mercedes' ? 'Mercedes-Benz' : km), model: full.slice(km.length).trim()};
+  const guess = SHEET_MAKERS.find(([re])=>re.test(full));
+  return {maker: guess ? guess[1] : '', model: full};
+}
+function sheetIsHouseClient(name){ return /^(deed ?motors|долгион)/i.test(name||'') || /showroom|өмнөговь/i.test(name||''); }
+
+function parseSheetRows(text, today){
+  const rows = parseSheetTSV(text);
+  const hdr = sheetDetectHeader(rows);
+  if(!hdr) return {error:'Header row not found. Copy the range INCLUDING the header row (Stock No / Car name / Chassis No …).'};
+  const type = sheetDetectType(hdr.map);
+  const get = (r, k) => hdr.map[k]===undefined ? '' : sheetClean(r[hdr.map[k]]);
+  const out = [];
+  rows.slice(hdr.idx+1).forEach((r, i)=>{
+    if(!r.some(c=>sheetClean(c))) return;
+    const rec = {line: hdr.idx+i+2, type};
+    SHEET_COLS.forEach(([k])=>{ rec[k] = get(r, k); });
+    const name = sheetSplitCarName(get(r,'carName'), hdr.map.carModel!==undefined ? sheetClean(r[hdr.map.carModel]) : '');
+    rec.maker = name.maker; rec.model = name.model;
+    rec.stockNo = (/DM\d+/i.exec(rec.stockNo)||[''])[0].toUpperCase();
+    rec.vinKey = sheetNormVin(rec.chassis);
+    if(rec.vinKey.length < 6) rec.vinKey = '';
+    rec.plateKey = /\d/.test(rec.number) ? sheetNormPlate(rec.number) : '';
+    rec.priceSale = sheetParsePrice(rec.sellPrice);
+    rec.minSell = sheetParsePrice(rec.minPrice);
+    rec.km = sheetParseMileage(rec.mileage);
+    rec.yearN = sheetParseYear(rec.year);
+    rec.etdDate = sheetParseDate(rec.etd, today);
+    rec.ubDate = sheetParseDate(rec.ubEta, today);
+    rec.purchasedDate = sheetParseDate(rec.purchased, today);
+    rec.regDateIso = sheetParseDate(rec.regDate, today);
+    if(sheetIsHouseClient(rec.clientName)){ rec.houseLocation = rec.clientName; rec.clientName = ''; }
+    ['done','paid'].forEach(k=>{ if(/^true$/i.test(rec[k])) rec[k] = '✓'; });
+    ['regDate','inYard','chinaArr','chinaLeave'].forEach(k=>{ const d = sheetParseDate(rec[k], today); if(d) rec[k] = d; });
+    if(!rec.model && !rec.stockNo && !rec.vinKey) return;     // blank template rows (e.g. "65 | SWD")
+    if(!rec.model && !rec.vinKey) return;                     // Stock NO reserved but nothing filled yet
+    out.push(rec);
+  });
+  return {type, header: hdr, rows: out};
+}
+function sheetNoteMap(notes){
+  const esc2 = s => s.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+  const m = new RegExp(esc2(SHEET_NOTE_START) + '([\\s\\S]*?)' + esc2(SHEET_NOTE_END)).exec(notes||'');
+  const map = {};
+  if(m) m[1].split('\n').forEach(l=>{ const i = l.indexOf(':'); if(i>0) map[l.slice(0,i).trim()] = l.slice(i+1).trim(); });
+  return map;
+}
+function sheetMergeNotes(notes, kv){
+  const esc2 = s => s.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+  const re = new RegExp(esc2(SHEET_NOTE_START) + '[\\s\\S]*?' + esc2(SHEET_NOTE_END), 'g');
+  const stripped = (notes||'').replace(re,'').trim();
+  const lines = Object.entries(kv).filter(([,v])=>v).map(([k,v])=>`${k}: ${v}`);
+  if(!lines.length) return stripped;
+  const block = [SHEET_NOTE_START, ...lines, SHEET_NOTE_END].join('\n');
+  return stripped ? `${block}\n\n${stripped}` : block;
+}
+function sheetStockNoOf(v){ return ((v.notes||'').match(/Stock NO:\s*(DM\d+)/i)||[])[1] || ''; }
+
+// Builds the proposed change set. Pure: takes vehicles/customers arrays, returns plan items.
+function buildSheetSyncPlan(parsed, vehs, custs, today){
+  const now = (today||new Date()).getTime();
+  const byStock = {}, byVin = {}, byPlate = {};
+  vehs.forEach(v=>{
+    const s = sheetStockNoOf(v).toUpperCase(); if(s) (byStock[s] = byStock[s]||[]).push(v);
+    const k = sheetNormVin(v.vin); if(k.length>=6) (byVin[k] = byVin[k]||[]).push(v);
+    const p = sheetNormPlate(v.regNum); if(p && /\d/.test(p)) (byPlate[p] = byPlate[p]||[]).push(v);
+  });
+  const custByPhone = {};
+  custs.forEach(c=>{ const k = sheetPhoneKey(c.phone); if(k && !custByPhone[k]) custByPhone[k] = c; });
+  const seen = new Set();
+  return parsed.rows.map(rec=>{
+    let v = null, how = '';
+    if(rec.stockNo && byStock[rec.stockNo]){ v = byStock[rec.stockNo][0]; how = 'Stock NO'; }
+    else if(rec.vinKey && byVin[rec.vinKey]){ v = byVin[rec.vinKey][0]; how = 'VIN'; }
+    else if(rec.plateKey && byPlate[rec.plateKey]){ v = byPlate[rec.plateKey][0]; how = 'Plate'; }
+    const warn = [];
+    let weak = false;
+    if(!v && !rec.stockNo && !rec.vinKey && rec.model){
+      // No hard key: offer a look-alike (same model + year + color) but leave it unticked for a human to confirm.
+      const mk = sheetNormHeader(rec.model).replace(/[^a-z0-9а-яөү]/g,'');
+      const cand = vehs.find(x=>!seen.has(x.id) && x.year && x.year===rec.yearN && sheetNormHeader(x.color)===sheetNormHeader(rec.colour)
+        && mk && (sheetNormHeader(x.model).replace(/[^a-z0-9а-яөү]/g,'').includes(mk.slice(0,5)) || mk.includes(sheetNormHeader(x.model).replace(/[^a-z0-9а-яөү]/g,'').slice(0,5))));
+      if(cand){ v = cand; how = 'Model+Year+Color (please confirm)'; weak = true; warn.push(`Possible match: ${cand.maker} ${cand.model} ${cand.year} ${cand.color}${sheetStockNoOf(cand)?' · '+sheetStockNoOf(cand):''} — tick only if it is the same car`); }
+    }
+    if(v && seen.has(v.id)) warn.push('Same DMS vehicle matched by another row above');
+    if(v) seen.add(v.id);
+    if(v && rec.vinKey && sheetNormVin(v.vin).length>=6 && sheetNormVin(v.vin)!==rec.vinKey) warn.push(`VIN differs (DMS ${v.vin})`);
+    if(v && rec.stockNo && sheetStockNoOf(v) && sheetStockNoOf(v).toUpperCase()!==rec.stockNo) warn.push(`Stock NO differs (DMS ${sheetStockNoOf(v)})`);
+    const changes = [];
+    const cur = v || {};
+    const prop = (field, label, val, opts={}) => {
+      if(val===null || val===undefined || val==='') return;
+      const old = cur[field];
+      if(opts.onlyIfEmpty && old!==undefined && old!==null && old!=='' && old!==0) return;
+      if(String(old==null?'':old) === String(val)) return;
+      changes.push({field, label, old: old==null?'':old, val, on: opts.off ? false : true});
+    };
+    prop('maker','Make', rec.maker, {onlyIfEmpty:true});
+    prop('model','Model', rec.model, {onlyIfEmpty:true});
+    prop('year','Year', rec.yearN, {onlyIfEmpty:true});
+    prop('vin','VIN', rec.chassis && rec.vinKey ? rec.chassis : '', {onlyIfEmpty:true});
+    if(rec.plateKey && sheetNormPlate(cur.regNum)!==rec.plateKey) prop('regNum','Plate No.', rec.number);
+    prop('color','Color', rec.colour);
+    prop('mileage','Mileage (km)', rec.km, {off: !!(v && cur.mileage && rec.km < cur.mileage)});
+    prop('priceSale','Sale Price (₮)', rec.priceSale);
+    prop('minSellPrice','Min Sell Price (₮)', rec.minSell);
+    if(rec.type==='autocom'){
+      prop('purchasedDate','Purchased Date', rec.purchasedDate);
+      prop('etd','ETD (Leaving)', rec.etdDate);
+      prop('eta','ETA (Arrives UB)', rec.ubDate);
+      const ubPast = rec.ubDate && parseEtaDate(rec.ubDate)!==null && parseEtaDate(rec.ubDate) <= now;
+      if(v && cur.arrived===false && ubPast) prop('arrived','Arrived in UB', true);
+    }
+    if(rec.documents) prop('hasDocuments','Documents', /байгаа/i.test(rec.documents) ? 'Байгаа' : (/байхгүй/i.test(rec.documents) ? 'Байхгүй' : rec.documents));
+    if(rec.inspection) prop('stateInspectionStatus','State Inspection', rec.inspection);
+    if(rec.fbBoost && !cur.fbBoosted) prop('fbBoosted','FB Boosted', true);
+    if(rec.condition && !/^new$/i.test(rec.condition)) prop('externalGrade','Grade', rec.condition, {onlyIfEmpty:true});
+    // Consignor link (consignment sheet: "Client name" = vehicle owner).
+    let ownerCust = null;
+    if(rec.type==='consign' && rec.phone){
+      ownerCust = custByPhone[sheetPhoneKey(rec.phone)] || null;
+      if(ownerCust && cur.ownerCustomerId!==ownerCust.id && !cur.ownerCustomerId) changes.push({field:'ownerCustomerId', label:'Owner / Consignor', old:'', val: ownerCust.id, display: ownerCust.name, on:true});
+    }
+    // Notes block (merge over keys already there so other sheets' keys survive).
+    const kv = sheetNoteMap(cur.notes);
+    const before = JSON.stringify(kv);
+    SHEET_NOTE_FIELDS.forEach(([k, label])=>{
+      if(k==='stockNo' && !rec.stockNo) return;
+      if(rec[k]) kv[label] = rec[k];
+    });
+    if(rec.houseLocation) kv['Location'] = rec.houseLocation;
+    if(rec.phone && rec.clientName && !ownerCust && rec.type!=='consign'){
+      const c = custByPhone[sheetPhoneKey(rec.phone)];
+      if(c) kv['Client'] = `${rec.clientName} (DMS: ${c.name})`;
+    }
+    const outsideHasStock = v && sheetStockNoOf({notes: sheetMergeNotes(cur.notes, {})});
+    if(outsideHasStock) delete kv['Stock NO'];
+    if(JSON.stringify(kv)!==before) changes.push({field:'notes', label:'Notes (Sheet Sync block)', old:'', val: kv, display: Object.entries(kv).map(([a,b])=>`${a}: ${b}`).join(' · '), on:true});
+    let isNew = !v;
+    if(isNew && !rec.model) warn.push('No car name — cannot create');
+    if(isNew && !rec.stockNo && !rec.vinKey) warn.push('No Stock NO or VIN — check it is not a duplicate');
+    const clientNotInDms = rec.clientName && rec.phone && !custByPhone[sheetPhoneKey(rec.phone)];
+    return {
+      rec, vehicle: v, how, isNew, changes, warn, clientNotInDms,
+      include: isNew ? (!!rec.model && !!(rec.stockNo || rec.vinKey)) : (changes.length>0 && !weak),
+      newStatus: isNew ? (rec.contractNo ? 'sold' : 'stock') : null,
+      newArrived: isNew ? (rec.type==='autocom' ? !!(rec.ubDate && parseEtaDate(rec.ubDate)!==null && parseEtaDate(rec.ubDate) <= now) : true) : null,
+    };
+  });
+}
+function applySheetChange(v, ch){
+  if(ch.field==='notes') v.notes = sheetMergeNotes(v.notes, ch.val);
+  else v[ch.field] = ch.val;
+}
+
+/* ---- UI ---- */
+let sheetSyncState = null;
+function openSheetSync(){
+  sheetSyncState = null;
+  showModal(`
+    <div class="modal-head"><h3>📥 Sheet Sync <span style="font-size:12px; color:var(--text-dim); font-weight:400">· Хүснэгтээс шинэчлэх</span></h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div style="font-size:12px; color:var(--text-dim); line-height:1.7; margin-bottom:12px">
+        1. In Google Sheets, select the range <b>including the header row</b> (Stock No / Car name …) and copy (Ctrl+C).<br>
+        <span style="color:var(--text-dim2)">Google Sheets дээр гарчгийн мөртэй нь хамт сонгоод хуулна.</span><br>
+        2. Paste below and press <b>Analyze</b>. Nothing is saved until you press <b>Apply</b>.<br>
+        <span style="color:var(--text-dim2)">Supported: 在庫一覧 (Stock List) · 委託・展示車 (Consignment) · Autocom orders.</span>
+      </div>
+      <textarea id="f_sheetpaste" placeholder="Paste copied cells here…" style="width:100%; min-height:120px; background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:10px; font-family:'JetBrains Mono',monospace; font-size:11px"></textarea>
+      <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap">
+        <button type="button" class="btn sm" onclick="importFromClipboard('f_sheetpaste', analyzeSheetSync)">📥 Paste from Clipboard &amp; Analyze</button>
+        <button type="button" class="btn ghost sm" onclick="analyzeSheetSync()">🔍 Analyze</button>
+      </div>
+      <div id="sheetSyncResult" style="margin-top:14px"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">Close</button>
+      <button class="btn" id="sheetSyncApplyBtn" onclick="applySheetSync()" disabled>Apply</button>
+    </div>
+  `);
+  const m = document.querySelector('#modalRoot .modal'); if(m) m.style.maxWidth = '980px';
+}
+function analyzeSheetSync(){
+  const text = document.getElementById('f_sheetpaste').value;
+  const out = document.getElementById('sheetSyncResult');
+  if(!text.trim()){ out.innerHTML = `<div style="color:var(--amber); font-size:12px">Paste the copied cells first.</div>`; return; }
+  const parsed = parseSheetRows(text);
+  if(parsed.error){ out.innerHTML = `<div style="color:var(--red); font-size:12.5px">${esc(parsed.error)}</div>`; document.getElementById('sheetSyncApplyBtn').disabled = true; return; }
+  const plan = buildSheetSyncPlan(parsed, vehicles, customers);
+  sheetSyncState = {parsed, plan};
+  renderSheetSyncPreview();
+}
+function sheetSyncFmt(field, val, display){
+  if(display) return esc(display);
+  if(val===true) return 'Yes'; if(val===false) return 'No';
+  if(['priceSale','minSellPrice'].includes(field) && val) return fmtMoney(val);
+  if(field==='mileage' && val) return Number(val).toLocaleString()+'km';
+  return esc(val===''||val==null ? '—' : val);
+}
+function renderSheetSyncPreview(){
+  const {parsed, plan} = sheetSyncState;
+  const nNew = plan.filter(p=>p.isNew).length, nUpd = plan.filter(p=>!p.isNew && p.changes.length).length, nSame = plan.filter(p=>!p.isNew && !p.changes.length).length;
+  const missingClients = plan.filter(p=>p.clientNotInDms);
+  const tag = (txt, color) => `<span class="badge" style="position:static; background:var(--${color}-soft); color:var(--${color}); font-size:10.5px">${txt}</span>`;
+  const items = plan.map((p, i)=>{
+    if(!p.isNew && !p.changes.length) return '';
+    const r = p.rec;
+    return `
+      <div class="panel" style="background:var(--panel2); padding:10px 12px; margin-bottom:8px; ${p.include?'':'opacity:.6'}">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+          <input type="checkbox" style="width:auto" ${p.include?'checked':''} onchange="sheetSyncState.plan[${i}].include=this.checked; renderSheetSyncPreview()">
+          <b style="font-size:13px">${esc(r.stockNo||'—')}</b>
+          <span style="font-size:13px">${esc([r.maker, r.model].filter(Boolean).join(' '))} ${r.yearN||''}</span>
+          <span class="mono" style="font-size:11px; color:var(--text-dim)">${esc(r.chassis||'')}</span>
+          ${p.isNew ? tag('＋ NEW · '+(p.newStatus==='sold'?'Sold':'In Stock')+(p.newArrived?'':' · 🚢 In Transit'),'green') : tag('UPDATE · matched by '+p.how,'teal')}
+          <span style="font-size:10.5px; color:var(--text-dim2)">row ${r.line}</span>
+        </div>
+        ${p.warn.map(w=>`<div style="font-size:11.5px; color:var(--amber); margin-top:4px">⚠ ${esc(w)}</div>`).join('')}
+        ${p.changes.length ? `<div style="margin-top:6px; display:grid; gap:3px">${p.changes.map((ch, j)=>`
+          <label style="display:flex; gap:8px; align-items:flex-start; font-size:12px; ${p.include?'':'pointer-events:none'}">
+            <input type="checkbox" style="width:auto; margin-top:2px" ${ch.on?'checked':''} onchange="sheetSyncState.plan[${i}].changes[${j}].on=this.checked">
+            <span style="min-width:130px; color:var(--text-dim)">${esc(ch.label)}</span>
+            ${p.isNew || ch.field==='notes' ? '' : `<span style="color:var(--text-dim2); text-decoration:line-through">${sheetSyncFmt(ch.field, ch.old)}</span><span>→</span>`}
+            <span style="${ch.field==='notes'?'font-size:11px; color:var(--text-dim)':''}">${sheetSyncFmt(ch.field, ch.val, ch.display)}</span>
+          </label>`).join('')}</div>` : ''}
+      </div>`;
+  }).join('');
+  document.getElementById('sheetSyncResult').innerHTML = `
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px">
+      <b style="font-size:13px">${esc(SHEET_TYPE_LABEL[parsed.type])}</b>
+      ${tag(parsed.rows.length+' rows','blue')} ${tag('＋ New '+nNew,'green')} ${tag('Update '+nUpd,'teal')} ${tag('No change '+nSame,'violet')}
+    </div>
+    ${missingClients.length ? `<div style="font-size:11.5px; color:var(--text-dim); margin-bottom:10px; line-height:1.6">ℹ️ Clients not yet in DMS (saved in the vehicle notes; register them as customers if needed): ${missingClients.map(p=>esc(p.rec.clientName)).join(', ')}</div>` : ''}
+    ${items || `<div class="empty" style="padding:20px"><b>Everything is already up to date</b>DMS matches the sheet.</div>`}
+  `;
+  const nApply = plan.filter(p=>p.include && (p.isNew || p.changes.some(c=>c.on))).length;
+  const btn = document.getElementById('sheetSyncApplyBtn');
+  btn.disabled = nApply===0;
+  btn.textContent = nApply ? `Apply ${nApply} vehicle(s)` : 'Apply';
+}
+async function applySheetSync(){
+  if(!sheetSyncState) return;
+  const todo = sheetSyncState.plan.filter(p=>p.include && (p.isNew || p.changes.some(c=>c.on)));
+  if(!todo.length) return;
+  if(!confirm(`Apply changes to ${todo.length} vehicle(s)?`)) return;
+  const btn = document.getElementById('sheetSyncApplyBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const touched = [];
+  todo.forEach(p=>{
+    let v = p.vehicle;
+    if(p.isNew){
+      v = {id:uid('V'), kind:'stock', maker:'', model:'', year:null, color:'', mileage:0, vin:'', regNum:'', priceCost:0, priceSale:0,
+           status:p.newStatus, notes:'', arrived:p.newArrived, appraisal:{exterior:0,interior:0,engine:0,undercarriage:0,electrical:0}, defects:[], createdAt:Date.now()};
+      vehicles.push(v);
+    }
+    p.changes.filter(c=>c.on).forEach(c=>applySheetChange(v, c));
+    if(p.isNew && !v.notes.includes('Stock NO:') && p.rec.stockNo) v.notes = sheetMergeNotes(v.notes, {...sheetNoteMap(v.notes), 'Stock NO': p.rec.stockNo});
+    touched.push(v);
+  });
+  saving = true; renderSaveBar();
+  let failed = 0;
+  for(let i=0; i<touched.length; i+=50){
+    const { error } = await sb.from('vehicles').upsert(touched.slice(i, i+50).map(vehicleToRow));
+    if(error){ console.error('sheet sync save error', error); failed += Math.min(50, touched.length-i); }
+  }
+  saving = false; renderSaveBar();
+  closeModal();
+  renderView();
+  alert(failed ? `Saved ${touched.length-failed}, failed ${failed}. Check the connection and run Sheet Sync again.` : `✓ ${touched.length} vehicle(s) updated from the sheet.`);
+}
 
 /* ---------------- router ---------------- */
 // renderView() replaces the whole #view innerHTML, which recreates search <input>
