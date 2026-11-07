@@ -4640,7 +4640,7 @@ function openSheetSync(){
       </div>
       <textarea id="f_sheetpaste" placeholder="Paste copied cells here…" style="width:100%; min-height:120px; background:var(--panel2); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:10px; font-family:'JetBrains Mono',monospace; font-size:11px"></textarea>
       <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap">
-        <button type="button" class="btn sm" onclick="importFromClipboard('f_sheetpaste', analyzeSheetSync)">📥 Paste from Clipboard &amp; Analyze</button>
+        <button type="button" class="btn sm" onclick="sheetPasteFromClipboard()">📥 Paste from Clipboard &amp; Analyze</button>
         <button type="button" class="btn ghost sm" onclick="analyzeSheetSync()">🔍 Analyze</button>
       </div>
       <div id="sheetSyncResult" style="margin-top:14px"></div>
@@ -4651,6 +4651,44 @@ function openSheetSync(){
     </div>
   `);
   const m = document.querySelector('#modalRoot .modal'); if(m) m.style.maxWidth = '980px';
+  // Ctrl+V of a screenshot / "Copy as Picture" gives an image with no text — explain instead of doing nothing.
+  document.getElementById('f_sheetpaste').addEventListener('paste', e=>{
+    const cd = e.clipboardData; if(!cd) return;
+    const hasText = !!cd.getData('text/plain').trim();
+    const hasImage = [...(cd.items||[])].some(it=>it.type.startsWith('image/'));
+    if(!hasText && hasImage){ e.preventDefault(); sheetShowImageHelp(); }
+    else if(hasText) setTimeout(analyzeSheetSync, 0);
+  });
+}
+function sheetShowImageHelp(){
+  document.getElementById('sheetSyncResult').innerHTML = `
+    <div class="panel" style="background:var(--amber-soft); border-color:#f5a62355; font-size:12.5px; line-height:1.8">
+      <b>🖼 An image was pasted — cells are needed (зураг биш, нүднүүдийг хуулна уу)</b><br>
+      A screenshot or "Copy as Picture" contains no text, so it cannot be read.<br>
+      <b>Excel / Google Sheets:</b> drag over the cells (header row included) → <b>Ctrl+C</b> → click here → <b>Ctrl+V</b>.<br>
+      <span style="color:var(--text-dim)">Excel: нүднүүдийг гарчигтай нь сонгоод Ctrl+C → энд Ctrl+V. «Зураг болгон хуулах» (Copy as Picture) болон дэлгэцийн зураг ажиллахгүй.</span><br>
+      <span style="color:var(--text-dim)">Mac: ⌘C / ⌘V. Only a screenshot available? Ask the person who has the file to copy the cells.</span>
+    </div>`;
+  document.getElementById('sheetSyncApplyBtn').disabled = true;
+}
+async function sheetPasteFromClipboard(){
+  try{
+    if(navigator.clipboard.read){
+      const items = await navigator.clipboard.read();
+      const textItem = items.find(it=>it.types.includes('text/plain'));
+      if(textItem){
+        const text = await (await textItem.getType('text/plain')).text();
+        if(text.trim()){ document.getElementById('f_sheetpaste').value = text; analyzeSheetSync(); return; }
+      }
+      if(items.some(it=>it.types.some(t=>t.startsWith('image/')))){ sheetShowImageHelp(); return; }
+    }
+    const text = await navigator.clipboard.readText();
+    if(!text.trim()){ sheetShowImageHelp(); return; }
+    document.getElementById('f_sheetpaste').value = text; analyzeSheetSync();
+  }catch(e){
+    document.getElementById('sheetSyncResult').innerHTML = `<div style="font-size:12.5px; color:var(--amber); line-height:1.7">The browser blocked clipboard access. Click the box above and press <b>Ctrl+V</b> (Mac: ⌘V) instead — it analyzes automatically.<br><span style="color:var(--text-dim)">Дээрх хайрцаг дээр дараад Ctrl+V дарна уу.</span></div>`;
+    document.getElementById('f_sheetpaste').focus();
+  }
 }
 function analyzeSheetSync(){
   const text = document.getElementById('f_sheetpaste').value;
