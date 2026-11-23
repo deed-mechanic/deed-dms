@@ -405,6 +405,853 @@
 </div>
 <button id="mnKeyboardToggleBtn" class="btn" style="position:fixed; right:16px; bottom:16px; z-index:59;" onclick="toggleMnKeyboard()">🇲🇳 ⌨ Mongolian Keyboard</button>
 
+<!-- I18N:START -->
+<script>
+/* ============================================================
+   I18N — language switch (EN / 日本語 / МН)
+   The app is written in English. This layer translates what appears on screen:
+   it walks the DOM and swaps each text node / placeholder / title whose WHOLE text matches a
+   dictionary entry (exact) or a pattern (strings that contain numbers/names). Data typed by
+   staff (names, notes, plate numbers …) never matches, so it is never translated.
+   Unknown strings stay in English. Add entries with I18N.add(lang, {english: translation}) and
+   I18N.addRe(lang, [[/regex/, (m1,m2)=>string], …]).
+   Console helper: I18N.misses() lists on-screen English strings that have no translation yet.
+============================================================ */
+(function(){
+  const LANGS = {en:'EN', ja:'日本語', mn:'МН'};
+  const D = {ja:{}, mn:{}};
+  const R = {ja:[], mn:[]};
+  const PHR = {ja:[], mn:[]};   // fixed phrases replaced inside longer strings
+  const miss = new Set();
+  const origText = new WeakMap();   // text node -> {o: original English, s: what we last wrote}
+  const origAttr = new WeakMap();   // element   -> {attr: {o, s}}
+  const ATTRS = ['placeholder','title','aria-label'];
+  const SKIP_TAGS = new Set(['SCRIPT','STYLE','TEXTAREA','CODE','PRE']);
+  let lang = 'en';
+  try{ const s = localStorage.getItem('dms_lang'); if(s && LANGS[s]) lang = s; }catch(e){}
+
+  const norm = s => s.replace(/\s+/g,' ').trim();
+  // Look a plain string up: exact entry, then entry with numbers replaced by "#" (numbers are put back).
+  function lookup(core){
+    let out = D[lang][core];
+    if(out!==undefined) return out;
+    const nums = core.match(/\d[\d,]*(?:\.\d+)?/g);
+    if(nums){
+      const key = core.replace(/\d[\d,]*(?:\.\d+)?/g, '#');
+      const t = D[lang][key];
+      if(t!==undefined){ let i = 0; return t.replace(/#/g, ()=> nums[i++] ?? '#'); }
+    }
+    return undefined;
+  }
+  function tr(s){
+    if(lang==='en' || !s) return s;
+    const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(s);
+    const core = norm(m[2]);
+    if(!core) return s;
+    let out = lookup(core);
+    // leading symbols / emoji / arrows ("📋 ", "＋ ", "← ", "⚠️ ", "① ") are kept, the rest is translated
+    const pm = /^((?:[\u2460-\u2473]|[^\p{L}\p{N}#(])+)([\s\S]+)$/u.exec(core);
+    const rem = pm ? norm(pm[2]) : null;
+    if(out===undefined && pm){ const r = lookup(rem); if(r!==undefined) out = pm[1] + r; }
+    if(out===undefined){
+      for(const [re, fn] of R[lang]){
+        let mm = re.exec(core);
+        if(mm){ out = fn(...mm.slice(1)); break; }
+        if(pm && (mm = re.exec(rem))){ out = pm[1] + fn(...mm.slice(1)); break; }
+      }
+    }
+    if(out===undefined){
+      // fixed phrases that sit inside a longer string (e.g. "name ・ (Unknown vehicle)")
+      let t = core, changed = false;
+      for(const [en, tt] of PHR[lang]){ if(t.includes(en)){ t = t.split(en).join(tt); changed = true; } }
+      if(changed) out = t;
+    }
+    if(out===undefined){ if(/[A-Za-z]{3,}/.test(core)) miss.add(core); return s; }
+    return m[1] + out + m[3];
+  }
+  function skipEl(el){
+    for(let e = el; e && e.nodeType===1; e = e.parentElement){
+      if(SKIP_TAGS.has(e.tagName) || e.hasAttribute('data-i18n-skip') || e.isContentEditable) return true;
+    }
+    return false;
+  }
+  function doText(node){
+    if(skipEl(node.parentElement)) return;
+    const v = node.nodeValue;
+    let rec = origText.get(node);
+    if(!rec || v !== rec.s) rec = {o: v, s: v};   // new node, or the app wrote new English text into it
+    const out = tr(rec.o);
+    if(out !== v) node.nodeValue = out;
+    rec.s = out;
+    origText.set(node, rec);
+  }
+  function doAttrs(el){
+    if(el.nodeType!==1 || skipEl(el)) return;
+    let rec = origAttr.get(el);
+    for(const a of ATTRS){
+      if(!el.hasAttribute(a)) continue;
+      const v = el.getAttribute(a);
+      rec = rec || {};
+      let r = rec[a];
+      if(!r || v !== r.s) r = {o: v, s: v};
+      const out = tr(r.o);
+      if(out !== v) el.setAttribute(a, out);
+      r.s = out; rec[a] = r;
+    }
+    if(rec) origAttr.set(el, rec);
+  }
+  function walk(root){
+    if(!root) return;
+    if(root.nodeType===3){ doText(root); return; }
+    if(root.nodeType!==1) return;
+    doAttrs(root);
+    const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+    let n;
+    while((n = tw.nextNode())){
+      if(n.nodeType===3) doText(n); else doAttrs(n);
+    }
+  }
+  function translateAll(){
+    document.documentElement.setAttribute('lang', lang==='mn' ? 'mn' : lang);
+    document.documentElement.setAttribute('data-lang', lang);
+    walk(document.body);
+    document.title = tr(document.title) || document.title;
+    paintButtons();
+  }
+  let pending = false;
+  const queue = new Set();
+  function flush(){
+    pending = false;
+    const items = [...queue]; queue.clear();
+    obs.disconnect();
+    try{ items.forEach(walk); } finally { start(); }
+  }
+  const obs = new MutationObserver(muts=>{
+    if(lang==='en') return;
+    for(const m of muts){
+      if(m.type==='childList') m.addedNodes.forEach(n=>queue.add(n));
+      else if(m.type==='characterData') queue.add(m.target);
+      else if(m.type==='attributes') queue.add(m.target);
+    }
+    if(queue.size && !pending){ pending = true; requestAnimationFrame(flush); }
+  });
+  function start(){
+    obs.observe(document.body, {childList:true, subtree:true, characterData:true, attributes:true, attributeFilter:ATTRS});
+  }
+
+  /* ---- language buttons (sidebar + login screen) ---- */
+  function btnsHtml(){
+    return Object.keys(LANGS).map(k=>`<button type="button" class="langbtn${k===lang?' on':''}" data-lang="${k}" onclick="I18N.set('${k}')" title="${k==='en'?'English':k==='ja'?'日本語':'Монгол'}">${LANGS[k]}</button>`).join('');
+  }
+  function paintButtons(){
+    document.querySelectorAll('.langsw .langbtn').forEach(b=>b.classList.toggle('on', b.dataset.lang===lang));
+  }
+  function mount(){
+    const css = document.createElement('style');
+    css.textContent = `
+      .langsw{display:flex; gap:4px; margin:10px 0 2px}
+      .langsw .langbtn{flex:1; padding:5px 6px; font-size:12px; font-weight:700; border-radius:8px; cursor:pointer;
+        border:1px solid var(--line); background:var(--panel2); color:var(--text-dim)}
+      .langsw .langbtn.on{background:var(--teal); color:#07151a; border-color:var(--teal)}
+      #loginScreen .langsw{justify-content:center; margin:0 0 12px}
+      html[data-lang="ja"] .navitem .lbl small, html[data-lang="mn"] .navitem .lbl small{display:none}
+    `;
+    document.head.appendChild(css);
+    const mk = ()=>{ const d=document.createElement('div'); d.className='langsw'; d.setAttribute('data-i18n-skip',''); d.innerHTML=btnsHtml(); return d; };
+    const brand = document.querySelector('#sidebar .brand');
+    if(brand) brand.after(mk());
+    const lp = document.querySelector('#loginScreen .panel');
+    if(lp) lp.prepend(mk());
+  }
+  function set(l){
+    if(!LANGS[l]) return;
+    lang = l;
+    try{ localStorage.setItem('dms_lang', l); }catch(e){}
+    translateAll();
+  }
+
+  window.I18N = {
+    get lang(){ return lang; },
+    set,
+    t: s => tr(s),
+    add(l, obj){ Object.assign(D[l], obj); },
+    T(e, j, m){ D.ja[e] = j; D.mn[e] = m; },
+    addRe(l, arr){ R[l].push(...arr); },
+    addPhrases(l, arr){ PHR[l].push(...arr); },
+    misses(){ return [...miss].sort(); },
+    clearMisses(){ miss.clear(); },
+    refresh: translateAll,
+  };
+
+  // Native dialogs: translate the message too (whole string, then line by line).
+  ['alert','confirm','prompt'].forEach(fn=>{
+    const orig = window[fn].bind(window);
+    window[fn] = function(msg, ...rest){
+      let m = msg==null ? msg : String(msg);
+      if(lang!=='en' && m){
+        const whole = tr(m);
+        m = whole!==m ? whole : m.split('\n').map(tr).join('\n');
+      }
+      return orig(m, ...rest);
+    };
+  });
+
+  function init(){ mount(); translateAll(); start(); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+
+/* i18n dictionary part 10 — common controls, navigation, login, dashboard, calendar.  T(English, 日本語, Монгол)
+   "#" stands for a number (it is put back). A leading symbol/emoji is kept automatically. */
+(function(){ const T = I18N.T;
+/* ---------- generic buttons & words ---------- */
+T('Save','保存','Хадгалах');
+T('Cancel','キャンセル','Болих');
+T('Close','閉じる','Хаах');
+T('Close ✕','閉じる ✕','Хаах ✕');
+T('Delete','削除','Устгах');
+T('Edit','編集','Засах');
+T('Add','追加','Нэмэх');
+T('Change','変更','Өөрчлөх');
+T('Apply','適用','Хэрэглэх');
+T('Register','登録','Бүртгэх');
+T('Download','ダウンロード','Татах');
+T('Details','詳細','Дэлгэрэнгүй');
+T('Details / Notes','詳細・備考','Дэлгэрэнгүй / Тэмдэглэл');
+T('All','すべて','Бүгд');
+T('None','なし','Байхгүй');
+T('Yes','はい','Тийм');
+T('Date','日付','Огноо');
+T('Name','名前','Нэр');
+T('Note','メモ','Тэмдэглэл');
+T('Notes','備考','Тэмдэглэл');
+T('Memo','メモ','Тэмдэглэл');
+T('Type','区分','Төрөл');
+T('Status','状態','Төлөв');
+T('Category','カテゴリ','Ангилал');
+T('Role','役職','Албан тушаал');
+T('Phone Number','電話番号','Утасны дугаар');
+T('Email Address','メールアドレス','Имэйл хаяг');
+T('Address','住所','Хаяг');
+T('Birthday','誕生日','Төрсөн өдөр');
+T('Loading…','読み込み中…','Ачаалж байна…');
+T('Next →','次へ →','Дараах →');
+T('Prev','前へ','Өмнөх');
+T('Next','次へ','Дараах');
+T('Not set','未設定','Тохируулаагүй');
+T('Unassigned','担当者なし','Хариуцагчгүй');
+T('Search','検索','Хайх');
+T('Move up','上へ移動','Дээш зөөх');
+T('Move down','下へ移動','Доош зөөх');
+T('Yes','はい','Тийм');
+T('Mon','月','Да'); T('Tue','火','Мя'); T('Wed','水','Лх'); T('Thu','木','Пү'); T('Fri','金','Ба'); T('Sat','土','Бя'); T('Sun','日','Ня');
+T('this month','今月','энэ сард');
+T('units','台','ш');
+T('YYYY-MM-DD','YYYY-MM-DD','YYYY-MM-DD');
+
+/* ---------- sidebar / login ---------- */
+T('Dashboard','ダッシュボード','Хяналтын самбар');
+T('Manual','マニュアル','Гарын авлага');
+T('Customers','顧客管理','Үйлчлүүлэгч');
+T('Vehicles & Appraisal','車両管理・査定','Машин · Үнэлгээ');
+T('Deal Pipeline','商談管理','Худалдааны явц');
+T('Staff','スタッフ','Ажилтан');
+T('Reminder Settings','リマインド設定','Сануулгын тохиргоо');
+T('Calendar','カレンダー','Хуанли');
+T('Trash','ゴミ箱','Хогийн сав');
+T('Menu','メニュー','Цэс');
+T('DMS — Dealer Management','DMS — ディーラー管理','DMS — Дилерийн удирдлага');
+T('Japanese Used Car Sales & Appraisal','日本中古車の販売と査定','Япон хуучин машины худалдаа ба үнэлгээ');
+T('Download Backup','バックアップをダウンロード','Нөөц хуулбар татах');
+T('Change Password','パスワード変更','Нууц үг солих');
+T('Change Shared Password','共有パスワードの変更','Нийтийн нууц үг солих');
+T('Version 1.0','バージョン 1.0','Хувилбар 1.0');
+T('Log Out','ログアウト','Гарах');
+T('Log In','ログイン','Нэвтрэх');
+T('Staff Password','スタッフ用パスワード','Ажилтны нууц үг');
+T('Enter password','パスワードを入力','Нууц үгээ оруулна уу');
+T('Incorrect password','パスワードが違います','Нууц үг буруу байна');
+T('New password','新しいパスワード','Шинэ нууц үг');
+T('New password (confirm)','新しいパスワード（確認）','Шинэ нууц үг (давтан)');
+T('This changes the login password shared by all staff. After changing it, be sure to tell the other staff the new password (#+ characters).','全スタッフ共通のログインパスワードを変更します。変更後は、必ず他のスタッフに新しいパスワードを伝えてください（#文字以上）。','Бүх ажилтны нийтлэг нэвтрэх нууц үгийг солино. Солисны дараа шинэ нууц үгээ бусад ажилтанд заавал мэдэгдээрэй (#+ тэмдэгт).');
+T('Mongolian Keyboard','モンゴル語キーボード','Монгол гар');
+T('Mongolian Keyboard / Монгол гар','モンゴル語キーボード / Монгол гар','Монгол гар / Mongolian Keyboard');
+T('Saved · Shared with all staff','保存済み・全スタッフと共有','Хадгалагдсан · Бүх ажилтанд хуваалцсан');
+T('All data is shared in real time across staff and saved automatically','すべてのデータは全スタッフにリアルタイムで共有され、自動的に保存されます','Бүх мэдээлэл ажилтнуудад бодит цагт хуваалцагдаж, автоматаар хадгалагдана');
+T('Unified inventory, appraisal, deal, and customer management system (MVP)','在庫・査定・商談・顧客を一元管理するシステム（MVP）','Бэлэн машин, үнэлгээ, худалдаа, үйлчлүүлэгчийг нэгтгэсэн удирдлагын систем (MVP)');
+T('DEED MOTORS DMS — Version #','DEED MOTORS DMS — バージョン #','DEED MOTORS DMS — Хувилбар #');
+T('Implemented Features','実装済みの機能','Хэрэгжсэн боломжууд');
+T('Future Candidates','今後の候補','Цаашдын санал болгож буй боломжууд');
+T('Integrated customer info on the vehicle page, plus a full kanban overview','車両ページに顧客情報を統合し、全体をカンバンで一覧','Машины хуудсанд үйлчлүүлэгчийн мэдээллийг нэгтгэж, бүх явцыг канбан хэлбэрээр харуулна');
+T('#-point gauge appraisal sheet, deduction tags, automatic score calculation','#段階ゲージの査定シート、減点タグ、スコア自動計算','#-түвшний үнэлгээний хуудас, хасалтын шошго, оноог автоматаар тооцоолно');
+T('Facebook Messenger integration','Facebook Messenger 連携','Facebook Messenger холболт');
+T('PDF export of contracts and appraisal reports','契約書・査定レポートのPDF出力','Гэрээ, үнэлгээний тайланг PDF болгон гаргах');
+T('File management for photos, registration documents, etc. (requires external storage integration)','写真・登録書類などのファイル管理（外部ストレージ連携が必要）','Зураг, бүртгэлийн баримт зэрэг файлын удирдлага (гадаад хадгалалттай холбох шаардлагатай)');
+T('Automatic notifications for upcoming inspections','車検が近づいたときの自動通知','Үзлэгийн хугацаа ойртоход автоматаар мэдэгдэх');
+
+/* ---------- dashboard ---------- */
+T('Vehicles in Stock','在庫車両','Бэлэн байгаа машин');
+T('Sales This Month','今月の販売','Энэ сарын борлуулалт');
+T('Converted to In-House','自社客への切り替え','Манай хэрэглэгч болсон');
+T('Not Yet Appraised','未査定','Үнэлэгдээгүй');
+T('Stock Vehicles Needing Appraisal','査定が必要な在庫車両','Үнэлгээ хэрэгтэй бэлэн машин');
+T('Recent Deal Activity','最近の商談の動き','Сүүлийн худалдааны үйл явц');
+T('Reminders','リマインド','Сануулга');
+T('Contact Reminders','連絡リマインド','Холбоо барих сануулга');
+T('Inspection Reminders','車検リマインド','Үзлэгийн сануулга');
+T('Inspection Reminder','車検リマインド','Үзлэгийн сануулга');
+T('Upcoming Birthdays','もうすぐ誕生日','Удахгүй төрсөн өдөр');
+T('Birthday Greeting','誕生日のお祝い','Төрсөн өдрийн мэндчилгээ');
+T('General Outreach','一般のお声がけ','Ерөнхий холбоо барилт');
+T('No birthdays in the next # days','今後#日以内の誕生日はありません','Дараагийн # хоногт төрсөн өдөр алга');
+T('No inspections due within the next # days','今後#日以内の車検はありません','Дараагийн # хоногт үзлэгийн хугацаа болох машин алга');
+T('# deals','#件の商談','# худалдаа');
+T('# deal(s)','#件の商談','# худалдаа');
+T('# vehicles','#台','# машин');
+T('# registered','#件登録','# бүртгэлтэй');
+T('# item(s) · # overdue','#件・期限超過#件','# зүйл · # хугацаа хэтэрсэн');
+T('+# more','ほか#件','+# бусад');
+T('Handling:','担当：','Хариуцагч:');
+T('Handling','担当','Хариуцагч');
+T('Handled by','担当','Хариуцсан');
+T('Sold by','販売者','Борлуулсан');
+T('Sold By','販売者','Борлуулсан');
+T('Current Staff','現担当者','Одоогийн хариуцагч');
+T('Assigned Staff','担当スタッフ','Оноосон ажилтан');
+T('(current person in charge)','（現在の担当者）','(одоогийн хариуцагч)');
+T('(= customer\'s Sales Staff)','（＝顧客の担当営業）','(= үйлчлүүлэгчийн хариуцсан борлуулагч)');
+
+/* ---------- reminders / overdue ---------- */
+T('Overdue — due # day(s) ago','期限超過 — #日前が期限','Хугацаа хэтэрсэн — # хоногийн өмнө дуусах байсан');
+T('# overdue','期限超過#件','# хугацаа хэтэрсэн');
+T('Open reminders past their due date — still alerting every day until contact is recorded','期限を過ぎた未対応のリマインドです。連絡を記録するまで毎日通知されます','Хугацаа хэтэрсэн, шийдвэрлээгүй сануулга — холбоо барьсныг бүртгэх хүртэл өдөр бүр сануулна');
+T('Hot Lead','Hot（見込み度 高）','Hot (өндөр сонирхолтой)');
+T('Hot leads (no contact #+ days)','Hot案件（#日以上連絡なし）','Hot (# хоногоос дээш холбоо барьсангүй)');
+T('Hot leads — no contact for N+ days','Hot案件 — N日以上連絡なし','Hot — N хоногоос дээш холбоо барьсангүй');
+T('Post-delivery follow-up — first check-in, N day(s) after delivery','納車後フォロー — 納車のN日後に最初の確認','Хүлээлгэн өгсний дараах дагалт — анхны холбоо, хүлээлгэн өгснөөс N хоногийн дараа');
+T('Post-delivery follow-up — repeat every N days after that','納車後フォロー — その後N日ごとに繰り返し','Хүлээлгэн өгсний дараах дагалт — үүний дараа N хоног тутам давтана');
+T('Prospects — no contact for N+ days','見込み客 — N日以上連絡なし','Prospect — N хоногоос дээш холбоо барьсангүй');
+T('New inquiries (no contact #+ days)','新規問い合わせ（#日以上連絡なし）','Шинэ лавлагаа (# хоногоос дээш холбоо барьсангүй)');
+T('New inquiries — no contact for N+ days','新規問い合わせ — N日以上連絡なし','Шинэ лавлагаа — N хоногоос дээш холбоо барьсангүй');
+T('In-house customer check-in — every N days','自社客の定期確認 — N日ごと','Манай хэрэглэгчийн үзлэг — N хоног тутам');
+T('No contact for # days','#日間連絡なし','# хоног холбоо барьсангүй');
+T('No contact for # days (Negotiation)','#日間連絡なし（交渉中）','# хоног холбоо барьсангүй (Тохиролцоо)');
+T('# days since update','更新から#日','Шинэчилснээс хойш # хоног');
+T('Thresholds used by both the dashboard and daily reminder emails','ダッシュボードと毎日のリマインドメールの両方で使うしきい値','Хяналтын самбар болон өдөр бүрийн сануулга имэйлд хоёуланд хэрэглэх босго');
+T('Changing a number here updates both the dashboard panel and the daily reminder emails. The email side (Edge Function) reads this from the database on every run, so no redeploy is needed.','ここの数値を変えると、ダッシュボードの表示と毎日のリマインドメールの両方に反映されます。メール側（Edge Function）は実行のたびにデータベースから読み込むため、再デプロイは不要です。','Энд тоог өөрчлөхөд хяналтын самбар болон өдөр бүрийн сануулга имэйл хоёуланд хамаарна. Имэйлийн тал (Edge Function) ажиллах бүрдээ мэдээллийн сангаас уншдаг тул дахин байршуулах шаардлагагүй.');
+T('Reset to Defaults','初期値に戻す','Анхны утгад буцаах');
+T('Save Settings','設定を保存','Тохиргоог хадгалах');
+
+/* ---------- calendar ---------- */
+T('Monthly view of when each reminder first comes due','各リマインドが最初に期限を迎える日の月間表示','Сануулга бүр анх хэзээ хугацаа болохыг сараар харуулна');
+T('Back to Calendar','カレンダーに戻る','Хуанли руу буцах');
+T('Prev','前へ','Өмнөх');
+})();
+
+/* i18n dictionary part 20 — customer screens */
+(function(){ const T = I18N.T;
+T('Customer','顧客','Үйлчлүүлэгч');
+T('Customer Name','顧客名','Үйлчлүүлэгчийн нэр');
+T('Customer Type','顧客区分','Үйлчлүүлэгчийн төрөл');
+T('New Customer','新規顧客','Шинэ үйлчлүүлэгч');
+T('Edit Customer','顧客を編集','Үйлчлүүлэгч засах');
+T('Edit Customer Info','顧客情報を編集','Үйлчлүүлэгчийн мэдээлэл засах');
+T('Select Customer','顧客を選択','Үйлчлүүлэгч сонгох');
+T('Back to Customers','顧客一覧に戻る','Үйлчлүүлэгчийн жагсаалт руу буцах');
+T('Export CSV','CSV出力','CSV гаргах');
+T('Contact List (Excel)','連絡リスト（Excel）','Холбоо барих жагсаалт (Excel)');
+T('Reminder List (Excel)','リマインドリスト（Excel）','Сануулгын жагсаалт (Excel)');
+T('Sales List (CSV)','販売リスト（CSV）','Борлуулалтын жагсаалт (CSV)');
+T('All customer data as a CSV file','全顧客データをCSVファイルで出力','Бүх үйлчлүүлэгчийн мэдээллийг CSV файлаар');
+T('Contracted / delivered deals: who bought which car — opens in Excel','契約済み・納車済みの商談：誰がどの車を買ったか（Excelで開きます）','Гэрээ хийсэн / хүлээлгэн өгсөн худалдаа: хэн ямар машин авсан (Excel-д нээгдэнэ)');
+T('Everyone shown in the reminder panels below (inspections, birthdays, claims, contact reminders) as a print-ready call sheet with room for memos','下のリマインド欄（車検・誕生日・クレーム・連絡リマインド）に出ている全員を、メモ欄付きの印刷用コールシートにします','Доорх сануулгын хэсэгт (үзлэг, төрсөн өдөр, гомдол, холбоо барих) гарсан бүх хүнийг тэмдэглэл бичих зайтай хэвлэх дуудлагын хуудас болгоно');
+T('Search by name, phone, address, or vehicle…','名前・電話・住所・車で検索…','Нэр, утас, хаяг, машинаар хайх…');
+T('Search by phone digits or name…','電話番号の数字または名前で検索…','Утасны тоо эсвэл нэрээр хайх…');
+T('Search by make, model, color, VIN, plate number, or customer…','メーカー・車種・色・VIN・ナンバー・顧客名で検索…','Үйлдвэрлэгч, загвар, өнгө, арлын дугаар, улсын дугаар, үйлчлүүлэгчээр хайх…');
+T('Enter plate number digits… (e.g. #)','ナンバーの数字を入力…（例：#）','Улсын дугаарын тоог оруулна уу… (жишээ: #)');
+T('Newest first','新しい順','Шинэ нь эхэнд');
+T('Oldest first','古い順','Хуучин нь эхэнд');
+T('Custom (manual order)','手動で並べ替え','Өөрөө эрэмбэлэх');
+T('Most deals first','商談が多い順','Худалдаа олон нь эхэнд');
+T('Next inspection due soonest','次回車検が近い順','Дараагийн үзлэг ойр нь эхэнд');
+T('By name','名前順','Нэрээр');
+T('By make','メーカー順','Үйлдвэрлэгчээр');
+T('Price high to low','価格の高い順','Үнэ өндрөөс нам');
+T('Price low to high','価格の低い順','Үнэ намаас өндөр');
+T('Year newest first','年式が新しい順','Он шинэ нь эхэнд');
+T('Year oldest first','年式が古い順','Он хуучин нь эхэнд');
+
+/* customer types & chips */
+T('In-House Customer','自社客','Манай хэрэглэгч');
+T('In-House Customer (vehicle delivered — for future purchase & maintenance outreach)','自社客（納車済み — 次回購入・メンテナンス案内用）','Манай хэрэглэгч (машин хүлээлгэн өгсөн — дараагийн худалдан авалт, үйлчилгээний урилга)');
+T('Other Dealer Customer','他社客','Бусад дилерийн үйлчлүүлэгч');
+T('Other Dealer Customer (for event/maintenance outreach & converting to our own)','他社客（イベント・メンテナンス案内、自社客への転換用）','Бусад дилерийн үйлчлүүлэгч (арга хэмжээ, үйлчилгээний урилга, манай хэрэглэгч болгох)');
+T('In-House','自社客','Манай хэрэглэгч');
+T('In-House customer: has taken delivery of a vehicle from us','自社客：当店から納車を受けたお客様','Манай хэрэглэгч: манайхаас машин хүлээн авсан');
+T('No Type Set','区分未設定','Төрөл тохируулаагүй');
+T('Contracted','契約済み','Гэрээ хийсэн');
+T('Contracted · awaiting delivery (#)','契約済み・納車待ち（#）','Гэрээ хийсэн · хүлээлгэн өгөхийг хүлээж буй (#)');
+T('Hot / 👀 Prospect (#)','Hot / 👀 Prospect（#）','Hot / 👀 Prospect (#)');
+T('Hot','Hot','Hot');
+T('Prospect','Prospect','Prospect');
+T('No Prospect','見込みなし','Төлөвгүй (No Prospect)');
+T('Set Status','状態を設定','Төлөв тохируулах');
+T('Sales Staff','担当営業','Хариуцсан борлуулагч');
+T('Converted','切り替え済み','Хөрвөсөн');
+T('Appraisal only','査定のみ','Зөвхөн үнэлгээ');
+T('Buyer','購入者','Худалдан авагч');
+T('In talks','商談中','Тохиролцож буй');
+T('Consignor','委託オーナー','Зуучлуулагч эзэн');
+T('Company stock','会社名義の車','Компанийн нэрийн машин');
+T('Nominal owner','名義上のオーナー','Нэрийн эзэн');
+T('Owner / Consignor','オーナー／委託者','Эзэн / Зуучлуулагч');
+T('Owner','オーナー','Эзэн');
+T('Contract','契約','Гэрээ');
+T('Delivered','納車済み','Хүлээлгэн өгсөн');
+T('Negotiation','交渉','Тохиролцоо');
+T('Delivery','納車','Хүлээлгэн өгөх');
+T('Inquiry','問い合わせ','Лавлагаа');
+T('Visit','来店','Ирсэн');
+T('Appraisal','査定','Үнэлгээ');
+T('Test Drive','試乗','Туршиж жолоодох');
+T('Quote','見積','Үнийн санал');
+T('Cancelled','キャンセル','Цуцлагдсан');
+
+/* customer form */
+T('Name (Mongolian)','名前（モンゴル語）','Нэр (монголоор)');
+T('Name (Romanized)','名前（ローマ字）','Нэр (латинаар)');
+T('Facebook / Messenger','Facebook / Messenger','Facebook / Messenger');
+T('Facebook/Messenger','Facebook / Messenger','Facebook / Messenger');
+T('Facebook','Facebook','Facebook');
+T('Occupation / Workplace','職業・勤務先','Ажил мэргэжил / Ажлын газар');
+T('Office worker / Self-employed, etc.','会社員・自営業 など','Оффисын ажилтан / Хувиараа ажил эрхлэгч гэх мэт');
+T('Referred By','紹介者','Танилцуулсан хүн');
+T('Referrer\'s name (if any)','紹介者の名前（あれば）','Танилцуулсан хүний нэр (байвал)');
+T('Next Inspection Due Date','次回車検期限','Дараагийн үзлэгийн хугацаа');
+T('Next Inspection','次回車検','Дараагийн үзлэг');
+T('Desired vehicle type, current vehicle (customer sells it / consignment), family details, etc.','希望車種、現在の車（ご自身で売却／委託販売）、家族構成 など','Хүссэн машины төрөл, одоогийн машин (өөрөө зарна / зуучлалаар), гэр бүлийн мэдээлэл гэх мэт');
+T('— Register as new customer —','— 新規顧客として登録 —','— Шинэ үйлчлүүлэгчээр бүртгэх —');
+T('Sales Lead Info','営業リード情報','Борлуулалтын лидийн мэдээлэл');
+T('(optional — tap to expand)','（任意 — タップで開く）','(заавал биш — дарж нээнэ)');
+T('Lead Source','問い合わせ経路','Мэдээллийн эх сурвалж');
+T('Showroom','ショールーム','Шоурум');
+T('Referral','紹介','Танилаар');
+T('Other','その他','Бусад');
+T('Desired Vehicle','希望車種','Хүссэн машин');
+T('Budget','予算','Төсөв');
+T('Budget (₮)','予算（₮）','Төсөв (₮)');
+T('Has Responded','返信あり','Хариу өгсөн');
+T('Chatted via Messenger','Messengerでやり取り済み','Messenger-ээр харилцсан');
+T('Registration Type','登録区分','Бүртгэлийн төрөл');
+
+/* customer detail */
+T('Deal & Customer Info','商談・顧客情報','Худалдаа ба үйлчлүүлэгчийн мэдээлэл');
+T('Deal & Negotiation Log (#)','商談・交渉ログ（#）','Худалдаа, тохиролцооны бүртгэл (#)');
+T('Activity Log','活動ログ','Үйл ажиллагааны бүртгэл');
+T('Add Activity Entry','活動記録を追加','Үйл ажиллагаа нэмэх');
+T('Edit Activity Entry','活動記録を編集','Үйл ажиллагаа засах');
+T('Add Entry','記録を追加','Бүртгэл нэмэх');
+T('No deal or negotiation records yet','商談・交渉の記録はまだありません','Худалдаа, тохиролцооны бүртгэл одоогоор алга');
+T('No phone on file','電話番号なし','Утас бүртгэлгүй');
+T('No address on file','住所なし','Хаяг бүртгэлгүй');
+T('Past Deals (#)','過去の商談（#）','Өмнөх худалдаа (#)');
+T('Lifetime data (first contact, touchpoints, vehicles purchased, ownership history)','通算データ（初回接触・接点数・購入車両・所有履歴）','Нийт мэдээлэл (анхны холбоо, холбоо барилтын тоо, худалдан авсан машин, эзэмшлийн түүх)');
+T('First Contact','初回接触','Анхны холбоо');
+T('Total Touchpoints','総接点数','Нийт холбоо барилт');
+T('Vehicles Purchased','購入車両数','Худалдан авсан машин');
+T('Vehicles','車両','Машин');
+T('Vehicles Owned / Purchased (#)','所有・購入車両（#）','Эзэмшиж буй / худалдан авсан машин (#)');
+T('Report Claim','クレームを登録','Гомдол бүртгэх');
+T('Report a Claim / Complaint','クレーム・苦情を登録','Гомдол, санал хүсэлт бүртгэх');
+T('Message','メッセージ','Мессеж');
+T('Message Template','メッセージのひな型','Мессежийн загвар');
+T('Template','ひな型','Загвар');
+T('Message (edit before copying)','メッセージ（コピー前に編集できます）','Мессеж (хуулахаасаа өмнө засаж болно)');
+T('Copy to Clipboard','クリップボードにコピー','Санах ойд хуулах');
+T('Draft Mongolian wording — please have a Mongolian-speaking staff member review before relying on it for real messages.','モンゴル語の文面は下書きです。実際の連絡に使う前に、モンゴル語を話すスタッフが確認してください。','Монгол хэлний эх нь ноорог юм. Бодит мессеж болгон ашиглахаасаа өмнө монгол хэлтэй ажилтнаар шалгуулна уу.');
+T('Open reminders past their due date','期限を過ぎた未対応のリマインド','Хугацаа хэтэрсэн шийдвэрлээгүй сануулга');
+T('Converted to In-House','自社客に切り替え','Манай хэрэглэгч болсон');
+T('Converted this month','今月の切り替え','Энэ сард хөрвөсөн');
+T('Initial Status','初期状態','Анхны төлөв');
+T('Current Status','現在の状態','Одоогийн төлөв');
+})();
+
+/* i18n dictionary part 30 — vehicle screens */
+(function(){ const T = I18N.T;
+/* list / filters / status */
+T('New Vehicle','新規車両','Шинэ машин');
+T('Edit Vehicle','車両を編集','Машин засах');
+T('Back to Vehicles','車両一覧に戻る','Машины жагсаалт руу буцах');
+T('Vehicles','車両','Машин');
+T('In Stock','在庫','Бэлэн байгаа');
+T('In Negotiation','商談中','Тохиролцож буй');
+T('Sold','販売済み','Борлуулагдсан');
+T('At Branch (not our stock)','支店扱い（当店の在庫ではない）','Салбарт (манай бараа биш)');
+T('Appraisal Vehicle','査定車','Үнэлгээний машин');
+T('Appraisal Vehicles','査定車','Үнэлгээний машин');
+T('Field Appraisal','出張査定','Томилолтоор үнэлсэн');
+T('On Order','注文中','Захиалгаар');
+T('On Order (no vehicle yet)','注文中（現物なし）','Захиалгаар (машин хараахан алга)');
+T('NO VEHICLE YET — TARGET SPEC ONLY','現物なし — 希望スペックのみ','МАШИН ХАРААХАН АЛГА — ЗӨВХӨН ЗОРИЛТОТ СПЕК');
+T('In Transit','輸送中','Замд яваа');
+T('Appraised','査定済み','Үнэлэгдсэн');
+T('Photos','写真','Зураг');
+T('(Appraisal Vehicle)','（査定車）','(Үнэлгээний машин)');
+T('(Field Appraisal)','（出張査定）','(Томилолтоор үнэлсэн)');
+T('(On Order)','（注文中）','(Захиалгаар)');
+T('In Custody','保管中','Хадгалж буй');
+T('On Hold (data only)','保留（データのみ）','Түр хойшлуулсан (зөвхөн мэдээлэл)');
+T('In Custody (we hold the vehicle)','保管中（当店で車を預かっている）','Хадгалж буй (манайд машин байгаа)');
+T('On Hold (data kept only)','保留（データのみ保管）','Түр хойшлуулсан (зөвхөн мэдээлэл хадгална)');
+T('Inventory','在庫','Бэлэн машин');
+T('Stock','在庫','Бэлэн байгаа');
+T('Stock Vehicle (for sale)','在庫車両（販売用）','Бэлэн машин (худалдаалах)');
+T('Appraisal Vehicle (customer\'s current vehicle)','査定車（お客様の現在の車）','Үнэлгээний машин (үйлчлүүлэгчийн одоогийн машин)');
+T('Appraisal Vehicle (customer\'s current vehicle, appraisal only)','査定車（お客様の現在の車・査定のみ）','Үнэлгээний машин (үйлчлүүлэгчийн одоогийн машин, зөвхөн үнэлгээ)');
+T('Field Appraisal (appraised on a trip — kept in our custody or on hold)','出張査定（出張先で査定 — 当店で保管、または保留）','Томилолтоор үнэлсэн (гадуур очиж үнэлсэн — манайд хадгална эсвэл түр хойшлуулна)');
+
+/* vehicle form */
+T('Make','メーカー','Үйлдвэрлэгч');
+T('Model','車種','Загвар');
+T('Year','年式','Он');
+T('Color','色','Өнгө');
+T('Mileage','走行距離','Гүйлт');
+T('Mileage (km)','走行距離（km）','Гүйлт (км)');
+T('Trim Grade','グレード','Хувилбар (Grade)');
+T('VIN','車台番号','Арлын дугаар (VIN)');
+T('Plate Number','ナンバー','Улсын дугаар');
+T('Plate No.','ナンバー','Улсын дугаар');
+T('Purchase Cost','仕入原価','Худалдан авсан өртөг');
+T('Purchase Cost (₮)','仕入原価（₮）','Худалдан авсан өртөг (₮)');
+T('Sale Price','販売価格','Борлуулах үнэ');
+T('Sale Price (₮)','販売価格（₮）','Борлуулах үнэ (₮)');
+T('Min Sell Price (₮)','最低販売価格（₮）','Хамгийн доод үнэ (₮)');
+T('Negotiation Ceiling (₮)','交渉上限額（₮）','Тохиролцооны дээд хязгаар (₮)');
+T('Owner Payout (₮)','オーナー支払額（₮）','Эзэнд олгох дүн (₮)');
+T('Target Price','目標価格','Зорилтот үнэ');
+T('Target Price (₮)','目標価格（₮）','Зорилтот үнэ (₮)');
+T('Estimated Appraisal Value','査定見込額','Үнэлгээний тооцоолсон дүн');
+T('Estimated Appraisal Value (₮)','査定見込額（₮）','Үнэлгээний тооцоолсон дүн (₮)');
+T('Est. Gross Profit','見込み粗利','Тооцоолсон нийт ашиг');
+T('Purchased Date','仕入日','Худалдан авсан огноо');
+T('ETD (Leaving Japan)','出港予定日（日本出発）','ETD (Японоос гарах)');
+T('ETA (Arrives UB)','到着予定日（ウランバートル）','ETA (УБ-д ирэх)');
+T('Arrived in Ulaanbaatar','ウランバートル到着済み','Улаанбаатарт ирсэн');
+T('FB Boosted','FB広告済み','FB-д сурталчилсан');
+T('State Inspection','車検状況','Улсын үзлэг');
+T('Documents','書類','Бичиг баримт');
+T('Have (Байгаа)','あり（Байгаа）','Байгаа');
+T('Missing (Байхгүй)','なし（Байхгүй）','Байхгүй');
+T('Imported to Mongolia','モンゴルに輸入済み','Монголд импортолсон');
+T('Handling','取り扱い','Хандлага');
+T('Add comment','コメントを追加','Тайлбар нэмэх');
+T('Comment','コメント','Тайлбар');
+
+/* detail */
+T('Print Quote','見積書を印刷','Үнийн санал хэвлэх');
+T('Condition Check (Internal Notes)','コンディションチェック（社内メモ）','Төлөвийн шалгалт (дотоод тэмдэглэл)');
+T('Exterior','外装','Гадна');
+T('Interior','内装','Дотор');
+T('Engine / Motor','エンジン／モーター','Хөдөлгүүр / Мотор');
+T('Undercarriage','下回り','Явах эд анги');
+T('Electrical','電装','Цахилгаан');
+T('Deductions (tap to toggle)','減点項目（タップで切り替え）','Хасалтууд (дарж солино)');
+T('Bumper scratch','バンパー傷','Бампер зураас');
+T('Fender dent','フェンダー凹み','Хаалтны хонхор');
+T('Stone chip','飛び石','Чулууны мөр');
+T('Seat stain','シート汚れ','Суудлын толбо');
+T('Tire wear','タイヤ摩耗','Дугуйн элэгдэл');
+T('Oil leak','オイル漏れ','Тос гоожиж байна');
+T('Unusual noise','異音','Хачин дуу чимээ');
+T('Prior repair history','修復歴あり','Өмнө засвар хийгдсэн');
+T('Glass scratch','ガラス傷','Шилний зураас');
+T('Paint peeling','塗装剥がれ','Будаг хуулрах');
+T('Diagnosis','診断','Оношилгоо');
+T('Appraisal Tool Diagnosis (deed-motors-scraper)','査定ツール診断（deed-motors-scraper）','Үнэлгээний хэрэгслийн оношилгоо (deed-motors-scraper)');
+T('Import Results from Appraisal Tool','査定ツールの結果を取り込む','Үнэлгээний хэрэгслийн үр дүнг оруулах');
+T('Import JSON results from the appraisal tool (deed-motors-scraper)','査定ツール（deed-motors-scraper）のJSON結果を取り込む','Үнэлгээний хэрэгслийн (deed-motors-scraper) JSON үр дүнг оруулах');
+T('Paste the JSON copied via "📋 Copy Results" in the appraisal tool here.','査定ツールの「📋 Copy Results」でコピーしたJSONをここに貼り付けてください。','Үнэлгээний хэрэгслийн "📋 Copy Results" товчоор хуулсан JSON-г энд буулгана уу.');
+T('Paste the JSON copied via "📋 Copy Results" in the appraisal tool here. The fields below will fill in automatically.','査定ツールの「📋 Copy Results」でコピーしたJSONをここに貼り付けてください。下の項目が自動入力されます。','Үнэлгээний хэрэгслийн "📋 Copy Results" товчоор хуулсан JSON-г энд буулгана уу. Доорх талбарууд автоматаар бөглөгдөнө.');
+T('Load from Clipboard','クリップボードから読み込む','Санах ойноос ачаалах');
+T('Load Pasted JSON','貼り付けたJSONを読み込む','Буулгасан JSON-г ачаалах');
+T('Grade from the appraisal tool','査定ツールのグレード','Үнэлгээний хэрэгслийн дүн');
+T('Appraisal Tool Grade','査定ツールの評価','Үнэлгээний хэрэгслийн дүн');
+T('Reference Appraisal Price','参考査定価格','Лавлах үнэлгээний үнэ');
+T('Reference Appraisal Price (сая ₮)','参考査定価格（百万₮）','Лавлах үнэлгээний үнэ (сая ₮)');
+T('Reference Price Range','参考価格帯','Лавлах үнийн хүрээ');
+T('Market Average Price','市場平均価格','Зах зээлийн дундаж үнэ');
+T('Market Data Points','市場データ件数','Зах зээлийн өгөгдлийн тоо');
+T('Formula','算出式','Томьёо');
+T('Inspector','査定担当','Үнэлгээ хийсэн');
+T('Appraisal Date','査定日','Үнэлгээний огноо');
+T('Repair History','修復歴','Засварын түүх');
+T('Engine Model','エンジン型式','Хөдөлгүүрийн загвар');
+T('Detailed JSON (saved automatically, viewable on the vehicle page)','詳細JSON（自動保存・車両ページで確認できます）','Дэлгэрэнгүй JSON (автоматаар хадгалагдана, машины хуудсаас харж болно)');
+T('Show raw JSON (for support)','JSON原文を表示（サポート用）','JSON эх хувийг харуулах (дэмжлэгт)');
+T('This is the official appraisal result','これが正式な査定結果です','Энэ нь албан ёсны үнэлгээний үр дүн');
+
+/* service history */
+T('Service History','整備履歴','Үйлчилгээний түүх');
+T('No service history yet','整備履歴はまだありません','Үйлчилгээний түүх одоогоор алга');
+T('Oil Change','オイル交換','Тос солих');
+T('Tire Pressure Check','タイヤ空気圧チェック','Дугуйн даралт шалгах');
+T('Inspection','車検・点検','Үзлэг');
+T('General Repair','一般修理','Ерөнхий засвар');
+T('Add Service Entry','整備記録を追加','Үйлчилгээний бүртгэл нэмэх');
+
+/* photos & documents */
+T('Photos & Documents','写真・書類','Зураг ба баримт');
+T('Select Files (images/PDF, multiple allowed)','ファイルを選択（画像・PDF、複数可）','Файл сонгох (зураг/PDF, олныг сонгож болно)');
+T('Files upload automatically once selected (you can select multiple at once)','選択すると自動でアップロードされます（複数選択可）','Сонгосон даруйд файл автоматаар байршина (олныг нэг дор сонгож болно)');
+T('Front','前','Урд');
+T('Rear','後ろ','Хойд');
+T('Left Side','左側','Зүүн тал');
+T('Right Side','右側','Баруун тал');
+T('Underbody','下回り','Доод хэсэг');
+T('Damaged Area','損傷箇所','Гэмтсэн хэсэг');
+T('Registration Doc.','登録書類','Бүртгэлийн баримт');
+T('Appraisal Doc.','査定書類','Үнэлгээний баримт');
+T('OBD Screenshot','OBD画面','OBD дэлгэцийн зураг');
+T('Download All (#)','すべてダウンロード（#）','Бүгдийг татах (#)');
+T('No photos or documents uploaded yet','写真・書類はまだアップロードされていません','Зураг, баримт одоогоор байршуулаагүй');
+
+/* deal panel on a vehicle */
+T('Start Deal','商談を開始','Худалдаа эхлүүлэх');
+T('Start Deal (link customer)','商談を開始（顧客を紐づけ）','Худалдаа эхлүүлэх (үйлчлүүлэгч холбох)');
+T('No deal has started on this vehicle yet','この車の商談はまだ始まっていません','Энэ машинд худалдаа хараахан эхлээгүй');
+T('It\'s currently only appraised or on display. Once a customer is set, you can manage them together here.','現在は査定済み、または展示中のみです。顧客を設定すると、ここでまとめて管理できます。','Одоогоор зөвхөн үнэлэгдсэн эсвэл үзүүлбэрт байгаа. Үйлчлүүлэгчийг тохируулбал энд хамт удирдана.');
+T('Deal Details','商談の詳細','Худалдааны дэлгэрэнгүй');
+T('Deal History','商談履歴','Худалдааны түүх');
+T('Deal History by Vehicle','車両別の商談履歴','Машин тус бүрийн худалдааны түүх');
+T('Advance to Next Stage →','次の段階へ進める →','Дараагийн шат руу →');
+T('Back to Previous Stage','前の段階に戻す','Өмнөх шат руу буцах');
+T('Negotiation Failed / Cancel','交渉不成立／キャンセル','Тохиролцоо бүтсэнгүй / Цуцлах');
+T('Delete This Deal','この商談を削除','Энэ худалдааг устгах');
+T('Cancel Deal','商談をキャンセル','Худалдааг цуцлах');
+T('Change Deal\'s Target Vehicle','商談の対象車両を変更','Худалдааны зорилтот машиныг өөрчлөх');
+T('Change Target Vehicle','対象車両を変更','Зорилтот машиныг өөрчлөх');
+T('Select Vehicle','車両を選択','Машин сонгох');
+T('Vehicle','車両','Машин');
+T('Only stock vehicles (for sale) can be selected as a deal\'s target. To change the appraisal vehicle, re-register it via the "📋 Appraisal Vehicle" section below instead.','商談の対象に選べるのは在庫車両（販売用）のみです。査定車を変更するには、下の「📋 査定車」の欄から登録し直してください。','Худалдааны зорилтот машинаар зөвхөн бэлэн машин (худалдаалах) сонгож болно. Үнэлгээний машиныг өөрчлөхийг хүсвэл доорх "📋 Үнэлгээний машин" хэсгээр дахин бүртгэнэ үү.');
+
+/* appraisal / field vehicle info panels */
+T('About This Appraisal Vehicle','この査定車について','Энэ үнэлгээний машины тухай');
+T('This is not one of our stock vehicles — it is a record of an appraisal vehicle brought in by a customer.','これは当店の在庫車両ではなく、お客様が持ち込まれた査定車の記録です。','Энэ нь манай бэлэн машин биш — үйлчлүүлэгчийн авчирсан үнэлгээний машины бүртгэл.');
+T('About This Field Appraisal Vehicle','この出張査定車について','Энэ томилолтоор үнэлсэн машины тухай');
+T('Register Appraisal Vehicle','査定車を登録','Үнэлгээний машин бүртгэх');
+T('Register & Proceed to Appraisal','登録して査定に進む','Бүртгээд үнэлгээнд шилжих');
+T('Search & Link Appraisal Vehicle','査定車を検索して紐づけ','Үнэлгээний машин хайж холбох');
+T('If an appraisal vehicle is already registered under "Vehicles & Appraisal", you can search by just the plate number digits and link it — no need to re-enter it.','査定車が「車両管理・査定」にすでに登録されている場合は、ナンバーの数字だけで検索して紐づけられます。再入力は不要です。','Үнэлгээний машин "Машин · Үнэлгээ" хэсэгт бүртгэлтэй бол зөвхөн улсын дугаарын тоогоор хайж холбож болно — дахин оруулах шаардлагагүй.');
+T('Already linked appraisal vehicle(s):','すでに紐づいている査定車：','Аль хэдийн холбогдсон үнэлгээний машин:');
+T('No appraisal vehicle has been registered for this deal yet','この商談にはまだ査定車が登録されていません','Энэ худалдаанд үнэлгээний машин хараахан бүртгэгдээгүй');
+T('Register and appraise walk-in customers\' vehicles using the same form','来店のお客様の車も、同じフォームで登録・査定できます','Ирсэн үйлчлүүлэгчийн машиныг мөн ижил маягтаар бүртгэж үнэлнэ');
+T('Supported: 在庫一覧 (Stock List) · 委託・展示車 (Consignment) · Autocom orders.','対応形式：在庫一覧・委託・展示車・Autocomの注文。','Дэмжигдэх: 在庫一覧 (бэлэн машины жагсаалт) · 委託・展示車 (зуучлал) · Autocom захиалга.');
+T('A vehicle appraised on a trip. It is not our stock for sale — record what we do with it below. If we later sell it, change','出張先で査定した車です。当店の販売在庫ではありません。下に当店での扱いを記録してください。後で販売する場合は、','Томилолтоор үнэлсэн машин. Манай худалдах бэлэн машин биш — доор бидний хийх зүйлийг тэмдэглэнэ үү. Хожим зарах бол');
+T('to Stock Vehicle via ✎ Edit.','を ✎ 編集 から「在庫車両」に変更してください。','-г ✎ Засах хэсгээр "Бэлэн машин" болгон өөрчилнө үү.');
+})();
+
+/* i18n dictionary part 40 — deals, staff, settings, trash, sheet sync, dialogs, placeholders */
+(function(){ const T = I18N.T;
+/* ---------- deals ---------- */
+T('New Deal','新規商談','Шинэ худалдаа');
+T('Deals','商談','Худалдаа');
+T('Deals (#)','商談（#）','Худалдаа (#)');
+T('Other / Unassigned','その他／担当者なし','Бусад / Хариуцагчгүй');
+T('Edit Deal/Negotiation Entry','商談・交渉の記録を編集','Худалдаа/тохиролцооны бүртгэл засах');
+T('Edit Service History Entry','整備履歴を編集','Үйлчилгээний түүх засах');
+T('No deal activity yet','商談の動きはまだありません','Худалдааны үйл явц одоогоор алга');
+T('Back to Previous Stage','前の段階に戻す','Өмнөх шат руу буцах');
+T('Possible Duplicate Customers','重複の可能性がある顧客','Давхардсан байж болзошгүй үйлчлүүлэгч');
+T('(same phone number)','（同じ電話番号）','(ижил утасны дугаар)');
+T('Now handled by','現担当','Одоо хариуцаж буй:');
+T('Sold by','販売者','Борлуулсан');
+T('Active Claim — Open for # day(s)','対応中のクレーム — #日経過','Идэвхтэй гомдол — # хоног нээлттэй');
+T('Active Claims — Resolve ASAP','対応中のクレーム — 早急に解決を','Идэвхтэй гомдол — аль болох түргэн шийдээрэй');
+T('Mark Resolved','解決済みにする','Шийдвэрлэсэн гэж тэмдэглэх');
+T('Mark this claim as resolved?','このクレームを解決済みにしますか？','Энэ гомдлыг шийдвэрлэсэн гэж тэмдэглэх үү?');
+T('Unlink','紐づけ解除','Холбоог салгах');
+T('Will link: # # (Plate No.: #)','紐づけ予定：# #（ナンバー：#）','Холбох: # # (Улсын дугаар: #)');
+T('No matching customers','該当する顧客がいません','Тохирох үйлчлүүлэгч олдсонгүй');
+T('No matching customers found','該当する顧客が見つかりません','Тохирох үйлчлүүлэгч олдсонгүй');
+T('No matching unlinked appraisal vehicles found','紐づいていない該当の査定車はありません','Холбогдоогүй тохирох үнэлгээний машин олдсонгүй');
+T('No matching vehicles','該当する車両がありません','Тохирох машин олдсонгүй');
+T('Change the search criteria or register a new vehicle','検索条件を変えるか、新しい車両を登録してください','Хайлтын нөхцөлийг өөрчлөх эсвэл шинэ машин бүртгэнэ үү');
+T('Use "＋ New Customer" to register one','「＋ 新規顧客」から登録してください','"＋ Шинэ үйлчлүүлэгч" товчоор бүртгэнэ үү');
+T('No customers currently need contact','現在、連絡が必要な顧客はいません','Одоогоор холбоо барих шаардлагатай үйлчлүүлэгч алга');
+T('There are no reminders right now.','現在リマインドはありません。','Одоогоор сануулга алга.');
+T('Reminders for everyone','全員分のリマインド','Бүх хүний сануулга');
+T('Vehicle Arrival (UB)','車両到着（ウランバートル）','Машин ирэх (УБ)');
+T('Import / Consignment Tracking','輸入・委託の管理','Импорт / Зуучлалын хяналт');
+T('Individual management of display vehicles (make, year, price, status)','展示車の個別管理（メーカー・年式・価格・状態）','Үзүүлбэрийн машины тусгай удирдлага (үйлдвэрлэгч, он, үнэ, төлөв)');
+T('Orders','注文','Захиалга');
+T('Orders in progress (no update #+ days)','進行中の注文（#日以上更新なし）','Явагдаж буй захиалга (# хоногоос дээш шинэчлэлтгүй)');
+T('Prospects (no contact #+ days)','見込み客（#日以上連絡なし）','Prospect (# хоногоос дээш холбоо барьсангүй)');
+T('Post-delivery follow-up','納車後フォロー','Хүлээлгэн өгсний дараах дагалт');
+T('In-house customer check-in (every # days)','自社客の定期確認（#日ごと）','Манай хэрэглэгчийн үзлэг (# хоног тутам)');
+T('(shown as a dashboard reminder)','（ダッシュボードにリマインド表示）','(хяналтын самбарт сануулга болон харагдана)');
+T('(used for contact reminder emails)','（連絡リマインドメールに使用）','(холбоо барих сануулга имэйлд ашиглана)');
+T('Integration','連携','Холболт');
+T('Sharing','共有','Хуваалцах');
+
+/* ---------- staff ---------- */
+T('New Staff','新規スタッフ','Шинэ ажилтан');
+T('Edit Staff','スタッフを編集','Ажилтан засах');
+T('No staff registered','スタッフが登録されていません','Бүртгэлтэй ажилтан алга');
+T('Use "＋ New Staff" to register one','「＋ 新規スタッフ」から登録してください','"＋ Шинэ ажилтан" товчоор бүртгэнэ үү');
+T('Sales / Appraisal & Maintenance / President, etc.','営業／査定・整備／社長 など','Борлуулалт / Үнэлгээ ба засвар / Ерөнхийлөгч гэх мэт');
+T('Sales / Appraisal &amp; Maintenance / President, etc.','営業／査定・整備／社長 など','Борлуулалт / Үнэлгээ ба засвар / Ерөнхийлөгч гэх мэт');
+
+/* ---------- trash ---------- */
+T('Restore deleted customers, vehicles, and deals','削除した顧客・車両・商談を復元','Устгасан үйлчлүүлэгч, машин, худалдааг сэргээх');
+T('Restore','復元','Сэргээх');
+T('Delete permanently','完全に削除','Бүрмөсөн устгах');
+
+/* ---------- sheet sync ---------- */
+T('Sheet Sync','シート同期','Хүснэгт синк');
+T('Analyze','解析','Шинжлэх');
+T('Paste copied cells here…','コピーしたセルをここに貼り付け…','Хуулсан нүднүүдийг энд буулгана уу…');
+T('Paste the copied cells first.','先にコピーしたセルを貼り付けてください。','Эхлээд хуулсан нүднүүдээ буулгана уу.');
+T('In Google Sheets, select the range','Googleスプレッドシートで範囲を選択し、','Google Sheets дээр мужаа сонгоод');
+T('1. In Google Sheets, select the range','1. Googleスプレッドシートで範囲を選択し、','1. Google Sheets дээр мужаа сонгоод');
+T('(Stock No / Car name …) and copy (Ctrl+C).','（Stock No／車名 …）をコピーします（Ctrl+C）。','(Stock No / Машины нэр …) хуулна (Ctrl+C).');
+T('2. Paste below and press','2. 下に貼り付けて、','2. Доор буулгаад');
+T('. Nothing is saved until you press','。確認するまで何も保存されません。','. Товчийг дарах хүртэл юу ч хадгалагдахгүй.');
+T('including the header row','見出し行を含めて','гарчгийн мөрийг оруулаад');
+T('drag over the cells (header row included) →','セル（見出し行を含む）をドラッグ選択 →','нүднүүдийг (гарчгийн мөртэй нь) чирж сонгоно →');
+T('Excel / Google Sheets:','Excel／Googleスプレッドシート：','Excel / Google Sheets:');
+T('→ click here →','→ ここをクリック →','→ энд дарна →');
+T('Supported: 在庫一覧 (Stock List) · 委託・展示車 (Consignment) · Autocom orders.','対応形式：在庫一覧・委託・展示車・Autocomの注文。','Дэмжигдэх: 在庫一覧 (бэлэн машины жагсаалт) · 委託・展示車 (зуучлал) · Autocom захиалга.');
+T('A screenshot or "Copy as Picture" contains no text, so it cannot be read.','スクリーンショットや「図としてコピー」には文字データがないため、読み取れません。','Дэлгэцийн зураг эсвэл "Зураг болгон хуулах" нь текстгүй тул уншигдахгүй.');
+T('The browser blocked clipboard access. Click the box above and press','ブラウザがクリップボードへのアクセスをブロックしました。上の枠をクリックして、','Хөтөч санах ойн хандалтыг хаасан. Дээрх хайрцгийг дараад');
+T('(Mac: ⌘V) instead — it analyzes automatically.','（Macは⌘V）を押してください。自動で解析されます。','(Mac: ⌘V) дарна уу — автоматаар шинжилнэ.');
+T('Mac: ⌘C / ⌘V. Only a screenshot available? Ask the person who has the file to copy the cells.','Macは⌘C／⌘V。スクリーンショットしかない場合は、ファイルを持っている人にセルをコピーしてもらってください。','Mac: ⌘C / ⌘V. Зөвхөн дэлгэцийн зураг байвал файлтай хүнээр нүднүүдийг хуулуулна уу.');
+T('Space','スペース','Зай');
+T('Saving…','保存中…','Хадгалж байна…');
+
+/* ---------- dialogs ---------- */
+T('Log out?','ログアウトしますか？','Гарах уу?');
+T('Delete this entry?','この記録を削除しますか？','Энэ бүртгэлийг устгах уу?');
+T('Delete this file?','このファイルを削除しますか？','Энэ файлыг устгах уу?');
+T('Delete this service history entry?','この整備履歴を削除しますか？','Энэ үйлчилгээний түүхийг устгах уу?');
+T('Delete this staff member? Their name will remain as-is on past deal records.','このスタッフを削除しますか？ 過去の商談記録の名前はそのまま残ります。','Энэ ажилтныг устгах уу? Өмнөх худалдааны бүртгэлд нэр нь хэвээр үлдэнэ.');
+T('Move this customer to Trash? Related deal history will be kept. You can restore it from Trash at any time.','この顧客をゴミ箱に移しますか？ 関連する商談履歴は残ります。ゴミ箱からいつでも復元できます。','Энэ үйлчлүүлэгчийг хогийн саванд зөөх үү? Холбогдох худалдааны түүх хадгалагдана. Хогийн савнаас хүссэн үедээ сэргээж болно.');
+T('Move this deal record to Trash? You can restore it from Trash at any time.','この商談記録をゴミ箱に移しますか？ ゴミ箱からいつでも復元できます。','Энэ худалдааны бүртгэлийг хогийн саванд зөөх үү? Хогийн савнаас хүссэн үедээ сэргээж болно.');
+T('Move this vehicle to Trash? You can restore it from Trash at any time.','この車両をゴミ箱に移しますか？ ゴミ箱からいつでも復元できます。','Энэ машиныг хогийн саванд зөөх үү? Хогийн савнаас хүссэн үедээ сэргээж болно.');
+T('This will permanently delete it. This cannot be undone. Are you sure?','完全に削除します。元に戻せません。よろしいですか？','Бүрмөсөн устгана. Буцаах боломжгүй. Итгэлтэй байна уу?');
+T('Cancel this deal? The vehicle will be returned to "In Stock".','この商談をキャンセルしますか？ 車両は「在庫」に戻ります。','Энэ худалдааг цуцлах уу? Машин "Бэлэн байгаа" төлөвт буцна.');
+T('Reset all thresholds to their default values?','すべてのしきい値を初期値に戻しますか？','Бүх босгыг анхны утгад буцаах уу?');
+T('Apply changes to # vehicle(s)?','#台の車両に変更を適用しますか？','# машинд өөрчлөлтийг хэрэглэх үү?');
+T('Password changed. Please use the new password from your next login.','パスワードを変更しました。次回のログインから新しいパスワードを使ってください。','Нууц үг солигдлоо. Дараагийн нэвтрэхдээ шинэ нууц үгээ ашиглана уу.');
+T('Clipboard is empty. Press "📋 Copy Results" in the appraisal tool first, then try again.','クリップボードが空です。先に査定ツールで「📋 Copy Results」を押してから、もう一度お試しください。','Санах ой хоосон байна. Эхлээд үнэлгээний хэрэгсэлд "📋 Copy Results" дараад дахин оролдоно уу.');
+T('Could not parse the JSON. Press "Copy Results" in the appraisal tool again and re-paste.','JSONを解析できませんでした。査定ツールで「Copy Results」をもう一度押して、貼り付け直してください。','JSON-г задлан уншиж чадсангүй. Үнэлгээний хэрэгсэлд "Copy Results" дахин дараад буулгана уу.');
+T('Could not read the clipboard (check your browser permission settings). Paste the text manually into the text area, then press "Load JSON".','クリップボードを読み取れませんでした（ブラウザの権限設定をご確認ください）。テキスト欄に手動で貼り付けて「Load JSON」を押してください。','Санах ойг уншиж чадсангүй (хөтчийн зөвшөөрлийн тохиргоог шалгана уу). Текст талбарт гараар буулгаад "Load JSON" дарна уу.');
+T('Paste the JSON copied from the appraisal tool, then load it','査定ツールからコピーしたJSONを貼り付けてから読み込んでください','Үнэлгээний хэрэгслээс хуулсан JSON-г буулгаад ачаална уу');
+T('Could not create the Excel file:','Excelファイルを作成できませんでした：','Excel файл үүсгэж чадсангүй:');
+T('Failed to download the file. Please try again.','ファイルのダウンロードに失敗しました。もう一度お試しください。','Файл татаж чадсангүй. Дахин оролдоно уу.');
+T('Failed to fetch the backup. Please try again in a moment.','バックアップの取得に失敗しました。しばらくしてからもう一度お試しください。','Нөөц хуулбар авч чадсангүй. Түр хүлээгээд дахин оролдоно уу.');
+T('Please enter Birthday as YYYY-MM-DD (e.g. 1990-05-15)','誕生日は YYYY-MM-DD の形式で入力してください（例：1990-05-15）','Төрсөн өдрийг YYYY-MM-DD хэлбэрээр оруулна уу (жишээ: 1990-05-15)');
+T('Please enter ETA as YYYY-MM-DD (e.g. 2026-10-05) so it appears on the Calendar and triggers the arrival email','ETAは YYYY-MM-DD の形式で入力してください（例：2026-10-05）。カレンダーに表示され、到着メールが送られます','ETA-г YYYY-MM-DD хэлбэрээр оруулна уу (жишээ: 2026-10-05) — хуанлид харагдаж, ирэх тухай имэйл илгээгдэнэ');
+T('Please enter Next Inspection Due Date as YYYY-MM-DD (e.g. 2026-09-01)','次回車検期限は YYYY-MM-DD の形式で入力してください（例：2026-09-01）','Дараагийн үзлэгийн хугацааг YYYY-MM-DD хэлбэрээр оруулна уу (жишээ: 2026-09-01)');
+T('Please enter a customer name','顧客名を入力してください','Үйлчлүүлэгчийн нэрийг оруулна уу');
+T('Please enter a name','名前を入力してください','Нэрийг оруулна уу');
+T('Please enter details','内容を入力してください','Дэлгэрэнгүйг оруулна уу');
+T('Please enter details when selecting General Repair','「一般修理」を選ぶときは内容を入力してください','"Ерөнхий засвар" сонгохдоо дэлгэрэнгүйг оруулна уу');
+T('Please enter the make and model','メーカーと車種を入力してください','Үйлдвэрлэгч болон загварыг оруулна уу');
+T('Please register at least one customer and one vehicle first.','先に顧客と車両を少なくとも1件ずつ登録してください。','Эхлээд дор хаяж нэг үйлчлүүлэгч, нэг машин бүртгэнэ үү.');
+T('Please select a file','ファイルを選択してください','Файл сонгоно уу');
+T('The popup was blocked. Please check your browser settings.','ポップアップがブロックされました。ブラウザの設定をご確認ください。','Попап хаагдсан байна. Хөтчийн тохиргоогоо шалгана уу.');
+T('There are no contracted or delivered deals to export yet.','出力できる契約済み・納車済みの商談がまだありません。','Гаргах гэрээ хийсэн / хүлээлгэн өгсөн худалдаа одоогоор алга.');
+T('There are no customers in the current list to export.','今の一覧に出力できる顧客がいません。','Одоогийн жагсаалтад гаргах үйлчлүүлэгч алга.');
+T('Please enter details when selecting General Repair','「一般修理」を選ぶときは内容を入力してください','"Ерөнхий засвар" сонгохдоо дэлгэрэнгүйг оруулна уу');
+
+/* ---------- placeholders ---------- */
+T('4.5 / S / RA, etc.','4.5／S／RA など','4.5 / S / RA гэх мэт');
+T('Bayanzurkh District...','バヤンズルフ区…','Баянзүрх дүүрэг...');
+T('Condition notes, etc.','状態のメモ など','Төлөвийн тэмдэглэл гэх мэт');
+T('Deal details, negotiation progress, etc.','商談の内容、交渉の進み具合 など','Худалдааны дэлгэрэнгүй, тохиролцооны явц гэх мэт');
+T('Enter details','内容を入力','Дэлгэрэнгүйг оруулна уу');
+T('Initial contact details, etc.','最初の連絡内容 など','Анхны холбоо барилтын дэлгэрэнгүй гэх мэт');
+T('Make, model, year, color, etc.','メーカー・車種・年式・色 など','Үйлдвэрлэгч, загвар, он, өнгө гэх мэт');
+T('Recommended maintenance, etc.','推奨整備 など','Санал болгож буй засвар гэх мэт');
+T('Record activity details…','活動の内容を記録…','Үйл ажиллагааны дэлгэрэнгүйг бүртгэх…');
+T('Record visits, quotes, negotiation details, etc.','来店・見積・交渉の内容 などを記録','Ирсэн, үнийн санал, тохиролцооны дэлгэрэнгүй гэх мэтийг бүртгэх');
+T('What happened, what the customer is asking for, etc.','何があったか、お客様の要望 など','Юу болсон, үйлчлүүлэгч юу хүсч байгаа гэх мэт');
+T('e.g. Scratch on rear bumper','例：リアバンパーの傷','жишээ: Хойд бамперын зураас');
+T('Pearl White','パールホワイト','Сувдан цагаан');
+T('Silver','シルバー','Мөнгөлөг');
+T('Call sheet for sales staff: name (DM No.), phone, vehicle & shipping status, with room for contact memos. Exports the customers currently shown.','営業スタッフ用のコールシート：名前（DM番号）、電話、車両・輸送状況、連絡メモ欄付き。今表示している顧客を出力します。','Борлуулалтын ажилтны дуудлагын хуудас: нэр (DM дугаар), утас, машин ба тээврийн төлөв, холбоо барьсан тэмдэглэлийн зайтай. Одоо харагдаж буй үйлчлүүлэгчдийг гаргана.');
+T('Raised #-#-#','登録日 #-#-#','Бүртгэсэн #-#-#');
+T('Registered #-#-#','登録日 #-#-#','Бүртгэсэн #-#-#');
+T('Today #','今日 #','Өнөөдөр #');
+})();
+
+/* i18n dictionary part 50 — leftovers found by the live harvest */
+(function(){ const T = I18N.T, A = I18N.addRe;
+T('(Unknown customer)','（不明な顧客）','(Үл мэдэгдэх үйлчлүүлэгч)');
+T('(Unknown vehicle)','（不明な車両）','(Үл мэдэгдэх машин)');
+T('— (Unknown vehicle)','— （不明な車両）','— (Үл мэдэгдэх машин)');
+T('-- Register as new customer --','-- 新規顧客として登録 --','-- Шинэ үйлчлүүлэгчээр бүртгэх --');
+T('deals','件','худалдаа');
+T('Up','上へ','Дээш');
+T('Down','下へ','Доош');
+T('Hot Lead','Hot案件','Hot (өндөр сонирхолтой)');
+T('Paste from Clipboard & Analyze','クリップボードから貼り付けて解析','Санах ойноос буулгаж шинжлэх');
+T('A vehicle appraised on a trip. It is not our stock for sale — record what we do with it below. If we later sell it, change Registration Type to Stock Vehicle via ✎ Edit.','出張先で査定した車です。当店の販売在庫ではありません。下に当店での扱いを記録してください。後で販売する場合は、✎ 編集から「登録区分」を在庫車両に変更してください。','Томилолтоор үнэлсэн машин. Манай худалдах бэлэн машин биш — доор бидний хийх зүйлийг тэмдэглэнэ үү. Хожим зарах бол ✎ Засах хэсгээр "Бүртгэлийн төрөл"-ийг Бэлэн машин болгон өөрчилнө үү.');
+T('Owner:','オーナー：','Эзэн:');
+T('Customers (#)','顧客（#）','Үйлчлүүлэгч (#)');
+T('Vehicles (#)','車両（#）','Машин (#)');
+T('On Hold','保留','Түр хойшлуулсан');
+T('Add Entry','記録を追加','Бүртгэл нэмэх');
+T('Reminders for everyone','全員分のリマインド','Бүх хүний сануулга');
+T('On Order (target spec, not yet purchased)','注文中（希望スペック・未購入）','Захиалгаар (зорилтот спек, хараахан худалдан аваагүй)');
+T('row #','#行目','# дугаар мөр');
+T('# item(s)','#件','# зүйл');
+A('ja', [[/^(\S+) — Reminders for everyone$/, d => d + ' — 全員分のリマインド'], [/^Registered (\S+)$/, d => '登録日 ' + d], [/^Raised (\S+)$/, d => '登録日 ' + d], [/^Today (\S+)$/, d => '今日 ' + d]]);
+A('mn', [[/^(\S+) — Reminders for everyone$/, d => d + ' — Бүх хүний сануулга'], [/^Registered (\S+)$/, d => 'Бүртгэсэн ' + d], [/^Raised (\S+)$/, d => 'Бүртгэсэн ' + d], [/^Today (\S+)$/, d => 'Өнөөдөр ' + d]]);
+T('The latest service entry records # km, which is LOWER than the vehicle\'s current # km. Update the vehicle\'s mileage to # km anyway? (Cancel = keep # km — check the entry for a typo.)','最新の整備記録の走行距離は#kmで、車両の現在の#kmより少なくなっています。それでも車両の走行距離を#kmに更新しますか？（キャンセル＝#kmのまま。記録の入力ミスをご確認ください。）','Хамгийн сүүлийн үйлчилгээний бүртгэлийн гүйлт # км нь машины одоогийн # км-ээс БАГА байна. Гэсэн ч машины гүйлтийг # км болгон шинэчлэх үү? (Болих = # км хэвээр — бүртгэлд буруу бичсэн эсэхийг шалгана уу.)');
+T('— updates the vehicle\'s mileage','— 車両の走行距離を更新します','— машины гүйлтийг шинэчилнэ');
+/* sentences that carry a name / date / count in the middle */
+A('ja', [
+  [/^Go to (.+)'s customer page$/, n => n + 'さんの顧客ページへ'],
+  [/^Converted (\S+)$/, d => '切り替え日 ' + d],
+  [/^Deleted: (.+)$/, d => '削除日: ' + d],
+  [/^Inspection due (.+)$/, d => '車検期限 ' + d],
+  [/^Saved (\d+), failed (\d+)$/, (a,b) => '保存 ' + a + '件、失敗 ' + b + '件'],
+  [/^Will link: (.+) \(Plate No\.: (.*)\)$/, (n,p) => '紐づけ予定: ' + n + '（ナンバー: ' + p + '）'],
+]);
+A('mn', [
+  [/^Go to (.+)'s customer page$/, n => n + '-ийн үйлчлүүлэгчийн хуудас руу'],
+  [/^Converted (\S+)$/, d => 'Хөрвөсөн ' + d],
+  [/^Deleted: (.+)$/, d => 'Устгасан: ' + d],
+  [/^Inspection due (.+)$/, d => 'Үзлэгийн хугацаа ' + d],
+  [/^Saved (\d+), failed (\d+)$/, (a,b) => 'Хадгалсан ' + a + ', амжилтгүй ' + b],
+  [/^Will link: (.+) \(Plate No\.: (.*)\)$/, (n,p) => 'Холбох: ' + n + ' (Улсын дугаар: ' + p + ')'],
+]);
+I18N.addPhrases('ja', [['(Unknown customer)','（不明な顧客）'],['(Unknown vehicle)','（不明な車両）'],['No phone on file','電話番号なし'],['Unassigned','担当者なし']]);
+I18N.addPhrases('mn', [['(Unknown customer)','(Үл мэдэгдэх үйлчлүүлэгч)'],['(Unknown vehicle)','(Үл мэдэгдэх машин)'],['No phone on file','Утас бүртгэлгүй'],['Unassigned','Хариуцагчгүй']]);
+T('Orders in progress — no update for N+ days','進行中の注文 — N日以上更新なし','Явагдаж буй захиалга — N хоногоос дээш шинэчлэлтгүй');
+T('Load JSON','JSONを読み込む','JSON ачаалах');
+T('Copy Results','結果をコピー','Үр дүнг хуулах');
+A('ja', [
+  [/^(.+?) ・\s?No phone on file$/, n => n + ' ・電話番号なし'],
+  [/^(V-\S+) ・ Plate No\.: (.*?) ・ VIN: (.*)$/, (id,p,v) => id + ' ・ ナンバー: ' + p + ' ・ 車台番号: ' + v],
+  [/^(.+?) ・ Plate No\.: (.*?) ・ VIN: (.*)$/, (id,p,v) => id + ' ・ ナンバー: ' + p + ' ・ 車台番号: ' + v],
+]);
+A('mn', [
+  [/^(.+?) ・\s?No phone on file$/, n => n + ' ・Утас бүртгэлгүй'],
+  [/^(V-\S+) ・ Plate No\.: (.*?) ・ VIN: (.*)$/, (id,p,v) => id + ' ・ Улсын дугаар: ' + p + ' ・ VIN: ' + v],
+  [/^(.+?) ・ Plate No\.: (.*?) ・ VIN: (.*)$/, (id,p,v) => id + ' ・ Улсын дугаар: ' + p + ' ・ VIN: ' + v],
+]);
+A('ja', [[/^(.+) \(No phone on file\)$/, n => n + '（電話番号なし）']]);
+A('mn', [[/^(.+) \(No phone on file\)$/, n => n + ' (Утас бүртгэлгүй)']]);
+/* month names used by the calendar ("October 2026") */
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const re = /^(January|February|March|April|May|June|July|August|September|October|November|December) (\d{4})$/;
+A('ja', [[re, (m,y) => y + '年' + (MONTHS.indexOf(m)+1) + '月']]);
+A('mn', [[re, (m,y) => y + ' оны ' + (MONTHS.indexOf(m)+1) + '-р сар']]);
+})();
+
+</script>
+<!-- I18N:END -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 /* ============================================================
@@ -2782,8 +3629,9 @@ function fieldInfoPanel(v){
     <div class="panel">
       <h3>🧭 About This Field Appraisal Vehicle</h3>
       <div class="empty" style="padding:20px; text-align:left; color:var(--text-dim)">
-        A vehicle appraised on a trip${owner?`, owned by <strong style="color:var(--text)">${esc(owner.name)}</strong>`:''}. It is not our stock for sale — record what we do with it below.
-        If we later sell it, change <b>Registration Type</b> to Stock Vehicle via ✎ Edit.
+        A vehicle appraised on a trip. It is not our stock for sale — record what we do with it below.
+        If we later sell it, change Registration Type to Stock Vehicle via ✎ Edit.
+        ${owner?`<div style="margin-top:8px">Owner: <strong style="color:var(--text)">${esc(owner.name)}</strong></div>`:''}
       </div>
       <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; align-items:center">
         <span style="font-size:12px; color:var(--text-dim)">Handling:</span>
@@ -2876,7 +3724,8 @@ function tradeInInfoPanel(v){
     <div class="panel">
       <h3>📋 About This Appraisal Vehicle</h3>
       <div class="empty" style="padding:20px; text-align:left; color:var(--text-dim)">
-        This is not one of our stock vehicles — it is a record of an appraisal vehicle brought in by ${owner?`<strong style="color:var(--text)">${esc(owner.name)}</strong>`:'a customer'}.
+        This is not one of our stock vehicles — it is a record of an appraisal vehicle brought in by a customer.
+        ${owner?`<div style="margin-top:8px">Owner: <strong style="color:var(--text)">${esc(owner.name)}</strong></div>`:''}
       </div>
       <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap">
         ${owner?`<button class="btn ghost sm" onclick="openCustomerDetail('${owner.id}')">👤 Go to ${esc(owner.name)}'s customer page</button>`:''}
@@ -3901,6 +4750,7 @@ function renderManual(){
     <div class="panel manual-section" id="m-ch1">
       <h3><span class="manual-chapnum">01</span> Нэвтрэх ба цэс</h3>
       <p style="color:var(--text-dim); font-size:13px; margin:0 0 12px">Бүх ажилтан нэг ижил нэвтрэх эрх ашигладаг. Нэвтэрсний дараа зүүн талын цэснээс хэрэгтэй хэсгээ сонгоно:</p>
+      <div class="manual-callout"><span class="ic">🌐</span><div><b>Хэл солих (EN / 日本語 / МН)</b><p>Нэвтрэх дэлгэц болон зүүн талын цэсний дээд хэсэгт <b>EN</b> (Англи), <b>日本語</b> (Япон), <b>МН</b> (Монгол) гэсэн 3 товч байна. Дарахад бүх дэлгэц тухайн хэл рүү шууд солигдоно. Сонгосон хэл энэ хөтөч дээр хадгалагдана. Ойлгомжгүй зүйл тохиолдвол хэлээ сольж харна уу. Харилцагч, машины нэр, тэмдэглэл зэрэг <b>оруулсан мэдээлэл</b> орчуулагдахгүй. Энэ «Гарын авлага» хэсэг зөвхөн монгол хэлээр байна.</p></div></div>
       <ul style="margin:0; padding-left:20px; font-size:13px; color:var(--text-dim); line-height:1.9">
         <li><b style="color:var(--text)">🏠 Dashboard</b> — Хянах самбар. Өнөөдрийн байдал, сануулгууд энд харагдана.</li>
         <li><b style="color:var(--text)">👤 Customers</b> — Үйлчлүүлэгчийн бүртгэл.</li>
