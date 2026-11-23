@@ -569,6 +569,7 @@
     lang = l;
     try{ localStorage.setItem('dms_lang', l); }catch(e){}
     translateAll();
+    document.dispatchEvent(new Event('i18nchange'));
   }
 
   window.I18N = {
@@ -5352,7 +5353,421 @@ async function resetReminderSettingsForm(){
   await saveReminderSettings({...DEFAULT_REMINDER_SETTINGS});
   renderView();
 }
+/* The Manual exists in three full versions; the language buttons choose which one is shown. */
 function renderManual(){
+  const l = (window.I18N && I18N.lang) || 'en';
+  return l==='ja' ? renderManualJa() : (l==='mn' ? renderManualMn() : renderManualEn());
+}
+document.addEventListener('i18nchange', ()=>{ if(typeof currentView!=='undefined' && currentView==='manual' && document.getElementById('view')) renderView(); });
+function renderManualEn(){
+  return `
+    <div class="topbar">
+      <div class="pagetitle">📖 Manual <span class="sub">How to use the DMS</span></div>
+    </div>
+    <div class="manual-nav">
+      <a href="#m-ch1">01 Login · Menu</a>
+      <a href="#m-ch2">⚠ Key Rule</a>
+      <a href="#m-ch3">03 Basic Entry</a>
+      <a href="#m-ch4">04 The 6 Reminder Types</a>
+      <a href="#m-ch5">⚠ Complaints</a>
+      <a href="#m-ch6">06 Calendar</a>
+      <a href="#m-ch7">07 Customer Types</a>
+      <a href="#m-ch8">08 Vehicle Status</a>
+      <a href="#m-ch9">09 Staff Lanes</a>
+      <a href="#m-ch10">10 Downloading Photos</a>
+      <a href="#m-ch11">11 Message Templates</a>
+      <a href="#m-ch12">12 Management Tools</a>
+      <a href="#m-ch13">13 FAQ</a>
+    </div>
+
+    <div class="panel manual-section" id="m-ch1">
+      <h3><span class="manual-chapnum">01</span> Login and Menu</h3>
+      <p style="color:var(--text-dim); font-size:13px; margin:0 0 12px">All staff use the same shared login. After logging in, choose the section you need from the menu on the left:</p>
+      <div class="manual-callout warn"><span class="ic">👤</span><div><b>Choosing your own name at login, and your PIN</b><p>After logging in with the shared password, the «<b>Who is using this PC?</b>» screen appears. Choose <b>your own name</b> from the list. The first time, you create <b>your own PIN</b> (a 4–8 digit number) — never tell it to anyone else. After that, choose your name and enter your PIN. <b>Your name, the date and the time</b> are recorded automatically with every entry you make or change. If you forget your PIN, ask the President to reset it. To let someone else work on the PC, press <b>«Switch user»</b> in the left menu. Logging in under someone else's name to enter data is not allowed.</p></div></div>
+
+      <div class="manual-callout"><span class="ic">🕘</span><div><b>Edit Log</b><p>In the left menu, <b>«🕘 Edit Log»</b> shows who entered or changed what, and when (old value → new value). You can filter by person, type, action and date. The <b>«🕘 Edit Log»</b> button on a customer or vehicle page shows only the history of that record. This log cannot be edited or deleted.</p></div></div>
+
+      <div class="manual-callout"><span class="ic">🌐</span><div><b>Changing the language (EN / 日本語 / МН)</b><p>On the login screen and at the top of the left menu there are 3 buttons: <b>EN</b> (English), <b>日本語</b> (Japanese) and <b>МН</b> (Mongolian). Pressing one switches every screen — including this Manual — to that language immediately. The language you choose is remembered on this browser. If anything is unclear, switch the language and compare. Information you entered yourself — customer names, vehicle names, notes — is <b>not translated</b>.</p></div></div>
+      <ul style="margin:0; padding-left:20px; font-size:13px; color:var(--text-dim); line-height:1.9">
+        <li><b style="color:var(--text)">🏠 Dashboard</b> — Today's situation and reminders appear here.</li>
+        <li><b style="color:var(--text)">👤 Customers</b> — Customer records.</li>
+        <li><b style="color:var(--text)">🚗 Vehicles &amp; Appraisal</b> — Vehicle records and appraisals.</li>
+        <li><b style="color:var(--text)">💬 Deal Pipeline</b> — Every stage of every deal.</li>
+        <li><b style="color:var(--text)">👥 Staff</b> — The staff list.</li>
+        <li><b style="color:var(--text)">⚙️ Reminder Settings</b> — The number of days for each reminder (changed by the manager).</li>
+        <li><b style="color:var(--text)">📅 Calendar</b> — Monthly calendar view.</li>
+      </ul>
+    </div>
+
+    <div class="panel manual-section critical" id="m-ch2">
+      <h3><span class="manual-chapnum">⚠</span> The most important rule: record every contact</h3>
+      <p style="font-size:13px; margin:0 0 10px">The DMS <b>does not know by itself what you did last</b> — it only knows what you wrote down. Every time you talk to a customer, meet them or phone them, add a note right away.</p>
+      <div class="manual-callout warn">
+        <span class="ic">🚨</span>
+        <div><b>If you do not add a note</b><p>The system thinks you have "not been in touch for a long time" and sends the reminder for the same customer again <b>every day</b>.</p></div>
+      </div>
+      <div class="manual-flow">
+        <div class="manual-flow-step"><span class="k">01</span><div class="t">You make contact</div><div class="d">A phone call or a meeting</div></div>
+        <div class="manual-flow-arrow">→</div>
+        <div class="manual-flow-step"><span class="k">02</span><div class="t">The counter starts</div><div class="d">Days are counted from the last contact date</div></div>
+        <div class="manual-flow-arrow">→</div>
+        <div class="manual-flow-step alert"><span class="k">03</span><div class="t">The limit is reached</div><div class="d">It shows on the Dashboard and an email is sent</div></div>
+        <div class="manual-flow-arrow">→</div>
+        <div class="manual-flow-step reset"><span class="k">04</span><div class="t">Add a note → 0</div><div class="d">The counter restarts and the reminder disappears</div></div>
+      </div>
+      <p style="font-size:13px; margin:12px 0 8px">Where to add a note: the <b>«💬 Deal &amp; Negotiation Log»</b> section on the customer screen (Customers → click the customer).</p>
+      <div class="card" style="cursor:default; background:var(--panel2)">
+        <div style="font-weight:700; font-size:13px; margin-bottom:10px">💬 Deal &amp; Negotiation Log</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px">
+          <div class="field" style="margin-bottom:0"><label>Date</label><input value="Today" readonly></div>
+          <div class="field" style="margin-bottom:0"><label>Staff</label><input value="Your name ①" readonly></div>
+        </div>
+        <div class="field" style="margin-bottom:10px"><label>Details</label><textarea readonly placeholder='e.g. &quot;Spoke by phone; agreed to call back next week&quot; ②'></textarea></div>
+        <button class="btn sm" disabled>＋ Add Entry ③</button>
+      </div>
+      <ol style="font-size:13px; color:var(--text-dim); margin:12px 0 0; padding-left:20px; line-height:1.8">
+        <li><b style="color:var(--text)">Staff</b> — choose your own name.</li>
+        <li><b style="color:var(--text)">Details</b> — briefly write what was said and what was agreed.</li>
+        <li>Press <b style="color:var(--text)">＋ Add Entry</b> — pressing this is what resets the counter to 0.</li>
+      </ol>
+      <div class="manual-callout">
+        <span class="ic">✅</span>
+        <div><b>The rule in short</b><p>Every time you talk, meet or phone — press «＋ Add Entry» immediately. If you put it off until later, it gets forgotten.</p></div>
+      </div>
+      <p style="font-size:13px; margin:16px 0 8px"><b style="color:var(--text)">What to write in Details:</b></p>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+        <div class="card" style="cursor:default; border-color:var(--red); background:var(--red-soft)">
+          <div style="font-weight:700; font-size:12.5px; color:var(--red); margin-bottom:6px">✕ Too little</div>
+          <div style="font-size:12.5px; color:var(--text-dim)">"ok"</div>
+        </div>
+        <div class="card" style="cursor:default; border-color:var(--green); background:var(--green-soft)">
+          <div style="font-weight:700; font-size:12.5px; color:var(--green); margin-bottom:6px">✓ Enough</div>
+          <div style="font-size:12.5px; color:var(--text-dim)">"Showed the quote. He said he can discuss up to 20 million. I will call back on Monday."</div>
+        </div>
+      </div>
+      <p style="font-size:12px; color:var(--text-dim2); margin:8px 0 0">No long explanations needed — it is enough to write it so that someone else can read it and understand <b style="color:var(--text-dim)">who said what, and what the next step is</b>.</p>
+    </div>
+
+    <div class="panel manual-section" id="m-ch3">
+      <h3><span class="manual-chapnum">03</span> Basic Entry</h3>
+      <p style="font-size:13px; margin:0 0 10px"><b>👤 Registering a new customer:</b> On the Customers page, press «＋ New Customer» and enter the name and phone number, and always choose the <b>person in charge (Sales Staff)</b>. If this field is wrong, the reminder emails go to the wrong person!</p>
+      <p style="font-size:13px; margin:0 0 8px"><b>💬 The stages of a deal:</b> Every customer moves through the stages in this order:</p>
+      <div class="manual-stages">
+        ${['Inquiry','Visit','Appraisal','Test Drive','Quote','Negotiation','Contract','Delivery'].map(s=>`<span class="staff-tag">${s}</span>`).join('')}
+        <span class="staff-tag" style="color:var(--red); border-color:var(--red)">Cancelled</span>
+      </div>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:0">Depending on the stage a deal is in, the system decides by itself which of the 6 reminder types explained in the next chapter becomes active.</p>
+    </div>
+
+    <div class="panel manual-section" id="m-ch4">
+      <h3><span class="manual-chapnum">04</span> The 6 Reminder Types</h3>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:0 0 12px">The manager can change the number of days in ⚙️ Reminder Settings — the values below are the current defaults.</p>
+      <div class="manual-cat"><div class="ic">🔥</div><div><div class="name">① Hot Lead</div><div class="cond">In the Quote / Negotiation stage</div></div><div class="days" style="background:var(--amber-soft); color:var(--amber)">2+ days</div></div>
+      <div class="manual-cat"><div class="ic">🚗</div><div><div class="name">② Post-Delivery Follow-up</div><div class="cond">Delivered, but not yet marked as an "In-House customer"</div></div><div class="days" style="background:var(--teal-soft); color:var(--teal)">1 day → every 7 days</div></div>
+      <div class="manual-cat"><div class="ic">👀</div><div><div class="name">③ Prospect</div><div class="cond">In the Visit / Appraisal / Test Drive stage</div></div><div class="days" style="background:var(--blue-soft); color:var(--blue)">3+ days</div></div>
+      <div class="manual-cat"><div class="ic">📩</div><div><div class="name">④ New Inquiry</div><div class="cond">A first inquiry has come in</div></div><div class="days" style="background:var(--violet-soft); color:var(--violet)">3+ days</div></div>
+      <div class="manual-cat"><div class="ic">🔨</div><div><div class="name">⑤ Order In Progress</div><div class="cond">Contract signed, vehicle has not arrived yet</div></div><div class="days" style="background:var(--amber-soft); color:var(--amber)">5+ days</div></div>
+      <div class="manual-cat"><div class="ic">🤝</div><div><div class="name">⑥ In-House Check-in</div><div class="cond">Delivered and marked as an "In-House customer"</div></div><div class="days" style="background:var(--green-soft); color:var(--green)">every 60 days</div></div>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:10px 0 0">Clicking a card on the Dashboard opens that customer / deal right away — you can press «＋ Add Entry» from there.</p>
+    </div>
+
+    <div class="panel manual-section critical" id="m-ch5">
+      <h3><span class="manual-chapnum">⚠</span> Reporting a complaint (most urgent)</h3>
+      <p style="font-size:13px; margin:0 0 10px">When a customer reports a complaint (engine noise, repairs, damage, etc.), it must be dealt with <b>before all other reminders</b>.</p>
+      <div class="card" style="cursor:default; border-color:var(--red); background:var(--red-soft)">
+        <div style="font-weight:700; font-size:13px; color:var(--red); margin-bottom:6px">🚨 Active Claim — Open for 2 day(s)</div>
+        <div style="font-size:12px; color:var(--red); margin-bottom:10px">"A call came in saying the engine is making noise."</div>
+        <button class="btn sm" style="background:var(--red)" disabled>✅ Mark Resolved</button>
+      </div>
+      <ul style="font-size:13px; color:var(--text-dim); margin:12px 0 0; padding-left:20px; line-height:1.8">
+        <li>As soon as a complaint arrives, press <b style="color:var(--text)">«⚠️ Report a Claim / Complaint»</b> and write it down.</li>
+        <li>Until it is resolved it shows on the Dashboard in a red frame and reminds you <b style="color:var(--text)">every day</b>.</li>
+        <li>The reminder stops only when you press <b style="color:var(--text)">«✅ Mark Resolved»</b> after solving it.</li>
+      </ul>
+    </div>
+
+    <div class="panel manual-section" id="m-ch6">
+      <h3><span class="manual-chapnum">06</span> Calendar</h3>
+      <p style="font-size:13px; margin:0 0 10px">In 📅 Calendar you can see at a glance how many reminders come up on each day of the month.</p>
+      <ul style="font-size:13px; color:var(--text-dim); margin:0; padding-left:20px; line-height:1.8">
+        <li>The coloured number in a day's box is the number of reminders whose <b style="color:var(--text)">time limit is reached for the first time on that day</b>.</li>
+        <li>Clicking a day lists that day's reminders for <b style="color:var(--text)">all staff</b>, grouped by staff member.</li>
+        <li><b style="color:var(--text)">🚢 Vehicle Arrival (UB)</b> — If you enter the <b style="color:var(--text)">ETA (Arrives UB)</b> of a vehicle on its way from Japan in the vehicle details as <b style="color:var(--text)">YYYY-MM-DD</b>, its arrival day in Ulaanbaatar appears on the Calendar. An automatic email also goes to <b style="color:var(--text)">Maeda 7 days and 3 days before</b> arrival.</li>
+      </ul>
+    </div>
+
+    <div class="panel manual-section" id="m-ch7">
+      <h3><span class="manual-chapnum">07</span> Customer Types</h3>
+      <p style="font-size:13px; margin:0 0 10px">Every customer is marked as one of 2 types: <b>«In-House Customer»</b> (a customer who bought a vehicle from us and has had it delivered) or <b>«Other Dealer Customer»</b> (a customer who bought elsewhere, but whose information we keep). The type is shown as a coloured badge in the customer list and on the detail page, and you can filter by type with the filter at the top.</p>
+      <div class="manual-callout"><span class="ic">🔥</span><div><b>The Hot / Prospect / No Prospect mark on Other Dealer Customers</b><p>Each time you click the badge of an «Other Dealer Customer», it cycles <b>no mark → 🔥Hot → 👀Prospect → 🚫No Prospect → no mark</b>. This is a manual mark for internal information only — it does <b>not affect</b> the automatic reminder emails or the Dashboard reminders.</p></div></div>
+      <div class="manual-callout"><span class="ic">🎉</span><div><b>The Converted badge</b><p>When someone who was an «Other Dealer Customer» buys a vehicle from us and the deal reaches the «Delivery» stage (not when the contract is signed), the system automatically changes the type to «In-House Customer» and permanently shows a <b>«🎉 Converted [date]»</b> badge on the customer's profile. It records the success of winning over another dealer's customer.</p></div></div>
+    </div>
+
+    <div class="panel manual-section" id="m-ch8">
+      <h3><span class="manual-chapnum">08</span> Vehicle Status Categories</h3>
+      <p style="font-size:13px; margin:0 0 10px">The filters on the Vehicles &amp; Appraisal page appear in this order, with these meanings:</p>
+      <div class="manual-cat"><div class="ic">📦</div><div><div class="name">In Stock</div><div class="cond">Ready for sale; no customer decided yet</div></div></div>
+      <div class="manual-cat"><div class="ic">📋</div><div><div class="name">Appraisal Vehicle</div><div class="cond">A vehicle the customer is driving now — we only appraise it. The customer sells it themselves, or has us sell it on consignment (for a commission). We do not do trade-ins or buy vehicles outright.</div></div></div>
+      <div class="manual-cat"><div class="ic">🧭</div><div><div class="name">Field Appraisal</div><div class="cond">A vehicle appraised away from the shop. <b>📦 In Custody</b> — we are holding it; <b>⏸ On Hold</b> — postponed, only the information is kept. When it goes on sale, change it to «Stock Vehicle» in the edit window.</div></div></div>
+      <div class="manual-cat"><div class="ic">🤝</div><div><div class="name">In Negotiation</div><div class="cond">Sales talks with a specific customer are under way</div></div></div>
+      <div class="manual-cat"><div class="ic">✅</div><div><div class="name">Sold (contract signed)</div><div class="cond">As soon as the contract is signed the vehicle becomes «Sold», which prevents selling it twice. It stays «Sold» until delivery and also after delivery. Whether it has been delivered is recorded on the <b>«Delivery»</b> stage in the Deal Pipeline — at that moment the customer becomes an «In-House Customer».</div></div></div>
+
+      <div class="manual-cat"><div class="ic">🏢</div><div><div class="name">At Branch (not our stock)</div><div class="cond">A vehicle sent to, or sold by, the Umnugovi branch. It is not counted in «In Stock», «Not Yet Appraised» or the profit figures.</div></div></div>
+
+      <div class="manual-cat"><div class="ic">🔍</div><div><div class="name">On Order</div><div class="cond">The vehicle has NOT physically arrived yet — only a spec / an order</div></div></div>
+      <div class="manual-callout"><span class="ic">🏷</span><div><b>The coloured tag on a vehicle (who this person is to the vehicle)</b><p>In front of the person's name on vehicle cards and customer cards, a coloured tag shows <b>how that person is connected to that vehicle</b>, and the card has a bar of the same colour on its left side: <b>🛒 Buyer</b> (green — signed the contract / took delivery), <b>💬 In talks</b> (blue — negotiating), <b>🏷 Consignor</b> (orange — the owner who has us sell the vehicle on consignment), <b>📋 Appraisal only</b> (purple — only had the vehicle appraised), <b>🏢 Company stock</b> (grey — a vehicle in the company's name). If you also see a <b>⭐ In-House</b> mark next to the name, that person has bought and taken delivery of a vehicle from us before (is our customer) — even if this time they only had a vehicle appraised.</p></div></div>
+
+      <div class="manual-callout warn"><span class="ic">🔍</span><div><b>How On Order cards differ</b><p>«On Order» cards have a purple dashed frame and a strong background, and carry the label <b>«🔍 NO VEHICLE YET — TARGET SPEC ONLY»</b> — because it is not a real vehicle, only a target spec based on a customer's request. It is shown in a different colour on purpose, so it is not confused with other vehicles when you look at «All».</p></div></div>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:10px 0 0">A vehicle that is on its way from Japan (bought but not arrived yet) also shows a small <b>«🚢 In Transit»</b> tag. The default filter is «In Stock».</p>
+      <div class="manual-callout"><span class="ic">🚢</span><div><b>Vehicles that have not arrived (in transit)</b><p>A vehicle that has not yet arrived in Ulaanbaatar is <b>not counted</b> in the «In Stock» number or in «Not Yet Appraised»; it is shown separately under the «🚢 In Transit» filter. When an order comes in, you can press «Start Deal» in the vehicle details and assign it to a customer. When the vehicle arrives, switch on <b>«Arrived in Ulaanbaatar»</b> in the vehicle's edit window and record the inspection / appraisal done on arrival. It is temporarily registered under the name «Deed Motors» (🔑 Nominal owner).</p></div></div>
+    </div>
+
+    <div class="panel manual-section" id="m-ch9">
+      <h3><span class="manual-chapnum">09</span> A Deal Lane for Each Staff Member</h3>
+      <p style="font-size:13px; margin:0 0 10px">On the 💬 Deal Pipeline page, <b>every registered staff member automatically gets their own lane</b> — when a new staff member is added or an old one leaves, the lanes update by themselves; nothing has to be set up separately. You can change the order of the lanes with the ↑/↓ buttons, just like on the Staff page (there are ↑/↓ buttons at the top right of each lane).</p>
+      <div class="manual-callout"><span class="ic">👤</span><div><b>The person in charge (Sales Staff) is kept in one place only</b><p>A deal lane is decided by the customer's <b>Sales Staff</b> (the current person in charge). To change the person in charge, go to Customers, press «✎ Edit» on that customer and change <b>Sales Staff</b> — all of that customer's deals (Deal Pipeline) and the reminder emails are updated together. <b>«Sold By» (the person who made the sale)</b>, however, always stays as the name at the time of the contract — so you can see both, e.g. «Sold by Essa · Now handled by Temuka».</p></div></div>
+      <div class="manual-callout warn"><span class="ic">⚠</span><div><b>The «Negotiation Failed &amp; Cancel» button</b><p>When negotiations fail and the purchase will not happen, do not delete the card — press <b>«Negotiation Failed / Cancel»</b>. The stage is then saved as «Cancelled» — nothing is lost from the history or the figures. The ordinary <b>Delete</b> is only for permanently removing a record that was entered by mistake or is a duplicate.</p></div></div>
+    </div>
+
+    <div class="panel manual-section" id="m-ch10">
+      <h3><span class="manual-chapnum">10</span> Downloading Vehicle Photos</h3>
+      <p style="font-size:13px; margin:0 0 10px">In the photo list on a vehicle's detail page, each photo has a button marked <b>💾</b> next to it; pressing it downloads that photo to your own computer. The <b>«💾 Download All»</b> button at the top of the list downloads all of that vehicle's photos at once.</p>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:0">Do not mix up the 💾 (download) button with the ↑/↓ buttons that change the order of the photos — they are told apart by colour and symbol.</p>
+    </div>
+
+    <div class="panel manual-section" id="m-ch11">
+      <h3><span class="manual-chapnum">11</span> Ready-made Message Templates</h3>
+      <p style="font-size:13px; margin:0 0 10px">On a customer's detail page and on the reminder cards on the Dashboard there is a <b>«✉️ Message»</b> button. Pressing it brings up a ready-made text template in Mongolian for a birthday, an inspection reminder, or a general offer (outreach). Press the button to copy it and send it straight away by SMS, Messenger or phone.</p>
+      <div class="manual-callout"><span class="ic">💡</span><div><b>Note</b><p>These texts are general templates prepared automatically — you may edit them to fit the situation before sending, and where necessary we recommend having a native Mongolian-speaking staff member check the wording.</p></div></div>
+    </div>
+
+    <div class="panel manual-section" id="m-ch12">
+      <h3><span class="manual-chapnum">12</span> Extra Management Tools</h3>
+      <ul style="font-size:13px; color:var(--text-dim); margin:0; padding-left:20px; line-height:1.9">
+        <li><b style="color:var(--text)">🎂 Upcoming Birthdays</b> — On the Dashboard, lists the customers whose birthday falls in the next 7 days; from there you can press «✉️ Message» right away to send greetings.</li>
+        <li><b style="color:var(--text)">⚠️ Duplicate customers</b> — If several records have the same phone number, a yellow-framed warning appears at the top of the Customers page — please check whether they need to be merged.</li>
+        <li><b style="color:var(--text)">📋 Contact List (Excel)</b> — With the button at the top of the Customers page, download a <b style="color:var(--text)">salesperson's call sheet</b> as Excel: the customer's name (DM number), phone, vehicle and shipping status, and a column to write down what you discussed. It prints the customers currently shown on the screen (as selected by the filter); an all-staff sheet and a separate sheet for each staff member are produced. Customers whose vehicle is on its way are shown in yellow, at the top.</li>
+        <li><b style="color:var(--text)">📋 Reminder List (Excel)</b> — With the button at the top of the Dashboard, download <b style="color:var(--text)">all the reminders</b> shown on the Dashboard (inspections, birthdays, complaints, the 6 types of contact reminders) as Excel in the same form as the Contact List. Each type has a different colour (complaints — red), it is ready to print on A4 landscape, and it has a column to write down what you discussed. After you make contact, do not forget to press «＋ Add Entry» in the DMS — that is what makes the reminder disappear.</li>
+        <li><b style="color:var(--text)">⬇ Export CSV</b> — With the button at the top of the Customers page you can download the list of all customers as a CSV file that opens in Excel.</li>
+      </ul>
+    </div>
+
+    <div class="panel manual-section" id="m-ch13">
+      <h3><span class="manual-chapnum">13</span> Frequently Asked Questions</h3>
+      <div class="manual-callout"><span class="ic">❓</span><div><b>Why does the reminder for the same customer keep coming every day?</b><p>You have not pressed «＋ Add Entry». Add your note right after the phone call — the reminder goes away immediately.</p></div></div>
+      <div class="manual-callout"><span class="ic">❓</span><div><b>What if nothing was agreed — they just did not answer the phone?</b><p>That is a note too — for example, write "Did not answer, will try again later" and the counter goes to 0.</p></div></div>
+      <div class="manual-callout"><span class="ic">❓</span><div><b>Who receives the email?</b><p>The person in charge receives it mainly; all other staff receive a copy (CC).</p></div></div>
+      <div class="manual-callout"><span class="ic">❓</span><div><b>At what time does the email arrive?</b><p>It is sent automatically at 8 a.m. (Ulaanbaatar time) every day except Sunday.</p></div></div>
+      <div class="manual-callout"><span class="ic">💡</span><div><b>Tip</b><p>Every time you talk to a customer, remember to say "let me add a note". It is the most reliable method.</p></div></div>
+    </div>
+  `;
+}
+
+function renderManualJa(){
+  return `
+    <div class="topbar">
+      <div class="pagetitle">📖 マニュアル <span class="sub">DMSの使い方</span></div>
+    </div>
+    <div class="manual-nav">
+      <a href="#m-ch1">01 ログイン・メニュー</a>
+      <a href="#m-ch2">⚠ 最重要ルール</a>
+      <a href="#m-ch3">03 基本の入力</a>
+      <a href="#m-ch4">04 リマインド6種類</a>
+      <a href="#m-ch5">⚠ クレーム</a>
+      <a href="#m-ch6">06 カレンダー</a>
+      <a href="#m-ch7">07 顧客の区分</a>
+      <a href="#m-ch8">08 車両の状態</a>
+      <a href="#m-ch9">09 担当者ごとのレーン</a>
+      <a href="#m-ch10">10 写真のダウンロード</a>
+      <a href="#m-ch11">11 メッセージのひな型</a>
+      <a href="#m-ch12">12 管理用ツール</a>
+      <a href="#m-ch13">13 よくある質問</a>
+    </div>
+
+    <div class="panel manual-section" id="m-ch1">
+      <h3><span class="manual-chapnum">01</span> ログインとメニュー</h3>
+      <p style="color:var(--text-dim); font-size:13px; margin:0 0 12px">全スタッフが同じ共通ログインを使います。ログイン後は、左のメニューから必要な項目を選びます。</p>
+      <div class="manual-callout warn"><span class="ic">👤</span><div><b>ログイン時に自分の名前を選ぶ・PINコード</b><p>共通パスワードでログインすると、「<b>このPCを使うのはどなたですか？</b>」の画面が出ます。一覧から<b>自分の名前</b>を選びます。初めて選ぶときは、<b>自分専用のPIN</b>（4〜8桁の数字）を作ります。PINは他の人に教えてはいけません。次回からは、名前を選んでPINを入力します。入力・変更した内容には、<b>あなたの名前・日付・時刻</b>が自動で記録されます。PINを忘れたときは、社長にリセットを依頼してください。別の人がPCを使うときは、左メニューの<b>「ユーザー切替」</b>を押します。他人の名前でログインして入力することは禁止です。</p></div></div>
+
+      <div class="manual-callout"><span class="ic">🕘</span><div><b>入力ログ（Edit Log）</b><p>左メニューの<b>「🕘 入力ログ」</b>では、誰が・いつ・何を入力／変更したか（変更前の値→変更後の値）をすべて見られます。人・種類・操作・日付で絞り込めます。顧客や車両のページにある<b>「🕘 入力ログ」</b>ボタンは、その1件の履歴だけを表示します。このログは編集も削除もできません。</p></div></div>
+
+      <div class="manual-callout"><span class="ic">🌐</span><div><b>言語の切り替え（EN / 日本語 / МН）</b><p>ログイン画面と、左メニューの上部に、<b>EN</b>（英語）・<b>日本語</b>・<b>МН</b>（モンゴル語）の3つのボタンがあります。押すと、このマニュアルを含む全画面がすぐにその言語に切り替わります。選んだ言語は、このブラウザに記憶されます。分からないことがあれば、言語を切り替えて見比べてください。顧客名・車名・備考など、<b>自分で入力した内容</b>は翻訳されません。</p></div></div>
+      <ul style="margin:0; padding-left:20px; font-size:13px; color:var(--text-dim); line-height:1.9">
+        <li><b style="color:var(--text)">🏠 ダッシュボード</b> — 今日の状況とリマインドが表示されます。</li>
+        <li><b style="color:var(--text)">👤 顧客管理</b> — お客様の登録情報です。</li>
+        <li><b style="color:var(--text)">🚗 車両管理・査定</b> — 車両の登録と査定です。</li>
+        <li><b style="color:var(--text)">💬 商談管理</b> — 商談のすべての段階を見られます。</li>
+        <li><b style="color:var(--text)">👥 スタッフ</b> — スタッフの一覧です。</li>
+        <li><b style="color:var(--text)">⚙️ リマインド設定</b> — リマインドを出す日数の設定です（管理者が変更します）。</li>
+        <li><b style="color:var(--text)">📅 カレンダー</b> — 月間カレンダー表示です。</li>
+      </ul>
+    </div>
+
+    <div class="panel manual-section critical" id="m-ch2">
+      <h3><span class="manual-chapnum">⚠</span> いちばん大事なルール：連絡のたびに必ず記録する</h3>
+      <p style="font-size:13px; margin:0 0 10px">DMSは、あなたが<b>最後に何をしたかを自分では知りません</b>。あなたが書き込んだことだけが分かります。お客様と話した・会った・電話したときは、そのたびにすぐ記録を追加してください。</p>
+      <div class="manual-callout warn">
+        <span class="ic">🚨</span>
+        <div><b>記録を追加しないと</b><p>システムは「長い間連絡していない」と判断し、同じお客様のリマインドを<b>毎日</b>送り続けます。</p></div>
+      </div>
+      <div class="manual-flow">
+        <div class="manual-flow-step"><span class="k">01</span><div class="t">連絡する</div><div class="d">電話で話した、会った</div></div>
+        <div class="manual-flow-arrow">→</div>
+        <div class="manual-flow-step"><span class="k">02</span><div class="t">カウントが始まる</div><div class="d">最後に連絡した日から日数を数える</div></div>
+        <div class="manual-flow-arrow">→</div>
+        <div class="manual-flow-step alert"><span class="k">03</span><div class="t">しきい値の日数に達する</div><div class="d">ダッシュボードに表示され、メールが送られる</div></div>
+        <div class="manual-flow-arrow">→</div>
+        <div class="manual-flow-step reset"><span class="k">04</span><div class="t">記録を追加 → 0</div><div class="d">カウントが最初からになり、リマインドが消える</div></div>
+      </div>
+      <p style="font-size:13px; margin:12px 0 8px">記録を追加する場所：顧客画面の<b>「💬 商談・交渉ログ」</b>の欄です（顧客管理 → 該当のお客様をクリック）。</p>
+      <div class="card" style="cursor:default; background:var(--panel2)">
+        <div style="font-weight:700; font-size:13px; margin-bottom:10px">💬 商談・交渉ログ</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px">
+          <div class="field" style="margin-bottom:0"><label>日付</label><input value="今日" readonly></div>
+          <div class="field" style="margin-bottom:0"><label>担当者</label><input value="あなたの名前 ①" readonly></div>
+        </div>
+        <div class="field" style="margin-bottom:10px"><label>内容</label><textarea readonly placeholder='例：「電話で話し、来週あらためて連絡することになった」②'></textarea></div>
+        <button class="btn sm" disabled>＋ 記録を追加 ③</button>
+      </div>
+      <ol style="font-size:13px; color:var(--text-dim); margin:12px 0 0; padding-left:20px; line-height:1.8">
+        <li><b style="color:var(--text)">担当者</b> — 自分の名前を選びます。</li>
+        <li><b style="color:var(--text)">内容</b> — 何を話し、何を決めたかを短く書きます。</li>
+        <li><b style="color:var(--text)">＋ 記録を追加</b> を押します — これを押したときに、カウントが0に戻ります。</li>
+      </ol>
+      <div class="manual-callout">
+        <span class="ic">✅</span>
+        <div><b>ルールを一言で</b><p>話した・会った・電話したら、その場ですぐ「＋ 記録を追加」を押します。あとでやろうと思うと忘れてしまいます。</p></div>
+      </div>
+      <p style="font-size:13px; margin:16px 0 8px"><b style="color:var(--text)">「内容」に何を書くか：</b></p>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+        <div class="card" style="cursor:default; border-color:var(--red); background:var(--red-soft)">
+          <div style="font-weight:700; font-size:12.5px; color:var(--red); margin-bottom:6px">✕ 少なすぎる</div>
+          <div style="font-size:12.5px; color:var(--text-dim)">「OK」</div>
+        </div>
+        <div class="card" style="cursor:default; border-color:var(--green); background:var(--green-soft)">
+          <div style="font-weight:700; font-size:12.5px; color:var(--green); margin-bottom:6px">✓ これで十分</div>
+          <div style="font-size:12.5px; color:var(--text-dim)">「見積書を見せた。2,000万まで検討できると言っていた。月曜日にあらためて連絡する。」</div>
+        </div>
+      </div>
+      <p style="font-size:12px; color:var(--text-dim2); margin:8px 0 0">長い説明は要りません。ほかの人が読んで、<b style="color:var(--text-dim)">誰が何を言い、次に何をするのか</b>が分かれば十分です。</p>
+    </div>
+
+    <div class="panel manual-section" id="m-ch3">
+      <h3><span class="manual-chapnum">03</span> 基本の入力</h3>
+      <p style="font-size:13px; margin:0 0 10px"><b>👤 新しいお客様を登録する：</b>顧客管理のページで「＋ 新規顧客」を押し、名前・電話番号を入力し、<b>担当営業</b>を必ず選びます。この欄が間違っていると、リマインドのメールが別の人に届いてしまいます！</p>
+      <p style="font-size:13px; margin:0 0 8px"><b>💬 商談の段階：</b>お客様は、次の順番で進みます。</p>
+      <div class="manual-stages">
+        ${['問い合わせ','来店','査定','試乗','見積','交渉','契約','納車'].map(s=>`<span class="staff-tag">${s}</span>`).join('')}
+        <span class="staff-tag" style="color:var(--red); border-color:var(--red)">キャンセル</span>
+      </div>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:0">どの段階にいるかによって、次の章で説明する6種類のリマインドのどれが動くかを、システムが自動で決めます。</p>
+    </div>
+
+    <div class="panel manual-section" id="m-ch4">
+      <h3><span class="manual-chapnum">04</span> リマインド6種類</h3>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:0 0 12px">日数は、管理者が ⚙️ リマインド設定 で変更できます。下は現在の初期値です。</p>
+      <div class="manual-cat"><div class="ic">🔥</div><div><div class="name">① Hot案件（見込み度が高いお客様）</div><div class="cond">見積／交渉の段階</div></div><div class="days" style="background:var(--amber-soft); color:var(--amber)">2日以上</div></div>
+      <div class="manual-cat"><div class="ic">🚗</div><div><div class="name">② 納車後フォロー</div><div class="cond">納車済みで、まだ「自社客」になっていない</div></div><div class="days" style="background:var(--teal-soft); color:var(--teal)">1日後 → その後7日ごと</div></div>
+      <div class="manual-cat"><div class="ic">👀</div><div><div class="name">③ 見込み客（Prospect）</div><div class="cond">来店／査定／試乗の段階</div></div><div class="days" style="background:var(--blue-soft); color:var(--blue)">3日以上</div></div>
+      <div class="manual-cat"><div class="ic">📩</div><div><div class="name">④ 新規問い合わせ</div><div class="cond">最初の問い合わせが来た</div></div><div class="days" style="background:var(--violet-soft); color:var(--violet)">3日以上</div></div>
+      <div class="manual-cat"><div class="ic">🔨</div><div><div class="name">⑤ 注文の進行中</div><div class="cond">契約済みで、車がまだ届いていない</div></div><div class="days" style="background:var(--amber-soft); color:var(--amber)">5日以上</div></div>
+      <div class="manual-cat"><div class="ic">🤝</div><div><div class="name">⑥ 自社客の定期確認</div><div class="cond">納車済みで、「自社客」になっている</div></div><div class="days" style="background:var(--green-soft); color:var(--green)">60日ごと</div></div>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:10px 0 0">ダッシュボードのカードをクリックすると、そのお客様／商談がすぐに開きます。そこから「＋ 記録を追加」を押せます。</p>
+    </div>
+
+    <div class="panel manual-section critical" id="m-ch5">
+      <h3><span class="manual-chapnum">⚠</span> クレームの登録（最優先）</h3>
+      <p style="font-size:13px; margin:0 0 10px">お客様からクレーム（車の異音、修理、破損など）があったときは、<b>ほかのすべてのリマインドより先に</b>対応します。</p>
+      <div class="card" style="cursor:default; border-color:var(--red); background:var(--red-soft)">
+        <div style="font-weight:700; font-size:13px; color:var(--red); margin-bottom:6px">🚨 対応中のクレーム — 2日経過</div>
+        <div style="font-size:12px; color:var(--red); margin-bottom:10px">「エンジンから音がするという電話があった。」</div>
+        <button class="btn sm" style="background:var(--red)" disabled>✅ 解決済みにする</button>
+      </div>
+      <ul style="font-size:13px; color:var(--text-dim); margin:12px 0 0; padding-left:20px; line-height:1.8">
+        <li>クレームが来たらすぐに、<b style="color:var(--text)">「⚠️ クレーム・苦情を登録」</b>を押して書き込みます。</li>
+        <li>解決するまで、ダッシュボードに赤い枠で表示され、<b style="color:var(--text)">毎日</b>知らせます。</li>
+        <li>解決したあとに<b style="color:var(--text)">「✅ 解決済みにする」</b>を押したときだけ、リマインドが止まります。</li>
+      </ul>
+    </div>
+
+    <div class="panel manual-section" id="m-ch6">
+      <h3><span class="manual-chapnum">06</span> カレンダー</h3>
+      <p style="font-size:13px; margin:0 0 10px">📅 カレンダーでは、毎月、どの日にリマインドがいくつ来るかを一目で確認できます。</p>
+      <ul style="font-size:13px; color:var(--text-dim); margin:0; padding-left:20px; line-height:1.8">
+        <li>日のマスにある色つきの数字は、<b style="color:var(--text)">その日にはじめて期限になる</b>リマインドの数です。</li>
+        <li>日をクリックすると、その日の<b style="color:var(--text)">全スタッフ</b>のリマインドが、スタッフごとに一覧で出ます。</li>
+        <li><b style="color:var(--text)">🚢 車両到着（ウランバートル）</b> — 日本から輸送中の車の<b style="color:var(--text)">到着予定日（ウランバートル）</b>を、車両の詳細に<b style="color:var(--text)">YYYY-MM-DD</b>の形式で入力すると、ウランバートルに着く日がカレンダーに出ます。また、到着の<b style="color:var(--text)">7日前と3日前にMaeda宛て</b>に自動でメールが届きます。</li>
+      </ul>
+    </div>
+
+    <div class="panel manual-section" id="m-ch7">
+      <h3><span class="manual-chapnum">07</span> 顧客の区分</h3>
+      <p style="font-size:13px; margin:0 0 10px">お客様は、<b>「自社客」</b>（当店から車を買い、納車まで済んだお客様）か、<b>「他社客」</b>（ほかで車を買ったが、情報は保存しているお客様）の、どちらか一方に分けられます。顧客一覧と詳細ページに色つきのバッジで表示され、上部の絞り込みで区分ごとに見分けられます。</p>
+      <div class="manual-callout"><span class="ic">🔥</span><div><b>他社客につく Hot／Prospect／見込みなし の印</b><p>「他社客」のバッジをクリックするたびに、<b>印なし → 🔥Hot → 👀Prospect → 🚫見込みなし → 印なし</b>の順に切り替わります。これは社内の情報を残すためだけの手動の印で、自動のリマインドメールやダッシュボードのリマインドには<b>影響しません</b>。</p></div></div>
+      <div class="manual-callout"><span class="ic">🎉</span><div><b>切り替え済みバッジ（Converted）</b><p>「他社客」だった人が当店から車を買い、商談が「納車」の段階に進んだとき（契約したときではありません）、システムが自動で区分を「自社客」に変え、お客様のプロフィールに<b>「🎉 切り替え日 [日付]」</b>のバッジをずっと表示します。他社のお客様を当店に引き込んだ成果を残すためのものです。</p></div></div>
+    </div>
+
+    <div class="panel manual-section" id="m-ch8">
+      <h3><span class="manual-chapnum">08</span> 車両の状態の区分</h3>
+      <p style="font-size:13px; margin:0 0 10px">車両管理・査定のページの絞り込みボタンは、次の順番で、次の意味で表示されます。</p>
+      <div class="manual-cat"><div class="ic">📦</div><div><div class="name">在庫</div><div class="cond">販売できる状態で、お客様はまだ決まっていない</div></div></div>
+      <div class="manual-cat"><div class="ic">📋</div><div><div class="name">査定車</div><div class="cond">お客様が今乗っている車で、査定だけを行います。お客様が自分で売るか、当店に委託販売（手数料制）を任せます。当店は下取りや直接の買取は行いません。</div></div></div>
+      <div class="manual-cat"><div class="ic">🧭</div><div><div class="name">出張査定</div><div class="cond">出先で査定した車です。<b>📦 保管中</b> — 当店で預かっている、<b>⏸ 保留</b> — 保留中で、情報だけを残す。販売に出すときは、編集画面で「在庫車両」に変更します。</div></div></div>
+      <div class="manual-cat"><div class="ic">🤝</div><div><div class="name">商談中</div><div class="cond">特定のお客様と販売の話が進んでいる</div></div></div>
+      <div class="manual-cat"><div class="ic">✅</div><div><div class="name">販売済み（契約済み）</div><div class="cond">契約すると「販売済み」になり、二重販売を防ぎます。納車までも、納車後も「販売済み」のままです。納車したかどうかは、商談管理の<b>「納車」</b>の段階で記録します。そのときにお客様が「自社客」になります。</div></div></div>
+
+      <div class="manual-cat"><div class="ic">🏢</div><div><div class="name">支店扱い（当店の在庫ではない）</div><div class="cond">ウムヌゴビ支店に回送した、または支店で販売した車です。「在庫」「未査定」「利益」の集計には入りません。</div></div></div>
+
+      <div class="manual-cat"><div class="ic">🔍</div><div><div class="name">注文中</div><div class="cond">車の現物はまだ届いていません — スペックや注文だけの状態です</div></div></div>
+      <div class="manual-callout"><span class="ic">🏷</span><div><b>車に出る人の印（色つきの札）</b><p>車両のカードや顧客のカードで、人の名前の前に、その人が<b>その車とどういう関係か</b>を色つきの札で表示します。カードの左端にも同じ色の帯が付きます：<b>🛒 購入者</b>（緑 — 契約した／納車を受けた）、<b>💬 商談中</b>（青 — 交渉中）、<b>🏷 委託オーナー</b>（橙 — 当店に委託販売を任せているオーナー）、<b>📋 査定のみ</b>（紫 — 査定だけを受けた）、<b>🏢 会社名義の車</b>（灰 — 会社の名義の車）。さらに名前の横に<b>⭐ 自社客</b>の印があれば、その人は以前に当店で車を買って納車を受けた（当店のお客様）ということです — 今回は査定だけでも同じです。</p></div></div>
+
+      <div class="manual-callout warn"><span class="ic">🔍</span><div><b>「注文中」のカードの違い</b><p>「注文中」のカードは、紫の点線の枠と濃い背景で、<b>「🔍 現物なし — 希望スペックのみ」</b>の表示が付きます。実際の車ではなく、お客様の要望に基づく目標スペックだけだからです。「すべて」で見たときにほかの車と間違えないよう、わざと別の色にしています。</p></div></div>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:10px 0 0">日本から輸送中（買ったがまだ届いていない）の車には、小さな<b>「🚢 輸送中」</b>の印も付きます。最初の絞り込みは「在庫」になっています。</p>
+      <div class="manual-callout"><span class="ic">🚢</span><div><b>まだ届いていない（輸送中の）車</b><p>ウランバートルにまだ着いていない車は、「在庫」の台数と「未査定」には<b>数えられず</b>、「🚢 輸送中」の絞り込みで別に表示されます。注文が入ったら、車両の詳細から「商談を開始」でお客様に割り当てられます。車が着いたら、車両の編集画面で<b>「ウランバートル到着済み」</b>をオンにして、到着時の点検・査定を記録します。名義は、仮に「Deed Motors」（🔑 名義上のオーナー）と登録されています。</p></div></div>
+    </div>
+
+    <div class="panel manual-section" id="m-ch9">
+      <h3><span class="manual-chapnum">09</span> スタッフごとの商談レーン</h3>
+      <p style="font-size:13px; margin:0 0 10px">💬 商談管理のページでは、登録されているスタッフ<b>1人ずつに、自分のレーン</b>が自動で作られます。新しいスタッフが加わったり、退職したりすると、レーンも自動で更新され、別に設定する必要はありません。レーンの順番は、スタッフのページと同じ ↑/↓ ボタンで変えられます（各レーンの右上に ↑/↓ ボタンがあります）。</p>
+      <div class="manual-callout"><span class="ic">👤</span><div><b>担当営業は1か所だけ</b><p>商談のレーンは、お客様の<b>担当営業</b>（現在の担当者）で決まります。担当者を替えるときは、顧客管理で該当のお客様の「✎ 編集」から<b>担当営業</b>を変更します。そのお客様の商談（商談管理）とリマインドのメールも、まとめて更新されます。一方、<b>「販売者」（販売した人）</b>は、契約したときの名前のまま変わりません — そのため「Sold by Essa · Now handled by Temuka」のように、両方を見られます。</p></div></div>
+      <div class="manual-callout warn"><span class="ic">⚠</span><div><b>「交渉不成立／キャンセル」ボタン</b><p>交渉がまとまらず、購入されないときは、カードを削除せず、<b>「交渉不成立／キャンセル」</b>を押します。そうすると段階が「キャンセル」として残り、履歴や数字から失われません。通常の<b>削除</b>は、間違って入力した記録や重複した記録を完全に消すためだけのものです。</p></div></div>
+    </div>
+
+    <div class="panel manual-section" id="m-ch10">
+      <h3><span class="manual-chapnum">10</span> 車両の写真をダウンロードする</h3>
+      <p style="font-size:13px; margin:0 0 10px">車両の詳細ページの写真一覧では、写真ごとに<b>💾</b>のボタンがあり、押すとその写真を自分のパソコンにダウンロードできます。一覧の上にある<b>「💾 すべてダウンロード」</b>を押すと、その車の写真をまとめてダウンロードできます。</p>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:0">💾（ダウンロード）のボタンを、写真の順番を変える ↑/↓ のボタンと間違えないでください。色と記号で区別されています。</p>
+    </div>
+
+    <div class="panel manual-section" id="m-ch11">
+      <h3><span class="manual-chapnum">11</span> メッセージのひな型</h3>
+      <p style="font-size:13px; margin:0 0 10px">顧客の詳細ページと、ダッシュボードのリマインドのカードに<b>「✉️ メッセージ」</b>のボタンがあります。押すと、誕生日・車検のお知らせ・一般的なご案内（アウトリーチ）用の、モンゴル語のひな型が出ます。ボタンでコピーして、そのままSMS・Messenger・電話で送れます。</p>
+      <div class="manual-callout"><span class="ic">💡</span><div><b>お知らせ</b><p>これらの文は、自動で用意した一般的なひな型です。送る前に状況に合わせて直して構いません。必要なら、モンゴル語の言い回しを、モンゴル語が母語のスタッフに確認してもらうことをおすすめします。</p></div></div>
+    </div>
+
+    <div class="panel manual-section" id="m-ch12">
+      <h3><span class="manual-chapnum">12</span> 管理用の追加ツール</h3>
+      <ul style="font-size:13px; color:var(--text-dim); margin:0; padding-left:20px; line-height:1.9">
+        <li><b style="color:var(--text)">🎂 もうすぐ誕生日</b> — ダッシュボードに、これから7日以内に誕生日を迎えるお客様を一覧で表示します。そこから「✉️ メッセージ」を押して、すぐにお祝いを送れます。</li>
+        <li><b style="color:var(--text)">⚠️ 重複の可能性がある顧客</b> — 同じ電話番号の記録が複数あると、顧客管理のページの上部に黄色い枠の警告が出ます。統合が必要かどうかを確認してください。</li>
+        <li><b style="color:var(--text)">📋 連絡リスト（Excel）</b> — 顧客管理のページの上部のボタンで、<b style="color:var(--text)">営業担当用の架電リスト</b>をExcelでダウンロードできます。お客様の名前（DM番号）、電話番号、車両と輸送の状況、話した内容を書き込む欄が付いています。今画面に表示しているお客様（絞り込みで選んだもの）が対象で、全スタッフ分のシートと、スタッフごとのシートが別々に出ます。車が輸送中のお客様は、黄色で先頭に出ます。</li>
+        <li><b style="color:var(--text)">📋 リマインドリスト（Excel）</b> — ダッシュボードの上部のボタンで、ダッシュボードに出ている<b style="color:var(--text)">すべてのリマインド</b>（車検、誕生日、クレーム、6種類の連絡リマインド）を、連絡リストと同じ形式のExcelでダウンロードできます。種類ごとに色が違い（クレームは赤）、A4横の印刷にそのまま使え、話した内容を書き込む欄があります。連絡したあとは、DMSで「＋ 記録を追加」を忘れずに押してください — そうするとリマインドが消えます。</li>
+        <li><b style="color:var(--text)">⬇ CSV出力</b> — 顧客管理のページの上部のボタンで、全顧客の一覧を、Excelで開けるCSVファイルでダウンロードできます。</li>
+      </ul>
+    </div>
+
+    <div class="panel manual-section" id="m-ch13">
+      <h3><span class="manual-chapnum">13</span> よくある質問</h3>
+      <div class="manual-callout"><span class="ic">❓</span><div><b>なぜ同じお客様のリマインドが毎日来るのですか？</b><p>「＋ 記録を追加」を押していないからです。電話で話したあと、すぐに記録を追加してください。リマインドはすぐに消えます。</p></div></div>
+      <div class="manual-callout"><span class="ic">❓</span><div><b>何も決まらず、電話に出てもらえなかっただけのときは？</b><p>それも記録です。たとえば「電話に出なかった。後でもう一度かける」と書けば、カウントが0に戻ります。</p></div></div>
+      <div class="manual-callout"><span class="ic">❓</span><div><b>メールは誰が受け取りますか？</b><p>おもに担当者が受け取り、ほかの全スタッフはコピー（CC）を受け取ります。</p></div></div>
+      <div class="manual-callout"><span class="ic">❓</span><div><b>メールは何時に届きますか？</b><p>日曜日を除く毎日、朝8時（ウランバートル時間）に自動で送られます。</p></div></div>
+      <div class="manual-callout"><span class="ic">💡</span><div><b>ヒント</b><p>お客様と話すたびに「記録を入れよう」と思い出してください。いちばん確実な方法です。</p></div></div>
+    </div>
+  `;
+}
+
+function renderManualMn(){
   return `
     <div class="topbar">
       <div class="pagetitle">📖 Гарын авлага <span class="sub">DMS системийг хэрхэн ашиглах вэ</span></div>
@@ -5380,7 +5795,7 @@ function renderManual(){
 
 <div class="manual-callout"><span class="ic">🕘</span><div><b>Бүртгэлийн түүх (Edit Log)</b><p>Зүүн цэсний <b>«🕘 Edit Log»</b> хэсэгт хэн, хэзээ, юуг оруулсан / өөрчилсөн нь (өмнөх утга → шинэ утга) бүгд харагдана. Хүн, төрөл, үйлдэл, огноогоор шүүж болно. Харилцагч, машины хуудсан дээрх <b>«🕘 Edit Log»</b> товч тухайн бүртгэлийн түүхийг л харуулна. Энэ бүртгэлийг засах, устгах боломжгүй.</p></div></div>
 
-<div class="manual-callout"><span class="ic">🌐</span><div><b>Хэл солих (EN / 日本語 / МН)</b><p>Нэвтрэх дэлгэц болон зүүн талын цэсний дээд хэсэгт <b>EN</b> (Англи), <b>日本語</b> (Япон), <b>МН</b> (Монгол) гэсэн 3 товч байна. Дарахад бүх дэлгэц тухайн хэл рүү шууд солигдоно. Сонгосон хэл энэ хөтөч дээр хадгалагдана. Ойлгомжгүй зүйл тохиолдвол хэлээ сольж харна уу. Харилцагч, машины нэр, тэмдэглэл зэрэг <b>оруулсан мэдээлэл</b> орчуулагдахгүй. Энэ «Гарын авлага» хэсэг зөвхөн монгол хэлээр байна.</p></div></div>
+<div class="manual-callout"><span class="ic">🌐</span><div><b>Хэл солих (EN / 日本語 / МН)</b><p>Нэвтрэх дэлгэц болон зүүн талын цэсний дээд хэсэгт <b>EN</b> (Англи), <b>日本語</b> (Япон), <b>МН</b> (Монгол) гэсэн 3 товч байна. Дарахад бүх дэлгэц тухайн хэл рүү шууд солигдоно. Сонгосон хэл энэ хөтөч дээр хадгалагдана. Ойлгомжгүй зүйл тохиолдвол хэлээ сольж харна уу. Харилцагч, машины нэр, тэмдэглэл зэрэг <b>оруулсан мэдээлэл</b> орчуулагдахгүй. Энэ «Гарын авлага» хэсэг ч сонгосон хэлээрээ (EN / 日本語 / МН) харагдана.</p></div></div>
       <ul style="margin:0; padding-left:20px; font-size:13px; color:var(--text-dim); line-height:1.9">
         <li><b style="color:var(--text)">🏠 Dashboard</b> — Хянах самбар. Өнөөдрийн байдал, сануулгууд энд харагдана.</li>
         <li><b style="color:var(--text)">👤 Customers</b> — Үйлчлүүлэгчийн бүртгэл.</li>
