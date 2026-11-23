@@ -1250,6 +1250,17 @@ A('ja', [[re, (m,y) => y + '年' + (MONTHS.indexOf(m)+1) + '月']]);
 A('mn', [[re, (m,y) => y + ' оны ' + (MONTHS.indexOf(m)+1) + '-р сар']]);
 })();
 
+/* i18n dictionary part 60 — multi-PC sync messages */
+(function(){ const T = I18N.T;
+T('Live sync','リアルタイム同期中','Бодит цагийн синк');
+T('Offline — reconnecting…','オフライン — 再接続中…','Холболтгүй — дахин холбогдож байна…');
+T('Refresh now','今すぐ更新','Одоо шинэчлэх');
+T('Updated from another PC.','他のPCの変更を反映しました。','Өөр компьютерийн өөрчлөлтийг шинэчиллээ.');
+T('Up to date.','最新の状態です。','Хамгийн сүүлийн төлөвт байна.');
+T('Could not save the last change. Check the internet connection and repeat it.','直前の変更を保存できませんでした。インターネット接続を確認して、もう一度入力してください。','Сүүлийн өөрчлөлтийг хадгалж чадсангүй. Интернэт холболтоо шалгаад дахин оруулна уу.');
+T('Could not save the settings. Check the internet connection and repeat it.','設定を保存できませんでした。インターネット接続を確認して、もう一度お試しください。','Тохиргоог хадгалж чадсангүй. Интернэт холболтоо шалгаад дахин оролдоно уу.');
+})();
+
 </script>
 <!-- I18N:END -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -1533,38 +1544,26 @@ function rowToDeal(r){
     stage: r.stage, staff: r.staff, soldBy: r.sold_by||'', history: r.history||[], deletedAt: r.deleted_at, createdAt: r.created_at
   };
 }
-async function upsertCustomerRow(c){
-  saving = true; renderSaveBar();
-  const { error } = await sb.from('customers').upsert(customerToRow(c));
-  if(error) console.error('save customer error', error);
-  saving = false; renderSaveBar();
-}
+async function upsertCustomerRow(c){ return syncedSave('customers', c); }
 async function deleteCustomerRow(id){
   saving = true; renderSaveBar();
+  syncForget('customers', id);
   const { error } = await sb.from('customers').delete().eq('id', id);
   if(error) console.error('delete customer error', error);
   saving = false; renderSaveBar();
 }
-async function upsertVehicleRow(v){
-  saving = true; renderSaveBar();
-  const { error } = await sb.from('vehicles').upsert(vehicleToRow(v));
-  if(error) console.error('save vehicle error', error);
-  saving = false; renderSaveBar();
-}
+async function upsertVehicleRow(v){ return syncedSave('vehicles', v); }
 async function deleteVehicleRow(id){
   saving = true; renderSaveBar();
+  syncForget('vehicles', id);
   const { error } = await sb.from('vehicles').delete().eq('id', id);
   if(error) console.error('delete vehicle error', error);
   saving = false; renderSaveBar();
 }
-async function upsertDealRow(d){
-  saving = true; renderSaveBar();
-  const { error } = await sb.from('deals').upsert(dealToRow(d));
-  if(error) console.error('save deal error', error);
-  saving = false; renderSaveBar();
-}
+async function upsertDealRow(d){ return syncedSave('deals', d); }
 async function deleteDealRow(id){
   saving = true; renderSaveBar();
+  syncForget('deals', id);
   const { error } = await sb.from('deals').delete().eq('id', id);
   if(error) console.error('delete deal error', error);
   saving = false; renderSaveBar();
@@ -1576,18 +1575,281 @@ function rowToStaff(r){
   return { id: r.id, name: r.name, role: r.role, email: r.email||'', active: r.active, sortOrder: r.sort_order, createdAt: r.created_at };
 }
 function sortedStaff(){ return [...staffList].sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0)); }
-async function upsertStaffRow(s){
-  saving = true; renderSaveBar();
-  const { error } = await sb.from('staff').upsert(staffToRow(s));
-  if(error) console.error('save staff error', error);
-  saving = false; renderSaveBar();
-}
+async function upsertStaffRow(s){ return syncedSave('staff', s); }
 async function deleteStaffRow(id){
   saving = true; renderSaveBar();
+  syncForget('staff', id);
   const { error } = await sb.from('staff').delete().eq('id', id);
   if(error) console.error('delete staff error', error);
   saving = false; renderSaveBar();
 }
+/* ============================================================
+   MULTI-PC SYNC
+   - Every row has a server-side revision number (rev). A save only succeeds if the row is still
+     at the revision this PC last saw; otherwise the record is re-read and merged three ways
+     (what I loaded / what I have now / what the server has now) so two people adding contact
+     notes to the same customer at the same time both keep their notes.
+   - Changes made on other PCs arrive through Supabase Realtime (plus a safety-net re-sync when the
+     window regains focus and every 90 s) and are applied in place; the screen refreshes unless the
+     user is typing or has a form open.
+============================================================ */
+const SYNC = {rev:{}, base:{}, inflight:{}, chain:{}, screen:null, lastSync:0, live:false, channel:null, renderPending:false, renderTimer:null, started:false, lastToast:0};
+const SYNC_TABLES = {
+  customers:{toRow:o=>customerToRow(o), fromRow:r=>rowToCustomer(r), list:()=>customers},
+  vehicles: {toRow:o=>vehicleToRow(o),  fromRow:r=>rowToVehicle(r),  list:()=>vehicles},
+  deals:    {toRow:o=>dealToRow(o),     fromRow:r=>rowToDeal(r),     list:()=>deals},
+  staff:    {toRow:o=>staffToRow(o),    fromRow:r=>rowToStaff(r),    list:()=>staffList},
+};
+const syncClone = o => JSON.parse(JSON.stringify(o));
+function syncDeepEq(a, b){
+  if(a===b) return true;
+  if(a==null || b==null) return a==null && b==null;
+  if(typeof a!=='object' || typeof b!=='object') return false;
+  if(Array.isArray(a)!==Array.isArray(b)) return false;
+  if(Array.isArray(a)) return a.length===b.length && a.every((x,i)=>syncDeepEq(x,b[i]));
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for(const k of keys){ if(!syncDeepEq(a[k], b[k])) return false; }
+  return true;
+}
+// Merge two versions of a list (history entries, files …). l = mine now, b = what I loaded, r = server now.
+function syncMergeArrays(l, b, r){
+  const key = e => (e && typeof e==='object' && e.id!=null) ? 'id:'+e.id : JSON.stringify(e);
+  const bMap = new Map((b||[]).map(e=>[key(e), e]));
+  const lMap = new Map(l.map(e=>[key(e), e]));
+  const out = [], seen = new Set();
+  for(const e of r){
+    const k = key(e); seen.add(k);
+    if(bMap.has(k) && !lMap.has(k)) continue;                                   // I deleted it
+    if(lMap.has(k) && bMap.has(k) && !syncDeepEq(lMap.get(k), bMap.get(k))){ out.push(lMap.get(k)); continue; }   // I edited it
+    out.push(e);
+  }
+  for(const e of l){ const k = key(e); if(!seen.has(k) && !bMap.has(k)) out.push(e); }   // I added it
+  return out;
+}
+function syncThreeWay(local, base, latest){
+  const out = {...latest};
+  for(const k of Object.keys(local)){
+    if(k==='id') continue;
+    const l = local[k], b = base ? base[k] : undefined, r = latest[k];
+    if(base && syncDeepEq(l, b)){ out[k] = r; continue; }      // I did not touch it: take the server's value
+    if(base && syncDeepEq(r, b)){ out[k] = l; continue; }      // only I changed it
+    if(Array.isArray(l) && Array.isArray(r)) out[k] = syncMergeArrays(l, Array.isArray(b) ? b : [], r);
+    else out[k] = l;                                           // both changed (or unknown): my edit wins
+  }
+  return out;
+}
+function syncMark(key, rev, obj){ SYNC.rev[key] = rev; SYNC.base[key] = syncClone(obj); }
+function syncForget(table, id){ delete SYNC.rev[table+':'+id]; delete SYNC.base[table+':'+id]; }
+
+async function syncSaveRow(table, obj){
+  const T = SYNC_TABLES[table], key = table+':'+obj.id;
+  for(let attempt=0; attempt<5; attempt++){
+    const rev = SYNC.rev[key];
+    if(rev===undefined){                                        // a record this PC has not seen on the server
+      const res = await sb.from(table).insert(T.toRow(obj)).select('rev').single();
+      if(!res.error){ syncMark(key, res.data.rev, obj); return; }
+      if(res.error.code!=='23505') throw res.error;             // 23505 = it already exists (e.g. restored from Trash) → merge below
+    } else {
+      const res = await sb.from(table).update(T.toRow(obj)).eq('id', obj.id).eq('rev', rev).select('rev');
+      if(res.error) throw res.error;
+      if(res.data && res.data.length===1){ syncMark(key, res.data[0].rev, obj); return; }
+    }
+    // Someone else saved this record in the meantime → merge their version with mine and try again
+    const lr = await sb.from(table).select('*').eq('id', obj.id).maybeSingle();
+    if(lr.error) throw lr.error;
+    if(!lr.data){ delete SYNC.rev[key]; delete SYNC.base[key]; continue; }
+    const latest = T.fromRow(lr.data);
+    Object.assign(obj, syncThreeWay(obj, SYNC.base[key], latest));
+    SYNC.rev[key] = lr.data.rev; SYNC.base[key] = syncClone(latest);
+  }
+  throw new Error('The record kept changing on another PC. Please repeat the change.');
+}
+function syncQueue(table, obj){
+  const key = table+':'+obj.id;
+  SYNC.inflight[key] = (SYNC.inflight[key]||0) + 1;
+  const run = (SYNC.chain[key] || Promise.resolve()).catch(()=>{}).then(()=>syncSaveRow(table, obj));
+  SYNC.chain[key] = run;
+  const done = ()=>{ SYNC.inflight[key] = Math.max(0, (SYNC.inflight[key]||1) - 1); };
+  run.then(done, done);
+  return run;
+}
+async function syncedSave(table, obj){
+  saving = true; renderSaveBar();
+  let ok = true;
+  try{ await syncQueue(table, obj); }
+  catch(e){ ok = false; console.error('save '+table+' error', e); syncNotify('⚠ Could not save the last change. Check the internet connection and repeat it.', 'err'); }
+  saving = false; renderSaveBar();
+  return ok;
+}
+
+/* ---------- incoming changes ---------- */
+function syncReplaceContents(target, src){
+  for(const k of Object.keys(target)) if(!(k in src)) delete target[k];
+  Object.assign(target, src);
+}
+function syncApplyIncoming(table, row){
+  const T = SYNC_TABLES[table], key = table+':'+row.id;
+  if(SYNC.inflight[key]) return false;                          // my own save is running; its merge handles it
+  const known = SYNC.rev[key];
+  if(known!==undefined && row.rev<=known) return false;        // my own echo / an older version
+  const arr = T.list();
+  const idx = arr.findIndex(x=>x.id===row.id);
+  if(row.deleted_at){ if(idx>=0){ arr.splice(idx, 1); syncForget(table, row.id); return true; } syncForget(table, row.id); return false; }
+  const obj = T.fromRow(row);
+  if(idx>=0) syncReplaceContents(arr[idx], obj); else arr.push(obj);
+  syncMark(key, row.rev, obj);
+  return true;
+}
+function syncRemoveLocal(table, id){
+  const arr = SYNC_TABLES[table].list();
+  const idx = arr.findIndex(x=>x.id===id);
+  syncForget(table, id);
+  if(idx>=0){ arr.splice(idx, 1); return true; }
+  return false;
+}
+async function syncOnChange(table, p){
+  try{
+    const id = (p.new && p.new.id) || (p.old && p.old.id);
+    if(!id) return;
+    let changed = false;
+    if(p.eventType==='DELETE'){ changed = syncRemoveLocal(table, id); }
+    else {
+      const { data, error } = await sb.from(table).select('*').eq('id', id).maybeSingle();   // re-read: never trust a truncated payload
+      if(error) return;
+      changed = data ? syncApplyIncoming(table, data) : syncRemoveLocal(table, id);
+    }
+    if(changed) syncScheduleRender(true);
+  }catch(e){ console.error('realtime change error', e); }
+}
+async function syncResyncAll(){
+  SYNC.lastSync = Date.now();
+  try{
+    const [c, v, d, s, k] = await Promise.all([
+      sb.from('customers').select('*').is('deleted_at', null),
+      sb.from('vehicles').select('*').is('deleted_at', null),
+      sb.from('deals').select('*').is('deleted_at', null),
+      sb.from('staff').select('*'),
+      sb.from('dms_kv').select('value').eq('key', 'reminder_settings').maybeSingle(),
+    ]);
+    if(c.error || v.error || d.error || s.error){ syncSetLive(false); return; }
+    let changed = false;
+    const apply = (table, rows)=>{
+      const ids = new Set(rows.map(r=>r.id));
+      rows.forEach(r=>{ if(syncApplyIncoming(table, r)) changed = true; });
+      const arr = SYNC_TABLES[table].list();
+      for(let i=arr.length-1; i>=0; i--){
+        const key = table+':'+arr[i].id;
+        if(!ids.has(arr[i].id) && SYNC.rev[key]!==undefined && !SYNC.inflight[key]){ const gone = arr[i].id; arr.splice(i, 1); syncForget(table, gone); changed = true; }
+      }
+    };
+    apply('customers', c.data||[]); apply('vehicles', v.data||[]); apply('deals', d.data||[]); apply('staff', s.data||[]);
+    if(k && k.data && k.data.value){
+      const next = {...DEFAULT_REMINDER_SETTINGS, ...k.data.value};
+      if(!syncDeepEq(next, reminderSettings)){ reminderSettings = next; changed = true; }
+    }
+    syncSetLive(true);
+    if(changed) syncScheduleRender(true);
+  }catch(e){ console.error('resync error', e); syncSetLive(false); }
+}
+function syncManualRefresh(){ syncResyncAll().then(()=>syncNotify('🔄 Up to date.', 'ok')); }
+
+/* ---------- screen refresh (never while typing or while a form is open) ---------- */
+function syncRefreshScreen(){
+  const y = window.scrollY, s = SYNC.screen;
+  if(s && s.kind==='veh' && vehicles.some(v=>v.id===s.id)) openVehicleDetail(s.id);
+  else if(s && s.kind==='cust' && customers.some(c=>c.id===s.id)) openCustomerDetail(s.id);
+  else renderView();
+  renderNav();
+  window.scrollTo(0, y);
+}
+function syncScheduleRender(fromOther){
+  SYNC.renderPending = true;
+  if(fromOther && Date.now()-SYNC.lastToast > 15000){ SYNC.lastToast = Date.now(); syncNotify('🔄 Updated from another PC.', 'ok'); }
+  clearTimeout(SYNC.renderTimer);
+  SYNC.renderTimer = setTimeout(syncTryRender, 500);
+}
+function syncTryRender(){
+  if(!SYNC.renderPending) return;
+  const app = document.getElementById('app');
+  if(!app || app.style.display==='none') return;
+  const ae = document.activeElement;
+  const typing = ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && ae.type!=='button' && ae.type!=='checkbox' && ae.type!=='radio';
+  const modalOpen = document.getElementById('modalRoot') && document.getElementById('modalRoot').children.length>0;
+  if(typing || modalOpen){ SYNC.renderTimer = setTimeout(syncTryRender, 1500); return; }
+  SYNC.renderPending = false;
+  try{ syncRefreshScreen(); }catch(e){ console.error('refresh error', e); }
+}
+
+/* ---------- small UI: live status + toast ---------- */
+function syncNotify(msg, kind){
+  let el = document.getElementById('syncToast');
+  if(!el){
+    el = document.createElement('div'); el.id = 'syncToast';
+    el.style.cssText = 'position:fixed; top:14px; left:50%; transform:translateX(-50%); z-index:200; padding:9px 16px; border-radius:10px; font-size:13px; font-weight:600; box-shadow:0 6px 24px rgba(0,0,0,.4); max-width:90vw; transition:opacity .25s';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.background = kind==='err' ? 'var(--red)' : 'var(--panel2)';
+  el.style.color = kind==='err' ? '#fff' : 'var(--text)';
+  el.style.border = kind==='err' ? '1px solid var(--red)' : '1px solid var(--line)';
+  el.style.opacity = '1'; el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>{ el.style.opacity = '0'; setTimeout(()=>{ el.style.display = 'none'; }, 300); }, kind==='err' ? 12000 : 3500);
+}
+function syncSetLive(on){
+  SYNC.live = on;
+  const el = document.getElementById('syncStatus');
+  if(!el) return;
+  el.querySelector('.sdot').style.background = on ? 'var(--green)' : 'var(--red)';
+  el.querySelector('.slabel').textContent = on ? 'Live sync' : 'Offline — reconnecting…';
+}
+function syncMountStatus(){
+  if(document.getElementById('syncStatus')) return;
+  const foot = document.querySelector('#sidebar .sidebar-foot');
+  if(!foot) return;
+  const el = document.createElement('div');
+  el.id = 'syncStatus';
+  el.style.cssText = 'display:flex; align-items:center; gap:8px; margin:0 0 10px; font-size:12px; color:var(--text-dim)';
+  el.innerHTML = `<span class="sdot" style="width:9px; height:9px; border-radius:50%; background:var(--amber); display:inline-block"></span><span class="slabel">Live sync</span><button type="button" class="btn ghost sm" style="margin-left:auto; padding:3px 9px" title="Refresh now" onclick="syncManualRefresh()">🔄</button>`;
+  foot.insertBefore(el, foot.firstChild);
+}
+
+/* ---------- start-up ---------- */
+function syncRegisterLoaded(table, rows, objs){
+  (rows||[]).forEach((r, i)=>{ if(objs[i]) syncMark(table+':'+r.id, r.rev, objs[i]); });
+}
+async function syncStartRealtime(){
+  try{
+    // Realtime must carry the logged-in user's token, otherwise row-level security hides every change from it.
+    const { data } = await sb.auth.getSession();
+    if(data && data.session) sb.realtime.setAuth(data.session.access_token);
+    sb.auth.onAuthStateChange((ev, sess)=>{ if(sess && sess.access_token) sb.realtime.setAuth(sess.access_token); });
+    const ch = sb.channel('dms-live');
+    ['customers','vehicles','deals','staff'].forEach(t=>ch.on('postgres_changes', {event:'*', schema:'public', table:t}, p=>syncOnChange(t, p)));
+    ch.on('postgres_changes', {event:'*', schema:'public', table:'dms_kv'}, ()=>syncResyncAll());
+    ch.subscribe(status=>{ if(status==='SUBSCRIBED'){ syncSetLive(true); syncResyncAll(); } else if(status==='CHANNEL_ERROR' || status==='TIMED_OUT' || status==='CLOSED'){ syncSetLive(false); } });
+    SYNC.channel = ch;
+  }catch(e){ console.error('realtime start error', e); syncSetLive(false); }
+}
+function syncStart(){
+  if(SYNC.started) return;
+  SYNC.started = true;
+  // remember which detail screen is open so a refresh redraws the same screen
+  const wrap = (name, kind)=>{ const orig = window[name]; if(typeof orig!=='function') return; window[name] = function(id){ const r = orig.apply(this, arguments); SYNC.screen = {kind, id}; return r; }; };
+  wrap('openVehicleDetail', 'veh'); wrap('openCustomerDetail', 'cust');
+  const rv = window.renderView; window.renderView = function(){ SYNC.screen = null; return rv.apply(this, arguments); };
+  const cm = window.closeModal; window.closeModal = function(){ const r = cm.apply(this, arguments); if(SYNC.renderPending) setTimeout(syncTryRender, 300); return r; };
+  document.addEventListener('focusout', ()=>{ if(SYNC.renderPending) setTimeout(syncTryRender, 400); });
+  syncMountStatus();
+  syncStartRealtime();
+  const maybeResync = ()=>{ if(document.visibilityState==='visible' && Date.now()-SYNC.lastSync > 15000) syncResyncAll(); };
+  window.addEventListener('focus', maybeResync);
+  document.addEventListener('visibilitychange', maybeResync);
+  setInterval(()=>{ if(document.visibilityState==='visible') syncResyncAll(); }, 90000);
+  window.addEventListener('online', ()=>syncResyncAll());
+  window.addEventListener('offline', ()=>syncSetLive(false));
+}
+
 async function migrateFromLegacyKv(){
   try{
     const { data, error } = await sb.from('dms_kv').select('key,value').in('key', ['dm_customers','dm_vehicles','dm_deals']);
@@ -1626,6 +1888,8 @@ async function loadAll(){
   vehicles = (vehRes.data||[]).map(rowToVehicle);
   deals = (dealRes.data||[]).map(rowToDeal);
   staffList = (staffRes.data||[]).map(rowToStaff);
+  syncRegisterLoaded('customers', custRes.data, customers); syncRegisterLoaded('vehicles', vehRes.data, vehicles);
+  syncRegisterLoaded('deals', dealRes.data, deals); syncRegisterLoaded('staff', staffRes.data, staffList);
   reminderSettings = {...DEFAULT_REMINDER_SETTINGS, ...(settingsRes.data && settingsRes.data.value || {})};
 
   if(customers.length===0 && vehicles.length===0 && deals.length===0){
@@ -1651,7 +1915,7 @@ async function saveReminderSettings(newSettings){
   saving = true; renderSaveBar();
   reminderSettings = {...DEFAULT_REMINDER_SETTINGS, ...newSettings};
   const { error } = await sb.from('dms_kv').upsert({ key: 'reminder_settings', value: reminderSettings });
-  if(error) console.error('save reminder settings error', error);
+  if(error){ console.error('save reminder settings error', error); syncNotify('⚠ Could not save the settings. Check the internet connection and repeat it.', 'err'); }
   saving = false; renderSaveBar();
 }
 function renderSaveBar(){
@@ -5658,9 +5922,8 @@ async function applySheetSync(){
   });
   saving = true; renderSaveBar();
   let failed = 0;
-  for(let i=0; i<touched.length; i+=50){
-    const { error } = await sb.from('vehicles').upsert(touched.slice(i, i+50).map(vehicleToRow));
-    if(error){ console.error('sheet sync save error', error); failed += Math.min(50, touched.length-i); }
+  for(const tv of touched){
+    if(!(await syncedSave('vehicles', tv))) failed++;
   }
   saving = false; renderSaveBar();
   closeModal();
@@ -5736,6 +5999,7 @@ async function startApp(){
   await loadAll();
   renderNav();
   renderView();
+  syncStart();
 }
 (async function init(){
   const authed = await requireAuth();
