@@ -558,6 +558,7 @@
     `;
     document.head.appendChild(css);
     const mk = ()=>{ const d=document.createElement('div'); d.className='langsw'; d.setAttribute('data-i18n-skip',''); d.innerHTML=btnsHtml(); return d; };
+    window.I18N_mk = mk;
     const brand = document.querySelector('#sidebar .brand');
     if(brand) brand.after(mk());
     const lp = document.querySelector('#loginScreen .panel');
@@ -581,6 +582,7 @@
     misses(){ return [...miss].sort(); },
     clearMisses(){ miss.clear(); },
     refresh: translateAll,
+    mountInto(el){ if(el && window.I18N_mk) el.prepend(window.I18N_mk()); },
   };
 
   // Native dialogs: translate the message too (whole string, then line by line).
@@ -1261,6 +1263,73 @@ T('Could not save the last change. Check the internet connection and repeat it.'
 T('Could not save the settings. Check the internet connection and repeat it.','設定を保存できませんでした。インターネット接続を確認して、もう一度お試しください。','Тохиргоог хадгалж чадсангүй. Интернэт холболтоо шалгаад дахин оролдоно уу.');
 })();
 
+/* i18n dictionary part 70 — who-is-using-this-PC picker, PIN, Edit Log */
+(function(){ const T = I18N.T;
+/* picker + PIN */
+T('Who is using this PC?','このPCを使うのはどなたですか？','Энэ компьютерийг хэн ашиглаж байна вэ?');
+T('Select your own name. Your name is recorded together with every entry you make.','ご自身の名前を選んでください。入力した内容には、あなたの名前が一緒に記録されます。','Өөрийн нэрийг сонгоно уу. Таны оруулсан мэдээлэл бүрт нэр тань хамт бүртгэгдэнэ.');
+T('Set a PIN','PINを設定','PIN тохируулах');
+T('Enter your PIN.','PINを入力してください。','PIN-ээ оруулна уу.');
+T('First time: create your personal PIN (4–8 digits). Only you should know it.','初回です。ご自身のPIN（4〜8桁の数字）を作成してください。他の人には教えないでください。','Анх удаа: хувийн PIN (4–8 оронтой тоо) үүсгэнэ үү. Өөр хүнд бүү хэлээрэй.');
+T('PIN','PIN','PIN');
+T('New PIN (4–8 digits)','新しいPIN（4〜8桁）','Шинэ PIN (4–8 оронтой)');
+T('Repeat the PIN','PINをもう一度入力','PIN-ээ давтан оруулна уу');
+T('Continue','続ける','Үргэлжлүүлэх');
+T('Save PIN & Continue','PINを保存して続ける','PIN хадгалаад үргэлжлүүлэх');
+T('Back','戻る','Буцах');
+T('Forgot your PIN? Ask the President to reset it.','PINを忘れた場合は、社長にリセットを依頼してください。','PIN мартсан бол Ерөнхийлөгчөөс шинэчлүүлнэ үү.');
+T('Incorrect PIN','PINが違います','PIN буруу байна');
+T('Too many wrong attempts. Please wait a moment.','間違いが続きました。しばらくお待ちください。','Олон удаа буруу оруулсан. Түр хүлээнэ үү.');
+T('The PIN must be 4–8 digits.','PINは4〜8桁の数字にしてください。','PIN нь 4–8 оронтой тоо байх ёстой.');
+T('The two PINs do not match.','2つのPINが一致しません。','Хоёр PIN таарахгүй байна.');
+T('Could not save the PIN. Check the internet connection.','PINを保存できませんでした。インターネット接続を確認してください。','PIN хадгалж чадсангүй. Интернэт холболтоо шалгана уу.');
+T('Switch user','ユーザー切替','Хэрэглэгч солих');
+T('Reset PIN','PINをリセット','PIN шинэчлэх');
+T('Reset this person\'s PIN? They will create a new PIN the next time they select their name.','この人のPINをリセットしますか？ 次に名前を選んだときに、新しいPINを作成してもらいます。','Энэ хүний PIN-ийг шинэчлэх үү? Дараагийн удаа нэрээ сонгохдоо шинэ PIN үүсгэнэ.');
+
+/* Edit Log screen */
+T('Edit Log','入力ログ','Бүртгэлийн түүх');
+T('Who entered or changed what, and when (Mongolia time)','誰が・いつ・何を入力／変更したか（モンゴル時間）','Хэн, хэзээ, юуг оруулсан / өөрчилсөн (Монголын цагаар)');
+T('All people','全員','Бүх хүн');
+T('All records','すべての種類','Бүх төрөл');
+T('All actions','すべての操作','Бүх үйлдэл');
+T('From','開始日','Эхлэх');
+T('To','終了日','Дуусах');
+T('Search by name or vehicle…','名前・車で検索…','Нэр, машинаар хайх…');
+T('Show all records','すべての記録を表示','Бүх бүртгэлийг харуулах');
+T('Could not load the log','ログを読み込めませんでした','Бүртгэлийг ачаалж чадсангүй');
+T('No log entries','ログがありません','Бүртгэл алга');
+T('Nothing matches the current filters','今の絞り込みに該当するものがありません','Одоогийн шүүлтүүрт тохирох зүйл алга');
+T('Load more','さらに読み込む','Цааш ачаалах');
+T('# entries','#件','# бүртгэл');
+T('# entries ·','#件 ·','# бүртгэл ·');
+T('Created','新規作成','Үүсгэсэн');
+T('Updated','更新','Шинэчилсэн');
+T('Moved to Trash','ゴミ箱へ移動','Хогийн саванд зөөсөн');
+T('Restored','復元','Сэргээсэн');
+T('Deleted permanently','完全に削除','Бүрмөсөн устгасан');
+T('Logged in','ログイン','Нэвтэрсэн');
+T('Logged out','ログアウト','Гарсан');
+T('Logins','ログイン記録','Нэвтрэлт');
+T('Hot / Prospect status','Hot／見込みの状態','Hot / Prospect төлөв');
+T('ID','ID','ID');
+T('Condition Check','コンディションチェック','Төлөвийн шалгалт');
+T('Deductions','減点項目','Хасалтууд');
+T('Min Sell Price','最低販売価格','Хамгийн доод үнэ');
+T('Negotiation Ceiling','交渉上限額','Тохиролцооны дээд хязгаар');
+T('Owner Payout','オーナー支払額','Эзэнд олгох дүн');
+T('ETD','出港予定日','ETD');
+T('ETA','到着予定日','ETA');
+T('Stage','段階','Шат');
+T('Active','有効','Идэвхтэй');
+T('Converted','切り替え済み','Хөрвөсөн');
+T('Trash','ゴミ箱','Хогийн сав');
+T('Next Inspection','次回車検','Дараагийн үзлэг');
+/* "Label:" — a field name followed by a colon */
+I18N.addRe('ja', [[/^(.{2,40}):$/, l => I18N.t(l) + '：']]);
+I18N.addRe('mn', [[/^(.{2,40}):$/, l => I18N.t(l) + ':']]);
+})();
+
 </script>
 <!-- I18N:END -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -1316,6 +1385,7 @@ const NAV = [
   {id:'vehicles', ic:'🚗', ja:'Vehicles & Appraisal', mn:'Тээвэр · Үнэлгээ'},
   {id:'deals', ic:'💬', ja:'Deal Pipeline', mn:'Худалдааны явц'},
   {id:'staff', ic:'👥', ja:'Staff', mn:'Ажилтан'},
+  {id:'audit', ic:'🕘', ja:'Edit Log', mn:'Бүртгэлийн түүх'},
   {id:'settings', ic:'⚙️', ja:'Reminder Settings', mn:'Тохиргоо'},
   {id:'calendar', ic:'📅', ja:'Calendar', mn:'Хуанли'},
   {id:'trash', ic:'🗑', ja:'Trash', mn:'Хогийн сав'},
@@ -1467,6 +1537,8 @@ async function changePassword(){
 }
 async function doLogout(){
   if(!confirm('Log out?')) return;
+  try{ if(currentUser) await sb.rpc('log_session', {p_actor: currentUser.name, p_action: 'logout'}); }catch(e){}
+  try{ sessionStorage.removeItem('dms_user'); }catch(e){}
   await sb.auth.signOut();
   location.reload();
 }
@@ -1548,7 +1620,7 @@ async function upsertCustomerRow(c){ return syncedSave('customers', c); }
 async function deleteCustomerRow(id){
   saving = true; renderSaveBar();
   syncForget('customers', id);
-  const { error } = await sb.from('customers').delete().eq('id', id);
+  const { error } = await sb.rpc('delete_as', {p_table:'customers', p_id:id, p_actor:auditActor()||''});
   if(error) console.error('delete customer error', error);
   saving = false; renderSaveBar();
 }
@@ -1556,7 +1628,7 @@ async function upsertVehicleRow(v){ return syncedSave('vehicles', v); }
 async function deleteVehicleRow(id){
   saving = true; renderSaveBar();
   syncForget('vehicles', id);
-  const { error } = await sb.from('vehicles').delete().eq('id', id);
+  const { error } = await sb.rpc('delete_as', {p_table:'vehicles', p_id:id, p_actor:auditActor()||''});
   if(error) console.error('delete vehicle error', error);
   saving = false; renderSaveBar();
 }
@@ -1564,25 +1636,313 @@ async function upsertDealRow(d){ return syncedSave('deals', d); }
 async function deleteDealRow(id){
   saving = true; renderSaveBar();
   syncForget('deals', id);
-  const { error } = await sb.from('deals').delete().eq('id', id);
+  const { error } = await sb.rpc('delete_as', {p_table:'deals', p_id:id, p_actor:auditActor()||''});
   if(error) console.error('delete deal error', error);
   saving = false; renderSaveBar();
 }
 function staffToRow(s){
-  return { id: s.id, name: s.name||'', role: s.role||'', email: s.email||'', active: s.active!==false, sort_order: s.sortOrder||0, created_at: s.createdAt||Date.now() };
+  return { id: s.id, name: s.name||'', role: s.role||'', email: s.email||'', active: s.active!==false, sort_order: s.sortOrder||0, created_at: s.createdAt||Date.now(), pin_hash: s.pinHash||null, pin_salt: s.pinSalt||null };
 }
 function rowToStaff(r){
-  return { id: r.id, name: r.name, role: r.role, email: r.email||'', active: r.active, sortOrder: r.sort_order, createdAt: r.created_at };
+  return { id: r.id, name: r.name, role: r.role, email: r.email||'', active: r.active, sortOrder: r.sort_order, createdAt: r.created_at, pinHash: r.pin_hash||null, pinSalt: r.pin_salt||null };
 }
 function sortedStaff(){ return [...staffList].sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0)); }
 async function upsertStaffRow(s){ return syncedSave('staff', s); }
 async function deleteStaffRow(id){
   saving = true; renderSaveBar();
   syncForget('staff', id);
-  const { error } = await sb.from('staff').delete().eq('id', id);
+  const { error } = await sb.rpc('delete_as', {p_table:'staff', p_id:id, p_actor:auditActor()||''});
   if(error) console.error('delete staff error', error);
   saving = false; renderSaveBar();
 }
+/* ============================================================
+   WHO IS USING THIS PC  +  EDIT LOG
+   - After the shared-password login every person picks their own name (and enters a personal PIN).
+     The name is sent as `last_editor` with every write; a database trigger records the change in
+     audit_log (who / when / what: old → new). The log cannot be edited or deleted from the app.
+   - "Edit Log" screen (sidebar) lists the entries with filters; each customer / vehicle has a
+     "🕘 Edit Log" button that shows only that record's history.
+============================================================ */
+let currentUser = null;                       // {id, name, role}
+const USER_KEY = 'dms_user';
+function auditActor(){ return currentUser ? currentUser.name : null; }
+function auditStamp(row){ row.last_editor = auditActor(); return row; }
+function isPresident(){ return !!currentUser && /president|社長/i.test(currentUser.role||''); }
+
+/* ---- SHA-256 (public-domain compact implementation; input must be ASCII) ---- */
+function sha256hex(ascii){
+  function rr(v, a){ return (v>>>a) | (v<<(32-a)); }
+  const m = Math.pow, mw = m(2, 32);
+  let i, j, result = '';
+  const words = [], asciiBitLength = ascii.length*8;
+  let hash = sha256hex.h = sha256hex.h || [];
+  const k = sha256hex.k = sha256hex.k || [];
+  let pc = k.length;
+  const isComp = {};
+  for(let c = 2; pc < 64; c++){
+    if(!isComp[c]){
+      for(i = 0; i < 313; i += c) isComp[i] = c;
+      hash[pc] = (m(c, .5)*mw) | 0;
+      k[pc++] = (m(c, 1/3)*mw) | 0;
+    }
+  }
+  ascii += '\x80';
+  while(ascii.length % 64 - 56) ascii += '\x00';
+  for(i = 0; i < ascii.length; i++){
+    j = ascii.charCodeAt(i);
+    if(j>>8) return '';
+    words[i>>2] |= j << ((3-i)%4)*8;
+  }
+  words[words.length] = ((asciiBitLength/mw) | 0);
+  words[words.length] = asciiBitLength;
+  for(j = 0; j < words.length;){
+    const w = words.slice(j, j += 16), oldHash = hash;
+    hash = hash.slice(0, 8);
+    for(i = 0; i < 64; i++){
+      const w15 = w[i-15], w2 = w[i-2];
+      const a = hash[0], e = hash[4];
+      const temp1 = hash[7] + (rr(e,6)^rr(e,11)^rr(e,25)) + ((e&hash[5])^((~e)&hash[6])) + k[i]
+        + (w[i] = (i < 16) ? w[i] : (w[i-16] + (rr(w15,7)^rr(w15,18)^(w15>>>3)) + w[i-7] + (rr(w2,17)^rr(w2,19)^(w2>>>10))) | 0);
+      const temp2 = (rr(a,2)^rr(a,13)^rr(a,22)) + ((a&hash[1])^(a&hash[2])^(hash[1]&hash[2]));
+      hash = [(temp1 + temp2) | 0].concat(hash);
+      hash[4] = (hash[4] + temp1) | 0;
+    }
+    for(i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
+  }
+  for(i = 0; i < 8; i++) for(j = 3; j+1; j--){ const b = (hash[i]>>(j*8)) & 255; result += ((b < 16) ? 0 : '') + b.toString(16); }
+  return result;
+}
+function pinHash(pin, salt){ let h = salt + ':' + pin; for(let i = 0; i < 4000; i++) h = sha256hex(h + salt + pin); return h; }
+function newSalt(){ const a = new Uint8Array(8); crypto.getRandomValues(a); return [...a].map(b=>b.toString(16).padStart(2, '0')).join(''); }
+
+/* ---- who is using this PC ---- */
+async function ensureUser(){
+  let saved = null;
+  try{ saved = JSON.parse(sessionStorage.getItem(USER_KEY) || 'null'); }catch(e){}
+  const { data } = await sb.from('staff').select('id,name,role,active,pin_hash,pin_salt,sort_order').order('sort_order');
+  const list = (data||[]).filter(s=>s.active!==false);
+  if(list.length===0){ return; }
+  if(saved && list.some(s=>s.id===saved.id)){ currentUser = saved; return; }
+  await showUserPicker(list);
+}
+function showUserPicker(list){
+  return new Promise(resolve=>{
+    let el = document.getElementById('userScreen');
+    if(!el){
+      el = document.createElement('div'); el.id = 'userScreen';
+      el.style.cssText = 'position:fixed; inset:0; background:var(--bg); z-index:150; display:flex; align-items:center; justify-content:center; overflow:auto';
+      document.body.appendChild(el);
+    }
+    let last = ''; try{ last = localStorage.getItem('dms_last_user') || ''; }catch(e){}
+    const fails = {};
+    const finish = async (s)=>{
+      currentUser = {id: s.id, name: s.name, role: s.role||''};
+      try{ sessionStorage.setItem(USER_KEY, JSON.stringify(currentUser)); localStorage.setItem('dms_last_user', s.id); }catch(e){}
+      el.remove();
+      try{ await sb.rpc('log_session', {p_actor: s.name, p_action: 'login'}); }catch(e){}
+      resolve();
+    };
+    const shell = inner => `<div class="panel" style="width:100%; max-width:420px; margin:16px" data-i18n-keep>${inner}</div>`;
+    const mountSwitch = ()=>{ if(window.I18N && I18N.mountInto) I18N.mountInto(el.querySelector('.panel')); };
+    const renderList = ()=>{
+      el.innerHTML = shell(`
+        <h3 style="text-align:center; margin-bottom:6px">👤 Who is using this PC?</h3>
+        <p style="text-align:center; color:var(--text-dim); font-size:12.5px; margin:0 0 14px">Select your own name. Your name is recorded together with every entry you make.</p>
+        <div style="display:flex; flex-direction:column; gap:8px">
+          ${list.map(s=>`<button type="button" class="btn ${s.id===last?'':'ghost'}" data-id="${esc(s.id)}" style="justify-content:flex-start; gap:10px; text-align:left"><b>${esc(s.name)}</b><span style="opacity:.7; font-weight:400">${esc(s.role||'')}</span>${s.pin_hash?'':'<span style="margin-left:auto; font-size:11px; color:var(--amber)">🔑 Set a PIN</span>'}</button>`).join('')}
+        </div>`);
+      mountSwitch();
+      el.querySelectorAll('button[data-id]').forEach(b=>b.onclick = ()=>renderPin(list.find(s=>s.id===b.dataset.id)));
+    };
+    const renderPin = s=>{
+      const hasPin = !!s.pin_hash;
+      el.innerHTML = shell(`
+        <h3 style="text-align:center; margin-bottom:6px">👤 ${esc(s.name)}</h3>
+        <p style="text-align:center; color:var(--text-dim); font-size:12.5px; margin:0 0 14px">${hasPin ? 'Enter your PIN.' : 'First time: create your personal PIN (4–8 digits). Only you should know it.'}</p>
+        <div class="field"><input id="f_pin1" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="${hasPin ? 'PIN' : 'New PIN (4–8 digits)'}" style="text-align:center; font-size:17px"></div>
+        ${hasPin ? '' : `<div class="field"><input id="f_pin2" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="Repeat the PIN" style="text-align:center; font-size:17px"></div>`}
+        <div id="pinError" style="color:var(--red); font-size:12.5px; margin-bottom:10px; display:none; text-align:center"></div>
+        <button type="button" class="btn" id="pinGo" style="width:100%">${hasPin ? 'Continue' : 'Save PIN & Continue'}</button>
+        <button type="button" class="btn ghost" id="pinBack" style="width:100%; margin-top:8px">← Back</button>
+        ${hasPin ? `<p style="text-align:center; color:var(--text-dim); font-size:11.5px; margin:12px 0 0">Forgot your PIN? Ask the President to reset it.</p>` : ''}`);
+      mountSwitch();
+      const err = msg=>{ const e = document.getElementById('pinError'); e.textContent = msg; e.style.display = 'block'; };
+      const go = async ()=>{
+        const p1 = document.getElementById('f_pin1').value.trim();
+        if(hasPin){
+          const f = fails[s.id] || {n:0, until:0};
+          if(Date.now() < f.until){ err('Too many wrong attempts. Please wait a moment.'); return; }
+          if(pinHash(p1, s.pin_salt) === s.pin_hash){ finish(s); return; }
+          f.n++; if(f.n >= 5){ f.until = Date.now() + 30000; f.n = 0; }
+          fails[s.id] = f; err('Incorrect PIN'); return;
+        }
+        const p2 = document.getElementById('f_pin2').value.trim();
+        if(!/^\d{4,8}$/.test(p1)){ err('The PIN must be 4–8 digits.'); return; }
+        if(p1 !== p2){ err('The two PINs do not match.'); return; }
+        const salt = newSalt(), hash = pinHash(p1, salt);
+        const { error } = await sb.from('staff').update({pin_hash: hash, pin_salt: salt, last_editor: s.name}).eq('id', s.id);
+        if(error){ err('Could not save the PIN. Check the internet connection.'); return; }
+        s.pin_hash = hash; s.pin_salt = salt;
+        finish(s);
+      };
+      document.getElementById('pinGo').onclick = go;
+      document.getElementById('pinBack').onclick = renderList;
+      el.querySelectorAll('input').forEach(i=>i.onkeydown = ev=>{ if(ev.key==='Enter') go(); });
+      document.getElementById('f_pin1').focus();
+    };
+    renderList();
+  });
+}
+function mountUserChip(){
+  if(document.getElementById('userChip') || !currentUser) return;
+  const foot = document.querySelector('#sidebar .sidebar-foot');
+  if(!foot) return;
+  const el = document.createElement('div');
+  el.id = 'userChip';
+  el.style.cssText = 'display:flex; align-items:center; gap:8px; margin:0 0 8px; font-size:12.5px';
+  el.innerHTML = `<span style="font-weight:700; color:var(--text)" data-i18n-skip>👤 ${esc(currentUser.name)}</span><button type="button" class="btn ghost sm" style="margin-left:auto; padding:3px 9px" onclick="switchUser()">Switch user</button>`;
+  foot.insertBefore(el, foot.firstChild);
+}
+async function switchUser(){
+  try{ if(currentUser) await sb.rpc('log_session', {p_actor: currentUser.name, p_action: 'logout'}); }catch(e){}
+  try{ sessionStorage.removeItem(USER_KEY); }catch(e){}
+  location.reload();
+}
+async function resetStaffPin(id){
+  const s = staffList.find(x=>x.id===id);
+  if(!s) return;
+  if(!confirm('Reset this person\'s PIN? They will create a new PIN the next time they select their name.')) return;
+  s.pinHash = null; s.pinSalt = null;
+  closeModal(); renderView();
+  await upsertStaffRow(s);
+}
+
+/* ---- Edit Log screen ---- */
+const AUDIT = {filter:{actor:'', tbl:'', action:'', from:'', to:'', q:'', record:''}, limit:200, rows:[]};
+const AUDIT_ACTIONS = {create:'Created', update:'Updated', delete:'Moved to Trash', restore:'Restored', purge:'Deleted permanently', login:'Logged in', logout:'Logged out'};
+const AUDIT_TABLES = {customers:'Customers', vehicles:'Vehicles', deals:'Deals', staff:'Staff', session:'Logins'};
+const AUDIT_FIELDS = {
+  name:'Name', name_mn:'Name (Mongolian)', phone:'Phone Number', fb:'Facebook / Messenger', address:'Address', birthday:'Birthday',
+  job:'Occupation / Workplace', referrer:'Referred By', note:'Notes', next_service_date:'Next Inspection', sales_staff:'Sales Staff',
+  customer_type:'Customer Type', negotiation_history:'Activity Log', lead_source:'Lead Source', desired_vehicle:'Desired Vehicle', budget:'Budget',
+  has_responded:'Has Responded', has_chatted:'Chatted via Messenger', claim:'Claim', other_dealer_status:'Hot / Prospect status', converted_at:'Converted',
+  deleted_at:'Trash', id:'ID', kind:'Type', maker:'Make', model:'Model', year:'Year', color:'Color', mileage:'Mileage', vin:'VIN', reg_num:'Plate Number',
+  price_cost:'Purchase Cost', price_sale:'Sale Price', status:'Status', notes:'Notes', appraisal:'Condition Check', defects:'Deductions',
+  files:'Photos & Documents', service_history:'Service History', owner_customer_id:'Owner', arrived:'Arrived in Ulaanbaatar',
+  purchased_date:'Purchased Date', etd:'ETD', eta:'ETA', owner_payout:'Owner Payout', min_sell_price:'Min Sell Price', negotiation_ceiling:'Negotiation Ceiling',
+  has_documents:'Documents', state_inspection_status:'State Inspection', fb_boosted:'FB Boosted', external_grade:'Appraisal Tool Grade',
+  external_appraisal_price:'Reference Appraisal Price', external_report_text:'Diagnosis',
+  customer_id:'Customer', vehicle_id:'Vehicle', trade_in_vehicle_id:'Appraisal Vehicle', stage:'Stage', staff:'Staff', sold_by:'Sold By', history:'Deal History',
+  role:'Role', email:'Email Address', active:'Active', pin:'PIN'
+};
+function openAuditFor(id){
+  AUDIT.filter = {actor:'', tbl:'', action:'', from:'', to:'', q:'', record:id};
+  AUDIT.limit = 200;
+  go('audit');
+}
+function auditVal(s){
+  if(s==null) return '';
+  let v = s;
+  try{ v = JSON.parse(s); }catch(e){ return String(s); }
+  if(v==null) return '—';
+  if(typeof v==='string') return v || '—';
+  if(typeof v==='object') return v.note || v.name || JSON.stringify(v);
+  return String(v);
+}
+function auditEntryText(raw){
+  try{
+    const o = JSON.parse(raw);
+    if(o && typeof o==='object'){
+      const when = o.date ? fmtDate(o.date) : '';
+      const bits = [o.note || o.name || o.title || o.description || o.stage || '', o.staff ? '('+o.staff+')' : ''].filter(Boolean).join(' ');
+      return (when ? when+' · ' : '') + (bits || raw);
+    }
+  }catch(e){}
+  return raw;
+}
+function auditChangesHtml(r){
+  const ch = r.changes || {};
+  const rows = Object.entries(ch).map(([k, v])=>{
+    const label = AUDIT_FIELDS[k] || k;
+    if(v && !Array.isArray(v) && typeof v==='object'){
+      const add = (v.added||[]).map(x=>`<div style="color:var(--green)">＋ ${esc(auditEntryText(x))}</div>`).join('');
+      const rem = (v.removed||[]).map(x=>`<div style="color:var(--red)">－ ${esc(auditEntryText(x))}</div>`).join('');
+      return `<div style="margin-top:3px"><b>${esc(label)}</b>${add}${rem}</div>`;
+    }
+    const a = auditVal(v[0]), b = auditVal(v[1]);
+    if(r.action==='create') return `<div><span style="color:var(--text-dim)">${esc(label)}:</span> ${esc(b)}</div>`;
+    return `<div><span style="color:var(--text-dim)">${esc(label)}:</span> <span style="text-decoration:line-through; opacity:.65">${esc(a)}</span> → <b>${esc(b)}</b></div>`;
+  });
+  return rows.join('') || '<span style="color:var(--text-dim)">—</span>';
+}
+function auditWhen(ts){
+  try{ return new Date(ts).toLocaleString('sv-SE', {timeZone:'Asia/Ulaanbaatar', hour12:false}).slice(0, 16); }catch(e){ return String(ts); }
+}
+function renderAudit(){
+  setTimeout(loadAudit, 0);
+  const f = AUDIT.filter;
+  const actors = [...new Set([...staffList.map(s=>s.name), '(unknown)'])];
+  return `
+    <div class="topbar">
+      <div class="pagetitle">🕘 Edit Log <span class="sub">Who entered or changed what, and when (Mongolia time)</span></div>
+    </div>
+    <div class="toolbar" style="flex-wrap:wrap; gap:8px">
+      <select onchange="AUDIT.filter.actor=this.value; AUDIT.limit=200; loadAudit()">
+        <option value="">All people</option>${actors.map(a=>`<option value="${esc(a)}" ${f.actor===a?'selected':''}>${esc(a)}</option>`).join('')}
+      </select>
+      <select onchange="AUDIT.filter.tbl=this.value; AUDIT.limit=200; loadAudit()">
+        <option value="">All records</option>${Object.entries(AUDIT_TABLES).map(([k,l])=>`<option value="${k}" ${f.tbl===k?'selected':''}>${l}</option>`).join('')}
+      </select>
+      <select onchange="AUDIT.filter.action=this.value; AUDIT.limit=200; loadAudit()">
+        <option value="">All actions</option>${Object.entries(AUDIT_ACTIONS).map(([k,l])=>`<option value="${k}" ${f.action===k?'selected':''}>${l}</option>`).join('')}
+      </select>
+      <input type="date" value="${esc(f.from)}" onchange="AUDIT.filter.from=this.value; AUDIT.limit=200; loadAudit()" title="From">
+      <input type="date" value="${esc(f.to)}" onchange="AUDIT.filter.to=this.value; AUDIT.limit=200; loadAudit()" title="To">
+      <input type="text" id="auditSearch" placeholder="🔍 Search by name or vehicle…" value="${esc(f.q)}" oninput="AUDIT.filter.q=this.value; clearTimeout(AUDIT._t); AUDIT._t=setTimeout(()=>{AUDIT.limit=200; loadAudit();}, 400)">
+      ${f.record ? `<button class="btn ghost sm" onclick="AUDIT.filter.record=''; AUDIT.limit=200; renderView()">✕ Show all records</button>` : ''}
+    </div>
+    <div id="auditBody"><div class="empty">Loading…</div></div>`;
+}
+async function loadAudit(){
+  const body = document.getElementById('auditBody');
+  if(!body || currentView!=='audit') return;
+  const f = AUDIT.filter;
+  let q = sb.from('audit_log').select('*').order('at', {ascending:false}).limit(AUDIT.limit);
+  if(f.actor) q = q.eq('actor', f.actor);
+  if(f.tbl) q = q.eq('tbl', f.tbl);
+  if(f.action) q = q.eq('action', f.action);
+  if(f.from) q = q.gte('at', f.from + 'T00:00:00+08:00');
+  if(f.to) q = q.lte('at', f.to + 'T23:59:59+08:00');
+  if(f.record) q = q.eq('record_id', f.record);
+  if(f.q) q = q.ilike('label', '%' + f.q.replace(/[%,]/g, '') + '%');
+  const { data, error } = await q;
+  if(!document.getElementById('auditBody')) return;
+  if(error){ body.innerHTML = `<div class="empty"><b>Could not load the log</b>${esc(error.message)}</div>`; return; }
+  const rows = data || [];
+  if(rows.length===0){ body.innerHTML = `<div class="empty"><b>No log entries</b>Nothing matches the current filters</div>`; return; }
+  const open = r => {
+    const id = r.record_id; if(!id) return '';
+    if(r.tbl==='customers' && customers.some(x=>x.id===id)) return `openCustomerDetail('${id}')`;
+    if(r.tbl==='vehicles' && vehicles.some(x=>x.id===id)) return `openVehicleDetail('${id}')`;
+    if(r.tbl==='deals' && deals.some(x=>x.id===id)) return `openDealDetail('${id}')`;
+    return '';
+  };
+  const color = {create:'var(--green)', update:'var(--blue)', delete:'var(--red)', restore:'var(--teal)', purge:'var(--red)', login:'var(--text-dim)', logout:'var(--text-dim)'};
+  body.innerHTML = `
+    <div class="panel" style="padding:0; overflow:hidden">
+      ${rows.map(r=>`
+        <div style="display:grid; grid-template-columns:128px 112px 1fr; gap:12px; padding:11px 14px; border-bottom:1px solid var(--line); align-items:start">
+          <div class="mono" style="font-size:12px; color:var(--text-dim)">${esc(auditWhen(r.at))}</div>
+          <div><b>${esc(r.actor||'(unknown)')}</b><div style="font-size:11px; font-weight:700; color:${color[r.action]||'var(--text-dim)'}">${esc(AUDIT_ACTIONS[r.action]||r.action)}</div></div>
+          <div style="font-size:12.5px; min-width:0">
+            ${r.tbl==='session' ? '' : `<div style="margin-bottom:2px"><span style="color:var(--text-dim)">${esc(AUDIT_TABLES[r.tbl]||r.tbl||'')}:</span> ${open(r) ? `<a href="#" onclick="event.preventDefault(); ${open(r)}">${esc(r.label||r.record_id||'')}</a>` : `<b>${esc(r.label||r.record_id||'')}</b>`}${r.record_id ? ` <a href="#" style="font-size:11px; color:var(--text-dim)" onclick="event.preventDefault(); AUDIT.filter.record='${esc(r.record_id)}'; AUDIT.limit=200; renderView()">🕘</a>` : ''}</div>`}
+            ${r.tbl==='session' ? '' : auditChangesHtml(r)}
+          </div>
+        </div>`).join('')}
+    </div>
+    <div style="text-align:center; margin:12px 0; color:var(--text-dim); font-size:12px">${rows.length} entries${rows.length>=AUDIT.limit ? ` · <a href="#" onclick="event.preventDefault(); AUDIT.limit+=200; loadAudit()">Load more</a>` : ''}</div>`;
+}
+
 /* ============================================================
    MULTI-PC SYNC
    - Every row has a server-side revision number (rev). A save only succeeds if the row is still
@@ -1646,11 +2006,11 @@ async function syncSaveRow(table, obj){
   for(let attempt=0; attempt<5; attempt++){
     const rev = SYNC.rev[key];
     if(rev===undefined){                                        // a record this PC has not seen on the server
-      const res = await sb.from(table).insert(T.toRow(obj)).select('rev').single();
+      const res = await sb.from(table).insert(auditStamp(T.toRow(obj))).select('rev').single();
       if(!res.error){ syncMark(key, res.data.rev, obj); return; }
       if(res.error.code!=='23505') throw res.error;             // 23505 = it already exists (e.g. restored from Trash) → merge below
     } else {
-      const res = await sb.from(table).update(T.toRow(obj)).eq('id', obj.id).eq('rev', rev).select('rev');
+      const res = await sb.from(table).update(auditStamp(T.toRow(obj))).eq('id', obj.id).eq('rev', rev).select('rev');
       if(res.error) throw res.error;
       if(res.data && res.data.length===1){ syncMark(key, res.data[0].rev, obj); return; }
     }
@@ -3809,6 +4169,7 @@ function openVehicleDetail(id){
             :`<span class="badge ${badgeClass(v.status)}" style="position:static">${VSTATUS[v.status]}</span>`}
           ${(!isTradeIn && !isOrder && v.arrived===false)?`<span class="badge" style="position:static; background:var(--amber-soft); color:var(--amber)">🚢 In Transit</span>`:''}
           <button class="btn ghost sm" onclick="printQuote('${v.id}')">📄 Print Quote</button>
+          <button class="btn ghost sm" onclick="openAuditFor('${v.id}')">🕘 Edit Log</button>
           <button class="btn ghost sm" onclick='openVehicleForm(${JSON.stringify(v).replace(/'/g,"&#39;")})'>✎ Edit</button>
         </div>
       </div>
@@ -4034,6 +4395,7 @@ function dealPanelHtml(v){
         ${stagePrev(deal.stage)?`<button class="btn ghost sm" onclick="moveStageAndRefresh('${deal.id}','${v.id}',-1)">← Back to Previous Stage</button>`:''}
         ${stageNext(deal.stage)?`<button class="btn sm" onclick="moveStageAndRefresh('${deal.id}','${v.id}',1)">Advance to Next Stage →</button>`:''}
         <button class="btn ghost sm" onclick="openCustomerForm(${JSON.stringify(c).replace(/'/g,"&#39;")})">✎ Edit Customer Info</button>
+        <button class="btn ghost sm" onclick="openAuditFor('${c.id}')">🕘 Edit Log</button>
         <button class="btn ghost sm" onclick="openChangeDealVehicleForm('${deal.id}',{type:'vehicle',vehicleId:'${v.id}'})">🚗 Change Target Vehicle</button>
         <button class="btn danger sm" onclick="cancelDeal('${deal.id}','${v.id}')">Cancel Deal</button>
       </div>
@@ -5014,7 +5376,11 @@ function renderManual(){
     <div class="panel manual-section" id="m-ch1">
       <h3><span class="manual-chapnum">01</span> Нэвтрэх ба цэс</h3>
       <p style="color:var(--text-dim); font-size:13px; margin:0 0 12px">Бүх ажилтан нэг ижил нэвтрэх эрх ашигладаг. Нэвтэрсний дараа зүүн талын цэснээс хэрэгтэй хэсгээ сонгоно:</p>
-      <div class="manual-callout"><span class="ic">🌐</span><div><b>Хэл солих (EN / 日本語 / МН)</b><p>Нэвтрэх дэлгэц болон зүүн талын цэсний дээд хэсэгт <b>EN</b> (Англи), <b>日本語</b> (Япон), <b>МН</b> (Монгол) гэсэн 3 товч байна. Дарахад бүх дэлгэц тухайн хэл рүү шууд солигдоно. Сонгосон хэл энэ хөтөч дээр хадгалагдана. Ойлгомжгүй зүйл тохиолдвол хэлээ сольж харна уу. Харилцагч, машины нэр, тэмдэглэл зэрэг <b>оруулсан мэдээлэл</b> орчуулагдахгүй. Энэ «Гарын авлага» хэсэг зөвхөн монгол хэлээр байна.</p></div></div>
+      <div class="manual-callout warn"><span class="ic">👤</span><div><b>Нэвтрэх үед өөрийн нэрээ сонгох, PIN код</b><p>Нийтийн нууц үгээр нэвтэрсний дараа «<b>Who is using this PC?</b>» дэлгэц гарна. Жагсаалтаас <b>өөрийн нэрийг</b> сонгоно. Анх удаа сонгохдоо <b>өөрийн PIN</b> (4–8 оронтой тоо) үүсгэнэ — түүнийг өөр хүнд хэлж болохгүй. Дараа нь нэрээ сонгоод PIN-ээ оруулна. Таны оруулсан, өөрчилсөн мэдээлэл бүрт <b>таны нэр, огноо, цаг</b> автоматаар бүртгэгдэнэ. PIN мартсан бол Ерөнхийлөгчөөс шинэчлүүлнэ. Өөр хүнд ажиллах бол зүүн цэсний <b>«Switch user»</b> товчийг дарна. Бусдын нэрээр нэвтэрч мэдээлэл оруулах нь хориотой.</p></div></div>
+
+<div class="manual-callout"><span class="ic">🕘</span><div><b>Бүртгэлийн түүх (Edit Log)</b><p>Зүүн цэсний <b>«🕘 Edit Log»</b> хэсэгт хэн, хэзээ, юуг оруулсан / өөрчилсөн нь (өмнөх утга → шинэ утга) бүгд харагдана. Хүн, төрөл, үйлдэл, огноогоор шүүж болно. Харилцагч, машины хуудсан дээрх <b>«🕘 Edit Log»</b> товч тухайн бүртгэлийн түүхийг л харуулна. Энэ бүртгэлийг засах, устгах боломжгүй.</p></div></div>
+
+<div class="manual-callout"><span class="ic">🌐</span><div><b>Хэл солих (EN / 日本語 / МН)</b><p>Нэвтрэх дэлгэц болон зүүн талын цэсний дээд хэсэгт <b>EN</b> (Англи), <b>日本語</b> (Япон), <b>МН</b> (Монгол) гэсэн 3 товч байна. Дарахад бүх дэлгэц тухайн хэл рүү шууд солигдоно. Сонгосон хэл энэ хөтөч дээр хадгалагдана. Ойлгомжгүй зүйл тохиолдвол хэлээ сольж харна уу. Харилцагч, машины нэр, тэмдэглэл зэрэг <b>оруулсан мэдээлэл</b> орчуулагдахгүй. Энэ «Гарын авлага» хэсэг зөвхөн монгол хэлээр байна.</p></div></div>
       <ul style="margin:0; padding-left:20px; font-size:13px; color:var(--text-dim); line-height:1.9">
         <li><b style="color:var(--text)">🏠 Dashboard</b> — Хянах самбар. Өнөөдрийн байдал, сануулгууд энд харагдана.</li>
         <li><b style="color:var(--text)">👤 Customers</b> — Үйлчлүүлэгчийн бүртгэл.</li>
@@ -5238,6 +5604,7 @@ function openStaffForm(existing){
     </div>
     <div class="modal-foot">
       ${existing?`<button class="btn danger" onclick="deleteStaff('${s.id}')">Delete</button>`:''}
+      ${(existing && s.pinHash && isPresident())?`<button class="btn ghost" onclick="resetStaffPin('${s.id}')">🔑 Reset PIN</button>`:''}
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
       <button class="btn" onclick="saveStaff('${existing?s.id:''}')">Save</button>
     </div>
@@ -5953,6 +6320,7 @@ function renderView(){
   else if(currentView==='vehicles') el.innerHTML = renderVehicles();
   else if(currentView==='deals') el.innerHTML = renderDeals();
   else if(currentView==='staff') el.innerHTML = renderStaff();
+  else if(currentView==='audit') el.innerHTML = renderAudit();
   else if(currentView==='settings') el.innerHTML = renderReminderSettings();
   else if(currentView==='calendar') el.innerHTML = renderCalendar();
   else if(currentView==='manual') el.innerHTML = renderManual();
@@ -5996,9 +6364,11 @@ async function startApp(){
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('view').innerHTML = `<div class="empty">Loading… ачааллаж байна…</div>`;
   renderMnKeyboardKeys();
+  await ensureUser();
   await loadAll();
   renderNav();
   renderView();
+  mountUserChip();
   syncStart();
 }
 (async function init(){
