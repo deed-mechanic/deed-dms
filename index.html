@@ -1331,6 +1331,13 @@ I18N.addRe('ja', [[/^(.{2,40}):$/, l => I18N.t(l) + '：']]);
 I18N.addRe('mn', [[/^(.{2,40}):$/, l => I18N.t(l) + ':']]);
 })();
 
+/* i18n dictionary part 80 — automatic update notice */
+(function(){ const T = I18N.T;
+T('A new version is available. It will update automatically as soon as you finish what you are doing.','新しい版があります。作業が終わり次第、自動で更新されます。','Шинэ хувилбар гарсан байна. Таныг ажлаа дуусгангуут автоматаар шинэчлэгдэнэ.');
+T('Update now','今すぐ更新','Одоо шинэчлэх');
+T('Updating to the new version…','新しい版に更新しています…','Шинэ хувилбар руу шинэчилж байна…');
+})();
+
 </script>
 <!-- I18N:END -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -1656,6 +1663,68 @@ async function deleteStaffRow(id){
   if(error) console.error('delete staff error', error);
   saving = false; renderSaveBar();
 }
+/* ============================================================
+   AUTO UPDATE — PCs that stay open pick up a new version by themselves
+   The publish script stamps APP_BUILD with the publish time. Every minute (and whenever the window
+   regains focus) the page reads the published file and compares its APP_BUILD with its own. If it
+   is newer the page reloads — but only when nothing would be lost: not while typing, with a form
+   open, or while a save is running. Otherwise a small notice waits, and the reload happens as soon as
+   the person is done (or after 10 minutes without any activity).
+============================================================ */
+const APP_BUILD = '20261123-143851';
+const APPUPD = {pending:null, lastActivity:Date.now(), banner:null, started:false};
+function appUpdateSafe(){
+  if(typeof saving!=='undefined' && saving) return false;
+  if(typeof SYNC!=='undefined' && Object.values(SYNC.inflight||{}).some(n=>n>0)) return false;
+  const ae = document.activeElement;
+  if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && !/^(button|checkbox|radio|submit)$/.test(ae.type||'')) return false;
+  const modal = document.getElementById('modalRoot');
+  if(modal && modal.children.length>0) return false;
+  return true;
+}
+function appUpdateReload(){
+  const base = location.href.split('#')[0].split('?')[0];
+  if(APPUPD.banner){ const s = APPUPD.banner.querySelector('.msg'); if(s) s.textContent = 'Updating to the new version…'; }
+  setTimeout(()=>{ location.href = base + '?v=' + encodeURIComponent(APPUPD.pending || Date.now()); }, 400);
+}
+function appUpdateShowBanner(){
+  if(APPUPD.banner) return;
+  const el = document.createElement('div');
+  el.id = 'appUpdateBanner';
+  el.style.cssText = 'position:fixed; left:50%; bottom:16px; transform:translateX(-50%); z-index:210; display:flex; align-items:center; gap:12px; padding:10px 16px; border-radius:12px; background:var(--panel2); border:1px solid var(--amber); box-shadow:0 8px 28px rgba(0,0,0,.45); font-size:13px; max-width:92vw';
+  el.innerHTML = `<span class="msg">A new version is available. It will update automatically as soon as you finish what you are doing.</span><button type="button" class="btn sm" onclick="appUpdateReload()">Update now</button>`;
+  document.body.appendChild(el);
+  APPUPD.banner = el;
+}
+function appUpdateTry(){
+  if(!APPUPD.pending) return;
+  const idle = Date.now() - APPUPD.lastActivity;
+  if(appUpdateSafe() || idle > 10*60*1000){ appUpdateReload(); return; }
+  appUpdateShowBanner();
+}
+async function appUpdateCheck(){
+  if(APP_BUILD.startsWith('__')) return;                     // a local copy that was never published
+  try{
+    const url = location.href.split('#')[0].split('?')[0] + '?_=' + Date.now();
+    const res = await fetch(url, {cache:'no-store'});
+    if(!res.ok) return;
+    const txt = await res.text();
+    const m = /const APP_BUILD = '([^']+)'/.exec(txt);
+    if(m && !m[1].startsWith('__') && m[1] !== APP_BUILD){ APPUPD.pending = m[1]; appUpdateTry(); }
+  }catch(e){ /* offline — try again next time */ }
+}
+function appUpdateStart(){
+  if(APPUPD.started) return;
+  APPUPD.started = true;
+  ['keydown','mousedown','touchstart','wheel'].forEach(ev=>document.addEventListener(ev, ()=>{ APPUPD.lastActivity = Date.now(); }, {passive:true, capture:true}));
+  const maybe = ()=>{ if(document.visibilityState==='visible') appUpdateCheck(); };
+  setInterval(maybe, 60000);
+  window.addEventListener('focus', maybe);
+  document.addEventListener('visibilitychange', maybe);
+  setInterval(appUpdateTry, 4000);                           // a waiting update goes ahead as soon as it is safe
+  setTimeout(maybe, 5000);
+}
+
 /* ============================================================
    WHO IS USING THIS PC  +  EDIT LOG
    - After the shared-password login every person picks their own name (and enters a personal PIN).
@@ -6786,6 +6855,7 @@ async function startApp(){
   mountUserChip();
   syncStart();
 }
+appUpdateStart();
 (async function init(){
   const authed = await requireAuth();
   if(authed) await startApp();
