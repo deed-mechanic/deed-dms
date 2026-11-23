@@ -1193,6 +1193,31 @@ function customerVehicleLinks(c){
 }
 // Contracted but not yet delivered: has a live Contract-stage deal. (Delivery moves them to In-House.)
 function awaitingDelivery(c){ return deals.some(d=>d.customerId===c.id && d.stage==='契約'); }
+// How a person relates to a vehicle, shown as a coloured tag so "bought from us", "in talks",
+// "consigns with us" and "only had it appraised" are never confused. (This is separate from the
+// customer's own type — In-House vs Other Dealer — which is shown as a ⭐ mark.)
+function relationOf(v, customerId){
+  if(!v || !customerId) return null;
+  const d = deals.find(x=>x.customerId===customerId && x.vehicleId===v.id && x.stage!=='キャンセル');
+  if(d){
+    if(d.stage==='契約' || d.stage==='納車') return {key:'buyer', icon:'🛒', label:'Buyer', detail: d.stage==='納車'?'Delivered':'Contract', color:'var(--green)', soft:'var(--green-soft)'};
+    return {key:'talks', icon:'💬', label:'In talks', detail: stageLabel(d.stage), color:'var(--blue)', soft:'var(--blue-soft)'};
+  }
+  if(v.ownerCustomerId===customerId){
+    if(isAppraisalOnly(v)) return {key:'appraisal', icon:'📋', label:'Appraisal only', detail:'', color:'var(--violet)', soft:'var(--violet-soft)'};
+    const c = customers.find(x=>x.id===customerId);
+    if(c && /^deed motors\b/i.test((c.name||'').trim())) return {key:'company', icon:'🏢', label:'Company stock', detail:'', color:'var(--text-dim)', soft:'var(--panel2)'};
+    return {key:'consign', icon:'🏷', label:'Consignor', detail:'', color:'var(--amber)', soft:'var(--amber-soft)'};
+  }
+  return null;
+}
+function relationTagHtml(rel){
+  return rel ? `<span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; background:${rel.soft}; color:${rel.color}">${rel.icon} ${rel.label}${rel.detail?` <span style="font-weight:500">· ${esc(rel.detail)}</span>`:''}</span>` : '';
+}
+function inHouseStarHtml(customerId){
+  const c = customers.find(x=>x.id===customerId);
+  return c && c.customerType==='自社客' ? `<span title="In-House customer: has taken delivery of a vehicle from us" style="font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; background:var(--green-soft); color:var(--green)">⭐ In-House</span>` : '';
+}
 // The customers currently shown on the Customers screen (search + type chip + sort).
 function filteredCustomerList(){
   const q = custFilter.trim().toLowerCase();
@@ -1424,19 +1449,27 @@ function renderCustomers(){
         const dealCount = deals.filter(d=>d.customerId===c.id).length;
         const due = serviceDue(c.nextServiceDate);
         const vehRows = customerVehicleLinks(c);
+        const rels = vehRows.map(r=>relationOf(r.v, c.id)).filter(Boolean);
+        const hasRel = k => rels.some(x=>x.key===k);
+        // Left colour bar: who is this customer to us?
+        const accent = c.customerType==='自社客' ? 'var(--green)' : (awaitingDelivery(c) ? 'var(--teal)' : (hasRel('consign') ? 'var(--amber)' : (hasRel('appraisal') ? 'var(--violet)' : '')));
+        const appraisalOnlyCust = c.customerType!=='自社客' && !awaitingDelivery(c) && hasRel('appraisal') && !hasRel('buyer') && !hasRel('consign');
         return `
-        <div class="card" onclick="openCustomerDetail('${c.id}')">
+        <div class="card" style="${accent?`border-left:5px solid ${accent};`:''}" onclick="openCustomerDetail('${c.id}')">
           <div style="display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; margin-bottom:2px;">
             ${c.claim?`<span class="badge" style="position:static; background:var(--red); color:#fff">🚨 Claim Open</span>`:''}
             ${c.customerType?`<span class="badge ${customerTypeBadgeClass(c.customerType)}" style="position:static">${esc(customerTypeLabel(c.customerType))}</span>`:''}
             ${awaitingDelivery(c)?`<span class="badge b-sold" style="position:static">✅ Contracted</span>`:''}
+            ${appraisalOnlyCust?`<span class="badge" style="position:static; background:var(--violet-soft); color:var(--violet)">📋 Appraisal only</span>`:''}
             ${c.customerType==='他社客'?otherDealerStatusSelectHtml(c):''}
             ${due?`<span class="badge b-sold" style="position:static">🔔 Inspection Due</span>`:''}
           </div>
           <div class="name">${esc(c.name)}</div>
           <div class="meta">${esc(c.nameMn||'')} ${c.nameMn?'・':''}${esc(c.phone||'No phone on file')}</div>
           <div class="meta" style="margin-top:-6px;">📍 ${esc(c.address||'No address on file')}</div>
-          ${vehRows.slice(0,3).map(r=>`<div class="meta" style="color:var(--teal); margin-top:-6px">${r.owner?'🔑':'🚗'} ${esc(vehName(r.v.id))} ・ ${esc(r.label)}</div>`).join('')}
+          ${vehRows.slice(0,3).map(r=>{ const rl = relationOf(r.v, c.id); return rl
+            ? `<div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin:-4px 0 6px">${relationTagHtml(rl)}<span style="font-size:12.5px; color:var(--text)">${esc(vehName(r.v.id))}</span></div>`
+            : `<div class="meta" style="color:var(--teal); margin-top:-6px">${r.owner?'🔑':'🚗'} ${esc(vehName(r.v.id))} ・ ${esc(r.label)}</div>`; }).join('')}
           ${vehRows.length>3?`<div class="meta" style="color:var(--teal); margin-top:-6px">+${vehRows.length-3} more</div>`:''}
           ${c.salesStaff?`<span class="staff-tag" style="margin-top:4px">👤 ${esc(c.salesStaff)}</span>`:''}
           ${c.convertedAt?`<span class="staff-tag" style="margin-top:4px; background:var(--green-soft); color:var(--green)">🎉 Converted ${fmtDate(c.convertedAt)}</span>`:''}
@@ -1689,7 +1722,7 @@ function openCustomerDetail(id){
         <div class="kv"><span class="k">Occupation / Workplace</span><span class="v">${esc(c.job||'—')}</span></div>
         <div class="kv"><span class="k">Referred By</span><span class="v">${esc(c.referrer||'—')}</span></div>
         <div class="kv"><span class="k">Current Staff</span><span class="v" style="color:var(--teal)">${esc(c.salesStaff||'—')}</span></div>
-        <div class="kv" style="grid-column:1/-1"><span class="k">Vehicles</span><span class="v" style="display:flex; flex-wrap:wrap; gap:6px">${customerVehicleLinks(c).map(r=>`<span class="staff-tag" style="cursor:pointer" onclick="openVehicleDetail('${r.v.id}')">${r.owner?'🔑':'🚗'} ${esc(vehName(r.v.id))} ・ ${esc(r.label)}</span>`).join('') || '—'}</span></div>
+        <div class="kv" style="grid-column:1/-1"><span class="k">Vehicles</span><span class="v" style="display:flex; flex-wrap:wrap; gap:6px">${customerVehicleLinks(c).map(r=>{ const rl = relationOf(r.v, c.id); return `<span style="cursor:pointer; display:inline-flex; gap:6px; align-items:center" onclick="openVehicleDetail('${r.v.id}')">${rl?relationTagHtml(rl):`<span class="staff-tag">${r.owner?'🔑':'🚗'} ${esc(r.label)}</span>`}<span style="font-size:12.5px">${esc(vehName(r.v.id))}</span></span>`; }).join('') || '—'}</span></div>
       </div>
       ${c.note? `<div class="field" style="margin-top:10px"><label>Notes</label><div class="panel" style="padding:10px 12px; background:var(--panel2)">${esc(c.note)}</div></div>`:''}
       <div class="kv-grid" style="margin-top:14px; padding-top:14px; border-top:1px solid var(--line)">
@@ -2260,15 +2293,18 @@ function vehicleCardHtml(v){
   const hasImage = (v.files||[]).some(f=>isImageFile(f.name));
   const hasAppraisal = (v.serviceHistory||[]).some(h=>h.category==='appraisal');
   const notArrived = !isTradeIn && !isField && !isOrder && v.arrived===false;
+  const liveDeal = deal && deal.stage!=='キャンセル' ? deal : null;
+  const relCid = liveDeal ? liveDeal.customerId : v.ownerCustomerId;
+  const rel = relationOf(v, relCid);
+  const accent = (!isOrder && rel) ? `border-left:5px solid ${rel.color};` : '';
   return `
-    <div class="card" style="${isOrder?'background:var(--violet-soft); border:2px dashed var(--violet);':''}" onclick="openVehicleDetail('${v.id}')">
+    <div class="card" style="${isOrder?'background:var(--violet-soft); border:2px dashed var(--violet);':accent}" onclick="openVehicleDetail('${v.id}')">
       <span class="badge ${badgeClass(isTradeIn?'tradein':(isField?'field':(isOrder?'order':v.status)))}">${badgeLabel}</span>
       ${isField?`<div style="margin-bottom:6px"><span class="mini-tag" style="background:${v.status==='custody'?'var(--teal-soft)':'var(--amber-soft)'}; color:${v.status==='custody'?'var(--teal)':'var(--amber)'}">${v.status==='custody'?'📦':'⏸'} ${esc(FIELD_STATUS_SHORT[v.status]||v.status||'')}</span></div>`:''}
       ${isOrder?`<div style="font-size:10px; font-weight:700; letter-spacing:.5px; color:var(--violet); margin-bottom:6px; padding-right:100px;">🔍 NO VEHICLE YET — TARGET SPEC ONLY</div>`:''}
       <div class="name"><div style="font-size:12px; font-weight:600; color:var(--text-dim); line-height:1.3">${esc(v.maker)||'&nbsp;'}</div><div style="line-height:1.3">${esc(v.model)||'&nbsp;'}</div></div>
       <div class="meta" style="margin-bottom:6px">${v.year||'—'} ・ ${esc(v.color)} ・ ${(v.mileage||0).toLocaleString()}km</div>
-      ${deal && deal.stage!=='キャンセル' ? `<div style="color:var(--teal); font-size:13px; font-weight:700; margin-bottom:6px">🙋 ${esc(custName(deal.customerId))} <span style="font-weight:500; font-size:11.5px">・ ${esc(stageLabel(deal.stage))}</span></div>`
-        : (v.ownerCustomerId ? `<div style="color:var(--teal); font-size:13px; font-weight:700; margin-bottom:6px">🔑 ${esc(custName(v.ownerCustomerId))} <span style="font-weight:500; font-size:11.5px">・ ${esc(ownerRoleLabel(v.ownerCustomerId, v))}</span></div>`:'')}
+      ${rel ? `<div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px">${relationTagHtml(rel)}${rel.key==='company'?'':inHouseStarHtml(relCid)}<span style="font-size:13px; font-weight:700; color:var(--text)">${esc(custName(relCid))}</span></div>` : ''}
       ${(hasImage||hasAppraisal||notArrived) ? `<div style="display:flex; gap:5px; margin:0 0 10px; flex-wrap:wrap;">
         ${hasImage?`<span class="mini-tag mini-tag-img">🖼 Photos</span>`:''}
         ${hasAppraisal?`<span class="mini-tag mini-tag-appr">✅ Appraised</span>`:''}
@@ -2670,7 +2706,8 @@ function openVehicleDetail(id){
           const cid = live ? live.customerId : v.ownerCustomerId;
           if(!cid) return '';
           const label = live ? 'Customer' : (isAppraisalOnly(v) ? 'Owner' : ownerRoleLabel(cid, v));
-          return `<div class="kv"><span class="k">${label}</span><span class="v" style="color:var(--teal)"><a href="#" onclick="event.preventDefault(); openCustomerDetail('${cid}')">${esc(custName(cid))}</a>${live?` <span style="color:var(--text-dim); font-weight:400">・ ${esc(stageLabel(live.stage))}</span>`:''}</span></div>`; })()}
+          const rel = relationOf(v, cid);
+          return `<div class="kv"><span class="k">${label}</span><span class="v" style="color:var(--teal)"><a href="#" onclick="event.preventDefault(); openCustomerDetail('${cid}')">${esc(custName(cid))}</a> ${relationTagHtml(rel)} ${rel && rel.key==='company' ? '' : inHouseStarHtml(cid)}</span></div>`; })()}
         ${isTradeIn?`
         <div class="kv"><span class="k">Estimated Appraisal Value</span><span class="v mono" style="color:var(--amber)">${fmtMoney(v.priceSale)}</span></div>
         `:isOrder?`
@@ -3988,7 +4025,9 @@ function renderManual(){
 <div class="manual-cat"><div class="ic">🏢</div><div><div class="name">At Branch — Салбарт (манай бараа биш)</div><div class="cond">Өмнөговь салбарт шилжүүлсэн эсвэл салбарт зарагдсан машин. «In Stock», «Not Yet Appraised», ашгийн тооцоонд орохгүй.</div></div></div>
 
 <div class="manual-cat"><div class="ic">🔍</div><div><div class="name">On Order — Захиалгаар</div><div class="cond">Машин бодитойгоор ХАРАЙХАН ирээгүй — зөвхөн спек/захиалга</div></div></div>
-      <div class="manual-callout warn"><span class="ic">🔍</span><div><b>On Order картын ялгаа</b><p>«On Order» төрлийн карт нь ягаан зурвасжсан хүрээ, тод дэвсгэртэй бөгөөд <b>«🔍 NO VEHICLE YET — TARGET SPEC ONLY»</b> гэсэн тэмдэглэгээтэй харагдана — учир нь энэ бол бодит машин биш, зөвхөн харилцагчийн хүсэлт дээр үндэслэсэн зорилтот спек. «All»-ээр харахад бусад машинтай андуурахгүйн тулд ийм зорилготойгоор өөр өнгөөр ялгасан.</p></div></div>
+      <div class="manual-callout"><span class="ic">🏷</span><div><b>Машин дээрх хүний тэмдэг (өнгөт шошго)</b><p>Машины карт болон харилцагчийн картан дээрх хүний нэрийн өмнө тухайн хүн <b>тэр машинтай ямар холбоотой</b> болохыг өнгөт шошгоор харуулна, картын зүүн талд мөн ижил өнгийн зураас байна: <b>🛒 Buyer</b> (ногоон — гэрээ хийсэн/хүлээлгэн өгсөн худалдан авагч), <b>💬 In talks</b> (цэнхэр — тохиролцож буй), <b>🏷 Consignor</b> (улбар шар — манайд зуучлуулж зарж буй эзэн), <b>📋 Appraisal only</b> (нил ягаан — зөвхөн үнэлгээ хийлгэсэн), <b>🏢 Company stock</b> (саарал — компанийн нэрийн машин). Мөн хүний нэрийн хажууд <b>⭐ In-House</b> тэмдэг байвал тэр хүн урьд нь манайхаас машин аваад хүлээн авсан (манай хэрэглэгч) гэсэн үг — зөвхөн үнэлгээ хийлгэсэн ч гэсэн.</p></div></div>
+
+<div class="manual-callout warn"><span class="ic">🔍</span><div><b>On Order картын ялгаа</b><p>«On Order» төрлийн карт нь ягаан зурвасжсан хүрээ, тод дэвсгэртэй бөгөөд <b>«🔍 NO VEHICLE YET — TARGET SPEC ONLY»</b> гэсэн тэмдэглэгээтэй харагдана — учир нь энэ бол бодит машин биш, зөвхөн харилцагчийн хүсэлт дээр үндэслэсэн зорилтот спек. «All»-ээр харахад бусад машинтай андуурахгүйн тулд ийм зорилготойгоор өөр өнгөөр ялгасан.</p></div></div>
       <p style="font-size:12.5px; color:var(--text-dim); margin:10px 0 0">Мөн Японоос тээвэрлэгдэж буй (худалдан авсан ч хараахан ирээгүй) машин дээр <b>«🚢 In Transit»</b> гэсэн жижиг тэмдэг харагдана. Анхны шүүлтүүр «In Stock» дээр байхаар тохируулагдсан.</p>
       <div class="manual-callout"><span class="ic">🚢</span><div><b>Ирээгүй (тээвэрлэгдэж буй) машин</b><p>Улаанбаатарт хараахан ирээгүй машин «In Stock»-ийн тоо болон «Not Yet Appraised»-д <b>тооцогдохгүй</b>, «🚢 In Transit» шүүлтүүрээр тусад нь харагдана. Захиалга ирвэл машины дэлгэрэнгүйгээс «Start Deal» хийж хэрэглэгчид оноож болно. Машин ирмэгц машины засах цонхонд <b>«Arrived in Ulaanbaatar»</b>-г идэвхжүүлээд, ирсэн үеийн үзлэг/үнэлгээгээ бүртгэнэ. Нэр дээр нь түр «Deed Motors» (🔑 Nominal owner) гэж бичигдсэн байдаг.</p></div></div>
     </div>
