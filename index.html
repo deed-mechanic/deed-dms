@@ -1671,7 +1671,7 @@ async function deleteStaffRow(id){
    open, or while a save is running. Otherwise a small notice waits, and the reload happens as soon as
    the person is done (or after 10 minutes without any activity).
 ============================================================ */
-const APP_BUILD = '20261123-143851';
+const APP_BUILD = '20261125-011314';
 const APPUPD = {pending:null, lastActivity:Date.now(), banner:null, started:false};
 function appUpdateSafe(){
   if(typeof saving!=='undefined' && saving) return false;
