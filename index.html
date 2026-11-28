@@ -1362,6 +1362,15 @@ T('Customer\'s Vehicle (their current vehicle)','お客様の車（現在お乗�
 T('Customer\'s Vehicles','お客様の車','Үйлчлүүлэгчийн машин');
 })();
 
+(function(){ const T = I18N.T;
+T('Umnugovi Branch','ウムヌゴビ支店','Өмнөговь салбар');
+T('Erdenet Branch','エルデネト支店','Эрдэнэт салбар');
+T('Branch not specified','支店名未設定','Салбар сонгоогүй');
+T('Branch Name','支店名','Салбарын нэр');
+T('Select a branch','支店を選択','Салбар сонгох');
+T('Please select the branch name','支店名を選んでください','Салбарын нэрийг сонгоно уу');
+})();
+
 </script>
 <!-- I18N:END -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -1394,9 +1403,11 @@ const STAGE_LABELS_EN = {
   '交渉':'Negotiation', '契約':'Contract', '納車':'Delivery', 'キャンセル':'Cancelled'
 };
 function stageLabel(stage){ return STAGE_LABELS_EN[stage] || stage; }
-// 'branch' = sent to / sold by the Umnugovi branch — no longer handled by this store (not stock, not our sale).
+// 'branch' = handled by a branch (see BRANCHES; the branch is kept in branchName) — not this store's stock or sale.
 // Vehicle flow: In Stock -> Sold (contract = locked, prevents double sale; stays Sold through delivery). Delivery is tracked on the deal (stage 納車), not as a vehicle status.
 const VSTATUS = {stock:'In Stock', nego:'In Negotiation', sold:'Sold', branch:'At Branch (not our stock)'};
+const BRANCHES = {umnugovi:'Umnugovi Branch', erdenet:'Erdenet Branch'};
+function branchLabel(v){ return BRANCHES[v.branchName] || 'Branch not specified'; }
 // "Field Appraisal" (kind 'field'): a customer's car appraised on a trip. Like a customer's vehicle record it is
 // not our stock; its status says what we do with it — keep it in our custody, or just keep the data on hold.
 const FIELD_STATUS = {custody:'In Custody (we hold the vehicle)', hold:'On Hold (data kept only)'};
@@ -1620,6 +1631,7 @@ function vehicleToRow(v){
     arrived: v.arrived===false ? false : true, purchased_date: v.purchasedDate||'', etd: v.etd||'', eta: v.eta||'',
     owner_payout: v.ownerPayout||null, min_sell_price: v.minSellPrice||null, negotiation_ceiling: v.negotiationCeiling||null,
     has_documents: v.hasDocuments||'', state_inspection_status: v.stateInspectionStatus||'', fb_boosted: !!v.fbBoosted,
+    branch_name: v.branchName||'',
     deleted_at: v.deletedAt||null, created_at: v.createdAt||Date.now()
   };
 }
@@ -1632,7 +1644,7 @@ function rowToVehicle(r){
     ownerCustomerId: r.owner_customer_id,
     arrived: r.arrived===false ? false : true, purchasedDate: r.purchased_date, etd: r.etd, eta: r.eta,
     ownerPayout: r.owner_payout, minSellPrice: r.min_sell_price, negotiationCeiling: r.negotiation_ceiling,
-    hasDocuments: r.has_documents, stateInspectionStatus: r.state_inspection_status, fbBoosted: !!r.fb_boosted,
+    hasDocuments: r.has_documents, stateInspectionStatus: r.state_inspection_status, fbBoosted: !!r.fb_boosted, branchName: r.branch_name||'',
     deletedAt: r.deleted_at, createdAt: r.created_at
   };
 }
@@ -1695,7 +1707,7 @@ async function deleteStaffRow(id){
    open, or while a save is running. Otherwise a small notice waits, and the reload happens as soon as
    the person is done (or after 10 minutes without any activity).
 ============================================================ */
-const APP_BUILD = '20261128-192600';
+const APP_BUILD = '20261128-193725';
 const APPUPD = {pending:null, lastActivity:Date.now(), banner:null, started:false};
 function appUpdateSafe(){
   if(typeof saving!=='undefined' && saving) return false;
@@ -1925,7 +1937,7 @@ const AUDIT_FIELDS = {
   files:'Photos & Documents', service_history:'Service History', owner_customer_id:'Owner', arrived:'Arrived in Ulaanbaatar',
   purchased_date:'Purchased Date', etd:'ETD', eta:'ETA', owner_payout:'Owner Payout', min_sell_price:'Min Sell Price', negotiation_ceiling:'Negotiation Ceiling',
   has_documents:'Documents', state_inspection_status:'State Inspection', fb_boosted:'FB Boosted', external_grade:'Appraisal Tool Grade',
-  external_appraisal_price:'Reference Appraisal Price', external_report_text:'Diagnosis',
+  external_appraisal_price:'Reference Appraisal Price', external_report_text:'Diagnosis', branch_name:'Branch Name',
   customer_id:'Customer', vehicle_id:'Vehicle', trade_in_vehicle_id:'Customer\'s Vehicle', stage:'Stage', staff:'Staff', sold_by:'Sold By', history:'Deal History',
   role:'Role', email:'Email Address', active:'Active', pin:'PIN'
 };
@@ -3823,7 +3835,7 @@ function vehicleCustomerNames(v){
    own    = our (managed) customers: cars we sold (contract or delivery) and the own car of an In-House customer
    other  = cars of customers who bought elsewhere (appraisal records; also those with no owner registered)
    field  = InvesCore field appraisals — shown apart from the customer groups; always appraised
-   branch = handled by the Umnugovi branch
+   branch = handled by a branch (Umnugovi or Erdenet; the card shows which)
    stock  = our unsold stock (including cars still being shipped and spec-only orders without a contract)
    Not yet in Ulaanbaatar: "Shipping" once the ETD (leaving Japan) date has passed, otherwise "Ordering". */
 function liveSaleDeal(v){
@@ -3875,6 +3887,7 @@ const VEH_SUB_CATS = {
   stock: [['','All'], ['show','On Display'], ['transit','Shipping'], ['ordering','Ordering']],
   own:   [['','All'], ['waiting','Awaiting Delivery'], ['transit','Shipping'], ['ordering','Ordering'], ['delivered','Sale Complete'], ['owncar',"Customer's Own Car"]],
   other: [['','All'], ['noowner','No owner registered']],
+  branch: [['','All'], ...Object.entries(BRANCHES)],
 };
 const VEH_APPR_CATS = [['','All'], ['yes','Appraised'], ['no','Not Appraised']];
 function vehMatches(v, status, sub, appr){
@@ -3883,6 +3896,7 @@ function vehMatches(v, status, sub, appr){
     if(status==='stock' && stockStage(v)!==sub) return false;
     if(status==='own' && ownStage(v)!==sub) return false;
     if(status==='other' && sub==='noowner' && v.ownerCustomerId) return false;
+    if(status==='branch' && v.branchName!==sub) return false;
   }
   if(appr==='yes' && !isAppraised(v)) return false;
   if(appr==='no' && isAppraised(v)) return false;
@@ -3900,7 +3914,7 @@ function vehFilterBarHtml(){
   if(subs){
     const row = subs.filter(([k])=>k!=='owncar' || n(vehFilter.status,k,'')>0)
       .map(([k,l])=>chip(vehFilter.sub===k, l, n(vehFilter.status, k, vehFilter.appr), `setVehFilter('${vehFilter.status}','${k}','${vehFilter.appr}')`, 'font-size:12px')).join('');
-    const appr = vehFilter.status==='stock' ? '' : `<span style="display:inline-flex; gap:8px; align-items:center; flex-wrap:wrap; margin-left:14px; padding-left:14px; border-left:1px solid var(--line)"><span style="font-size:12px; color:var(--text-dim)">Appraisal:</span>${VEH_APPR_CATS.map(([k,l])=>chip(vehFilter.appr===k, l, n(vehFilter.status, vehFilter.sub, k), `setVehFilter('${vehFilter.status}','${vehFilter.sub}','${k}')`, 'font-size:12px')).join('')}</span>`;
+    const appr = (vehFilter.status!=='own' && vehFilter.status!=='other') ? '' : `<span style="display:inline-flex; gap:8px; align-items:center; flex-wrap:wrap; margin-left:14px; padding-left:14px; border-left:1px solid var(--line)"><span style="font-size:12px; color:var(--text-dim)">Appraisal:</span>${VEH_APPR_CATS.map(([k,l])=>chip(vehFilter.appr===k, l, n(vehFilter.status, vehFilter.sub, k), `setVehFilter('${vehFilter.status}','${vehFilter.sub}','${k}')`, 'font-size:12px')).join('')}</span>`;
     second = `<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:-4px 0 14px">${row}${appr}</div>`;
   }
   return `<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:0 0 12px">${main}${field}</div>${second}`;
@@ -3940,7 +3954,7 @@ function vehicleCardHtml(v){
   const [badgeLabel, badgeCls] = cat==='own' ? OWN_BADGES[ownStage(v)]
     : cat==='other' ? ['Other-Dealer Customer','b-tradein']
     : cat==='field' ? ['🧭 Field Appraisal','b-tradein']
-    : cat==='branch' ? [VSTATUS.branch,'b-tradein']
+    : cat==='branch' ? ['🏢 '+branchLabel(v),'b-tradein']
     : isOrder ? ['🔍 On Order','b-tradein'] : [VSTATUS[v.status]||v.status, badgeClass(v.status)];
   const hasImage = (v.files||[]).some(f=>isImageFile(f.name));
   const appraised = isAppraised(v);
@@ -4080,8 +4094,14 @@ function openVehicleForm(existing){
         <div class="field"><label id="f_sale_label">${saleLabel}</label><input id="f_sale" type="number" value="${v.priceSale||''}" placeholder="43000000"></div>
       </div>
       <div class="field" id="f_status_wrap" style="${statusDisplay}"><label>Status</label>
-        <select id="f_status">
+        <select id="f_status" onchange="toggleBranchField()">
           ${Object.entries(VSTATUS).map(([k,v2])=>`<option value="${k}" ${v.status===k?'selected':''}>${v2}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field" id="f_branch_wrap" style="${v.status==='branch'?'':'display:none'}"><label>Branch Name</label>
+        <select id="f_branch">
+          <option value="">Select a branch</option>
+          ${Object.entries(BRANCHES).map(([k,l])=>`<option value="${k}" ${v.branchName===k?'selected':''}>${l}</option>`).join('')}
         </select>
       </div>
       <div class="field" id="f_fieldstatus_wrap" style="${fieldStatusDisplay}"><label>Handling</label>
@@ -4177,6 +4197,10 @@ function unselectLinkOwner(){
   linkedOwnerCustomerId = null;
   document.getElementById('ownerSelected').innerHTML = '';
 }
+function toggleBranchField(){
+  const stock = document.getElementById('f_kind').value==='stock';
+  document.getElementById('f_branch_wrap').style.display = (stock && document.getElementById('f_status').value==='branch') ? '' : 'none';
+}
 function toggleVehicleKindFields(){
   const kind = document.getElementById('f_kind').value;
   const isTradeIn = kind==='tradein';
@@ -4185,6 +4209,7 @@ function toggleVehicleKindFields(){
   document.getElementById('f_cost_wrap').style.display = (isTradeIn||isOrder||isField) ? 'none' : '';
   document.getElementById('f_status_wrap').style.display = (isTradeIn||isOrder||isField) ? 'none' : '';
   document.getElementById('f_fieldstatus_wrap').style.display = isField ? '' : 'none';
+  toggleBranchField();
   document.getElementById('f_tracking_wrap').style.display = (isTradeIn||isField) ? 'none' : '';
   document.getElementById('f_sale_label').textContent = (isTradeIn||isField) ? 'Estimated Appraisal Value (₮)' : (isOrder ? 'Target Price (₮)' : 'Sale Price (₮)');
 }
@@ -4298,7 +4323,9 @@ async function saveVehicle(id){
     stateInspectionStatus: document.getElementById('f_stateinspection').value.trim(),
     fbBoosted: document.getElementById('f_fbboosted').checked,
   };
+  data.branchName = data.status==='branch' ? document.getElementById('f_branch').value : '';
   if(!data.maker || !data.model){ alert('Please enter the make and model'); return; }
+  if(data.status==='branch' && !data.branchName){ alert('Please select the branch name'); return; }
   if(data.eta && parseEtaDate(data.eta)===null){ alert('Please enter ETA as YYYY-MM-DD (e.g. 2026-10-05) so it appears on the Calendar and triggers the arrival email'); return; }
   let v;
   if(id){
@@ -4345,6 +4372,7 @@ function openVehicleDetail(id){
           ${isField?`<span class="badge" style="position:static; background:var(--teal-soft); color:var(--teal)">🧭 Field Appraisal</span><span class="badge" style="position:static; background:${v.status==='custody'?'var(--teal-soft)':'var(--amber-soft)'}; color:${v.status==='custody'?'var(--teal)':'var(--amber)'}">${v.status==='custody'?'📦':'⏸'} ${esc(FIELD_STATUS_SHORT[v.status]||v.status||'')}</span>`
             :isTradeIn?`<span class="badge" style="position:static; background:var(--teal-soft); color:var(--teal)">📋 Customer's Vehicle</span>`
             :isOrder?`<span class="badge" style="position:static; background:var(--violet-soft); color:var(--violet)">🔍 On Order</span>`
+            :v.status==='branch'?`<span class="badge b-tradein" style="position:static">🏢 ${branchLabel(v)}</span>`
             :`<span class="badge ${badgeClass(v.status)}" style="position:static">${VSTATUS[v.status]}</span>`}
           ${(!isTradeIn && !isOrder && v.arrived===false)?`<span class="badge" style="position:static; background:var(--amber-soft); color:var(--amber)">${notArrivedTagLabel(v)}</span>`:''}
           <button class="btn ghost sm" onclick="printQuote('${v.id}')">📄 Print Quote</button>
@@ -5688,7 +5716,7 @@ function renderManualEn(){
       <div class="manual-cat"><div class="ic">📦</div><div><div class="name">Stock</div><div class="cond">Our vehicles that are not sold yet, including consignment cars. Sub-buttons: On Display (arrived), Shipping, Ordering (spec only, or not yet shipped).</div></div></div>
       <div class="manual-cat"><div class="ic">🤝</div><div><div class="name">In-House (Managed) Customers</div><div class="cond">Cars we sold. <b>Awaiting Delivery</b> — arrived in Ulaanbaatar, not delivered yet. <b>Shipping</b> — left Japan (the ETD date has passed), not arrived. <b>Ordering</b> — not shipped yet, or no vehicle yet. <b>Sale Complete</b> — delivered (deal stage «Delivery»). Each can also be filtered by Appraised / Not Appraised.</div></div></div>
       <div class="manual-cat"><div class="ic">🏷</div><div><div class="name">Other-Dealer Customers</div><div class="cond">Vehicles of customers who bought elsewhere (recorded for appraisal). Filter by Appraised / Not Appraised, and «No owner registered».</div></div></div>
-      <div class="manual-cat"><div class="ic">🏢</div><div><div class="name">Branch</div><div class="cond">Sent to, or sold by, the Umnugovi branch. Not counted in stock or profit.</div></div></div>
+      <div class="manual-cat"><div class="ic">🏢</div><div><div class="name">Branch</div><div class="cond">Vehicles handled by a branch (Umnugovi or Erdenet). The card shows the branch name, and sub-buttons filter by branch. Not counted in stock or profit. To set it, choose the status «At Branch» in the vehicle's edit window and select the branch name.</div></div></div>
       <div class="manual-cat"><div class="ic">🧭</div><div><div class="name">InvesCore Field Appraisal (separate box)</div><div class="cond">Field appraisals for InvesCore. All of them are appraised. They are not part of the customer groups.</div></div></div>
       <p style="font-size:12.5px; color:var(--text-dim); margin:8px 0 12px">On the cards, «Sold» is now shown by the stage (Awaiting Delivery / Shipping / Ordering / Sale Complete), and ✅ Appraised / ⏳ Not Appraised shows the appraisal. To move a car to «Awaiting Delivery», switch on «Arrived in Ulaanbaatar»; to «Sale Complete», move its deal to «Delivery».</p>
       <p style="font-size:12.5px; color:var(--text-dim); margin:0 0 12px"><b>«✅ Appraised»</b> means at least one of these is there: photos of the vehicle, a PDF from the appraisal tool or an appraisal sheet (file name containing «査定» or «チェックシート»), or a record of the appraisal (an «Appraisal» entry in the history, or data loaded from the appraisal tool). A Japanese auction grade or condition-check scores alone do not count. InvesCore field appraisals are shown as appraised.</p>
@@ -5890,7 +5918,7 @@ function renderManualJa(){
       <div class="manual-cat"><div class="ic">📦</div><div><div class="name">在庫</div><div class="cond">まだ売れていない当社の車です（委託販売の車を含む）。小ボタン：展示中（到着済み）／搬送中／オーダー中（希望スペックのみ、または出港前）。</div></div></div>
       <div class="manual-cat"><div class="ic">🤝</div><div><div class="name">自社客（管理客）</div><div class="cond">当社が販売した車です。<b>納車待ち</b>＝ウランバートルに到着して納車前。<b>搬送中</b>＝日本を出港し（ETDの日付を過ぎ）、まだ到着していない。<b>オーダー中</b>＝まだ出港していない、または現物がない。<b>販売済</b>＝納車済み（商談の段階が「納車」）。それぞれ「査定済／未査定」でも絞り込めます。</div></div></div>
       <div class="manual-cat"><div class="ic">🏷</div><div><div class="name">他社客</div><div class="cond">ほかで車を買ったお客様の車（査定の記録）です。「査定済／未査定」と「オーナー未登録」で絞り込めます。</div></div></div>
-      <div class="manual-cat"><div class="ic">🏢</div><div><div class="name">支店扱い</div><div class="cond">ウムヌゴビ支店に回送、または支店で販売した車です。在庫と利益の集計には入りません。</div></div></div>
+      <div class="manual-cat"><div class="ic">🏢</div><div><div class="name">支店扱い</div><div class="cond">支店（ウムヌゴビ支店・エルデネト支店）で扱う車です。カードに支店名が出て、小さなボタンで支店ごとに絞り込めます。在庫と利益の集計には入りません。設定するには、車の編集画面で状態を「支店扱い」にして、支店名を選びます。</div></div></div>
       <div class="manual-cat"><div class="ic">🧭</div><div><div class="name">InvesCore用出張査定車（別枠）</div><div class="cond">InvesCore向けの出張査定車です。すべて査定済です。お客様の区分には含みません。</div></div></div>
       <p style="font-size:12.5px; color:var(--text-dim); margin:8px 0 12px">カード右上には、販売した車の段階（納車待ち／搬送中／オーダー中／販売済）が出て、「✅査定済／⏳未査定」で査定の有無が分かります。「納車待ち」にするには車の「ウランバートル到着済み」をオンに、「販売済」にするには商談を「納車」に進めてください。</p>
       <p style="font-size:12.5px; color:var(--text-dim); margin:0 0 12px"><b>「✅査定済」</b>になるのは、次のどれか1つがある車です。車両の画像、査定ツールや査定シートのPDF（ファイル名に「査定」か「チェックシート」が入っているもの）、査定の経過記録（履歴の「査定」の記録、または査定ツールから取り込んだデータ）。日本のオークション評価点や、状態チェックの点数だけでは査定済になりません。InvesCore用出張査定車は査定済として表示します。</p>
@@ -6092,7 +6120,7 @@ function renderManualMn(){
       <div class="manual-cat"><div class="ic">📦</div><div><div class="name">Бэлэн байгаа</div><div class="cond">Хараахан зарагдаагүй манай машинууд (зуучлалын машиныг оролцуулна). Жижиг товч: Үзүүлбэрт (ирсэн) / Тээвэрлэж буй / Захиалгад (зөвхөн спек эсвэл Японоос гараагүй).</div></div></div>
       <div class="manual-cat"><div class="ic">🤝</div><div><div class="name">Манай хэрэглэгч</div><div class="cond">Манайхаас зарсан машин. <b>Хүлээлгэн өгөхийг хүлээж буй</b> — УБ-д ирсэн, хараахан өгөөгүй. <b>Тээвэрлэж буй</b> — Японоос гарсан (ETD өдөр өнгөрсөн), хараахан ирээгүй. <b>Захиалгад</b> — хараахан гараагүй эсвэл машин алга. <b>Борлуулалт дууссан</b> — хүлээлгэн өгсөн («Delivery» шат). Тус бүрийг Үнэлэгдсэн / Үнэлээгүй-ээр шүүж болно.</div></div></div>
       <div class="manual-cat"><div class="ic">🏷</div><div><div class="name">Бусад дилерийн үйлчлүүлэгч</div><div class="cond">Өөр газраас машин авсан үйлчлүүлэгчийн машин (үнэлгээний бүртгэл). Үнэлэгдсэн / Үнэлээгүй, «Эзэн бүртгэгдээгүй»-ээр шүүнэ.</div></div></div>
-      <div class="manual-cat"><div class="ic">🏢</div><div><div class="name">Салбарт</div><div class="cond">Өмнөговь салбарт шилжүүлсэн эсвэл салбарт зарагдсан машин. Нөөц, ашгийн тооцоонд орохгүй.</div></div></div>
+      <div class="manual-cat"><div class="ic">🏢</div><div><div class="name">Салбарт</div><div class="cond">Салбар (Өмнөговь, Эрдэнэт) хариуцаж буй машин. Карт дээр салбарын нэр гарах бөгөөд жижиг товчоор салбараар шүүнэ. Нөөц, ашгийн тооцоонд орохгүй. Машины засах цонхонд төлөвийг «Салбарт» болгож, салбарын нэрийг сонгоно.</div></div></div>
       <div class="manual-cat"><div class="ic">🧭</div><div><div class="name">InvesCore томилолтын үнэлгээ (тусдаа хүрээ)</div><div class="cond">InvesCore-д зориулсан томилолтоор үнэлсэн машин. Бүгд үнэлэгдсэн. Үйлчлүүлэгчийн ангилалд орохгүй.</div></div></div>
       <p style="font-size:12.5px; color:var(--text-dim); margin:8px 0 12px">Картын баруун дээд буланд зарсан машины шат (Хүлээлгэн өгөхийг хүлээж буй / Тээвэрлэж буй / Захиалгад / Борлуулалт дууссан), «✅ Үнэлэгдсэн / ⏳ Үнэлээгүй» тэмдгээр үнэлгээг харуулна. «Хүлээлгэн өгөхийг хүлээж буй» болгохын тулд машины «Arrived in Ulaanbaatar»-г асаана; «Борлуулалт дууссан» болгохын тулд худалдааг «Delivery» шатанд шилжүүлнэ.</p>
       <p style="font-size:12.5px; color:var(--text-dim); margin:0 0 12px"><b>«✅ Үнэлэгдсэн»</b> гэдэг нь дараахын ядаж нэг нь байна гэсэн үг: машины зураг; үнэлгээний хэрэгсэл эсвэл үнэлгээний хуудасны PDF (файлын нэрэнд «査定» эсвэл «チェックシート» орсон); үнэлгээний тэмдэглэл (түүх дэх «Үнэлгээ» бичлэг, эсвэл үнэлгээний хэрэгслээс оруулсан дата). Японы дуудлага худалдааны оноо эсвэл төлөвийн шалгалтын оноо дангаараа тооцогдохгүй. InvesCore томилолтын үнэлгээг үнэлэгдсэн гэж харуулна.</p>
