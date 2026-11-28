@@ -890,18 +890,15 @@ T('In Stock','在庫','Бэлэн байгаа');
 T('In Negotiation','商談中','Тохиролцож буй');
 T('Sold','販売済み','Борлуулагдсан');
 T('At Branch (not our stock)','支店扱い（当店の在庫ではない）','Салбарт (манай бараа биш)');
-T('Appraisal Vehicle','査定車','Үнэлгээний машин');
-T('Appraisal Vehicles','査定車','Үнэлгээний машин');
 T('Field Appraisal','出張査定','Томилолтоор үнэлсэн');
-T('On Order','注文中','Захиалгаар');
-T('On Order (no vehicle yet)','注文中（現物なし）','Захиалгаар (машин хараахан алга)');
+T('On Order','オーダー中','Захиалгад');
+T('On Order (no vehicle yet)','オーダー中（現物なし）','Захиалгад (машин хараахан алга)');
 T('NO VEHICLE YET — TARGET SPEC ONLY','現物なし — 希望スペックのみ','МАШИН ХАРААХАН АЛГА — ЗӨВХӨН ЗОРИЛТОТ СПЕК');
-T('In Transit','輸送中','Замд яваа');
+T('In Transit','搬送中','Тээвэрлэж буй');
 T('Appraised','査定済み','Үнэлэгдсэн');
 T('Photos','写真','Зураг');
-T('(Appraisal Vehicle)','（査定車）','(Үнэлгээний машин)');
 T('(Field Appraisal)','（出張査定）','(Томилолтоор үнэлсэн)');
-T('(On Order)','（注文中）','(Захиалгаар)');
+T('(On Order)','（オーダー中）','(Захиалгад)');
 T('In Custody','保管中','Хадгалж буй');
 T('On Hold (data only)','保留（データのみ）','Түр хойшлуулсан (зөвхөн мэдээлэл)');
 T('In Custody (we hold the vehicle)','保管中（当店で車を預かっている）','Хадгалж буй (манайд машин байгаа)');
@@ -909,8 +906,6 @@ T('On Hold (data kept only)','保留（データのみ保管）','Түр хой�
 T('Inventory','在庫','Бэлэн машин');
 T('Stock','在庫','Бэлэн байгаа');
 T('Stock Vehicle (for sale)','在庫車両（販売用）','Бэлэн машин (худалдаалах)');
-T('Appraisal Vehicle (customer\'s current vehicle)','査定車（お客様の現在の車）','Үнэлгээний машин (үйлчлүүлэгчийн одоогийн машин)');
-T('Appraisal Vehicle (customer\'s current vehicle, appraisal only)','査定車（お客様の現在の車・査定のみ）','Үнэлгээний машин (үйлчлүүлэгчийн одоогийн машин, зөвхөн үнэлгээ)');
 T('Field Appraisal (appraised on a trip — kept in our custody or on hold)','出張査定（出張先で査定 — 当店で保管、または保留）','Томилолтоор үнэлсэн (гадуур очиж үнэлсэн — манайд хадгална эсвэл түр хойшлуулна)');
 
 /* vehicle form */
@@ -1035,18 +1030,17 @@ T('Change Deal\'s Target Vehicle','商談の対象車両を変更','Худалд
 T('Change Target Vehicle','対象車両を変更','Зорилтот машиныг өөрчлөх');
 T('Select Vehicle','車両を選択','Машин сонгох');
 T('Vehicle','車両','Машин');
-T('Only stock vehicles (for sale) can be selected as a deal\'s target. To change the appraisal vehicle, re-register it via the "📋 Appraisal Vehicle" section below instead.','商談の対象に選べるのは在庫車両（販売用）のみです。査定車を変更するには、下の「📋 査定車」の欄から登録し直してください。','Худалдааны зорилтот машинаар зөвхөн бэлэн машин (худалдаалах) сонгож болно. Үнэлгээний машиныг өөрчлөхийг хүсвэл доорх "📋 Үнэлгээний машин" хэсгээр дахин бүртгэнэ үү.');
+T('Only stock vehicles (for sale) can be selected as a deal\'s target. To change the customer\'s vehicle, re-register it via the "📋 Customer\'s Vehicle" section below instead.','商談の対象に選べるのは在庫車両（販売用）のみです。お客様の車を変更するには、下の「📋 お客様の車」の欄から登録し直してください。','Худалдааны зорилтот машинаар зөвхөн бэлэн машин (худалдаалах) сонгож болно. Үйлчлүүлэгчийн машиныг солих бол доорх "📋 Үйлчлүүлэгчийн машин" хэсгээс дахин бүртгэнэ үү.');
 
 /* appraisal / field vehicle info panels */
-T('About This Appraisal Vehicle','この査定車について','Энэ үнэлгээний машины тухай');
-T('This is not one of our stock vehicles — it is a record of an appraisal vehicle brought in by a customer.','これは当店の在庫車両ではなく、お客様が持ち込まれた査定車の記録です。','Энэ нь манай бэлэн машин биш — үйлчлүүлэгчийн авчирсан үнэлгээний машины бүртгэл.');
+T('This is not one of our stock vehicles — it is a record of a customer\'s vehicle that was brought in for appraisal.','これは当店の在庫車両ではなく、査定のために持ち込まれたお客様の車の記録です。','Энэ нь манай бэлэн машин биш — үнэлгээнд авчирсан үйлчлүүлэгчийн машины бүртгэл.');
 T('About This Field Appraisal Vehicle','この出張査定車について','Энэ томилолтоор үнэлсэн машины тухай');
-T('Register Appraisal Vehicle','査定車を登録','Үнэлгээний машин бүртгэх');
+T('Register Customer\'s Vehicle','お客様の車を登録','Үйлчлүүлэгчийн машин бүртгэх');
 T('Register & Proceed to Appraisal','登録して査定に進む','Бүртгээд үнэлгээнд шилжих');
-T('Search & Link Appraisal Vehicle','査定車を検索して紐づけ','Үнэлгээний машин хайж холбох');
-T('If an appraisal vehicle is already registered under "Vehicles & Appraisal", you can search by just the plate number digits and link it — no need to re-enter it.','査定車が「車両管理・査定」にすでに登録されている場合は、ナンバーの数字だけで検索して紐づけられます。再入力は不要です。','Үнэлгээний машин "Машин · Үнэлгээ" хэсэгт бүртгэлтэй бол зөвхөн улсын дугаарын тоогоор хайж холбож болно — дахин оруулах шаардлагагүй.');
-T('Already linked appraisal vehicle(s):','すでに紐づいている査定車：','Аль хэдийн холбогдсон үнэлгээний машин:');
-T('No appraisal vehicle has been registered for this deal yet','この商談にはまだ査定車が登録されていません','Энэ худалдаанд үнэлгээний машин хараахан бүртгэгдээгүй');
+T('Search & Link Customer\'s Vehicle','お客様の車を検索して紐づけ','Үйлчлүүлэгчийн машин хайж холбох');
+T('If the customer\'s vehicle is already registered under "Vehicles & Appraisal", you can search by just the plate number digits and link it — no need to re-enter it.','お客様の車が「車両管理・査定」にすでに登録されている場合は、ナンバーの数字だけで検索して紐づけられます。再入力は不要です。','Үйлчлүүлэгчийн машин "Машин · Үнэлгээ" хэсэгт бүртгэлтэй бол зөвхөн улсын дугаарын тоогоор хайж холбож болно. Дахин оруулах шаардлагагүй.');
+T('Already linked customer\'s vehicle(s):','すでに紐づいているお客様の車：','Аль хэдийн холбогдсон үйлчлүүлэгчийн машин:');
+T('No customer\'s vehicle has been registered for this deal yet','この商談にはまだお客様の車が登録されていません','Энэ худалдаанд үйлчлүүлэгчийн машин хараахан бүртгэгдээгүй');
 T('Register and appraise walk-in customers\' vehicles using the same form','来店のお客様の車も、同じフォームで登録・査定できます','Ирсэн үйлчлүүлэгчийн машиныг мөн ижил маягтаар бүртгэж үнэлнэ');
 T('Supported: 在庫一覧 (Stock List) · 委託・展示車 (Consignment) · Autocom orders.','対応形式：在庫一覧・委託・展示車・Autocomの注文。','Дэмжигдэх: 在庫一覧 (бэлэн машины жагсаалт) · 委託・展示車 (зуучлал) · Autocom захиалга.');
 T('A vehicle appraised on a trip. It is not our stock for sale — record what we do with it below. If we later sell it, change','出張先で査定した車です。当店の販売在庫ではありません。下に当店での扱いを記録してください。後で販売する場合は、','Томилолтоор үнэлсэн машин. Манай худалдах бэлэн машин биш — доор бидний хийх зүйлийг тэмдэглэнэ үү. Хожим зарах бол');
@@ -1076,7 +1070,7 @@ T('Unlink','紐づけ解除','Холбоог салгах');
 T('Will link: # # (Plate No.: #)','紐づけ予定：# #（ナンバー：#）','Холбох: # # (Улсын дугаар: #)');
 T('No matching customers','該当する顧客がいません','Тохирох үйлчлүүлэгч олдсонгүй');
 T('No matching customers found','該当する顧客が見つかりません','Тохирох үйлчлүүлэгч олдсонгүй');
-T('No matching unlinked appraisal vehicles found','紐づいていない該当の査定車はありません','Холбогдоогүй тохирох үнэлгээний машин олдсонгүй');
+T('No matching unlinked customer\'s vehicles found','紐づいていない該当のお客様の車はありません','Холбогдоогүй тохирох үйлчлүүлэгчийн машин олдсонгүй');
 T('No matching vehicles','該当する車両がありません','Тохирох машин олдсонгүй');
 T('Change the search criteria or register a new vehicle','検索条件を変えるか、新しい車両を登録してください','Хайлтын нөхцөлийг өөрчлөх эсвэл шинэ машин бүртгэнэ үү');
 T('Use "＋ New Customer" to register one','「＋ 新規顧客」から登録してください','"＋ Шинэ үйлчлүүлэгч" товчоор бүртгэнэ үү');
@@ -1206,7 +1200,7 @@ T('Vehicles (#)','車両（#）','Машин (#)');
 T('On Hold','保留','Түр хойшлуулсан');
 T('Add Entry','記録を追加','Бүртгэл нэмэх');
 T('Reminders for everyone','全員分のリマインド','Бүх хүний сануулга');
-T('On Order (target spec, not yet purchased)','注文中（希望スペック・未購入）','Захиалгаар (зорилтот спек, хараахан худалдан аваагүй)');
+T('On Order (target spec, not yet purchased)','オーダー中（希望スペック・未購入）','Захиалгад (зорилтот спек, хараахан худалдан аваагүй)');
 T('row #','#行目','# дугаар мөр');
 T('# item(s)','#件','# зүйл');
 A('ja', [[/^(\S+) — Reminders for everyone$/, d => d + ' — 全員分のリマインド'], [/^Registered (\S+)$/, d => '登録日 ' + d], [/^Raised (\S+)$/, d => '登録日 ' + d], [/^Today (\S+)$/, d => '今日 ' + d]]);
@@ -1363,6 +1357,11 @@ T('Appraisal:','査定：','Үнэлгээ:');
 T('About This Customer\'s Vehicle','このお客様の車について','Энэ үйлчлүүлэгчийн машины тухай');
 })();
 
+(function(){ const T = I18N.T;
+T('Customer\'s Vehicle (their current vehicle)','お客様の車（現在お乗りの車）','Үйлчлүүлэгчийн машин (одоо унаж буй)');
+T('Customer\'s Vehicles','お客様の車','Үйлчлүүлэгчийн машин');
+})();
+
 </script>
 <!-- I18N:END -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -1398,7 +1397,7 @@ function stageLabel(stage){ return STAGE_LABELS_EN[stage] || stage; }
 // 'branch' = sent to / sold by the Umnugovi branch — no longer handled by this store (not stock, not our sale).
 // Vehicle flow: In Stock -> Sold (contract = locked, prevents double sale; stays Sold through delivery). Delivery is tracked on the deal (stage 納車), not as a vehicle status.
 const VSTATUS = {stock:'In Stock', nego:'In Negotiation', sold:'Sold', branch:'At Branch (not our stock)'};
-// "Field Appraisal" (kind 'field'): a customer's car appraised on a trip. Like an Appraisal Vehicle it is
+// "Field Appraisal" (kind 'field'): a customer's car appraised on a trip. Like a customer's vehicle record it is
 // not our stock; its status says what we do with it — keep it in our custody, or just keep the data on hold.
 const FIELD_STATUS = {custody:'In Custody (we hold the vehicle)', hold:'On Hold (data kept only)'};
 const FIELD_STATUS_SHORT = {custody:'In Custody', hold:'On Hold'};
@@ -1696,7 +1695,7 @@ async function deleteStaffRow(id){
    open, or while a save is running. Otherwise a small notice waits, and the reload happens as soon as
    the person is done (or after 10 minutes without any activity).
 ============================================================ */
-const APP_BUILD = '20261128-180742';
+const APP_BUILD = '20261128-181221';
 const APPUPD = {pending:null, lastActivity:Date.now(), banner:null, started:false};
 function appUpdateSafe(){
   if(typeof saving!=='undefined' && saving) return false;
@@ -1927,7 +1926,7 @@ const AUDIT_FIELDS = {
   purchased_date:'Purchased Date', etd:'ETD', eta:'ETA', owner_payout:'Owner Payout', min_sell_price:'Min Sell Price', negotiation_ceiling:'Negotiation Ceiling',
   has_documents:'Documents', state_inspection_status:'State Inspection', fb_boosted:'FB Boosted', external_grade:'Appraisal Tool Grade',
   external_appraisal_price:'Reference Appraisal Price', external_report_text:'Diagnosis',
-  customer_id:'Customer', vehicle_id:'Vehicle', trade_in_vehicle_id:'Appraisal Vehicle', stage:'Stage', staff:'Staff', sold_by:'Sold By', history:'Deal History',
+  customer_id:'Customer', vehicle_id:'Vehicle', trade_in_vehicle_id:'Customer\'s Vehicle', stage:'Stage', staff:'Staff', sold_by:'Sold By', history:'Deal History',
   role:'Role', email:'Email Address', active:'Active', pin:'PIN'
 };
 function openAuditFor(id){
@@ -3062,16 +3061,16 @@ function openCustomerForm(existing){
     <div class="modal-head"><h3>${existing?'Edit Customer':'＋ New Customer'}</h3><button class="close-x" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
       <div class="panel" style="background:var(--panel2); margin-bottom:16px; border-color:#48c2d644">
-        <h3 style="font-size:12.5px; color:var(--teal)">📋 Search &amp; Link Appraisal Vehicle</h3>
+        <h3 style="font-size:12.5px; color:var(--teal)">📋 Search &amp; Link Customer's Vehicle</h3>
         <div style="font-size:11.5px; color:var(--text-dim); margin-bottom:10px; line-height:1.6">
-          If an appraisal vehicle is already registered under "Vehicles &amp; Appraisal", you can search by just the plate number digits and link it — no need to re-enter it.
+          If the customer's vehicle is already registered under "Vehicles &amp; Appraisal", you can search by just the plate number digits and link it — no need to re-enter it.
         </div>
         <input id="f_linksearch" type="tel" placeholder="Enter plate number digits… (e.g. 0426)" oninput="searchLinkableVehicle()">
         <div id="linkSearchResults" style="margin-top:8px"></div>
         <div id="linkSelected" style="margin-top:8px"></div>
         ${alreadyLinked.length>0 ? `
         <div style="margin-top:10px; font-size:11.5px; color:var(--text-dim)">
-          Already linked appraisal vehicle(s): ${alreadyLinked.map(v=>`<span class="staff-tag" style="margin-right:6px">${esc(v.maker)} ${esc(v.model)}</span>`).join('')}
+          Already linked customer's vehicle(s): ${alreadyLinked.map(v=>`<span class="staff-tag" style="margin-right:6px">${esc(v.maker)} ${esc(v.model)}</span>`).join('')}
         </div>`:''}
       </div>
       <div class="field-row">
@@ -3152,7 +3151,7 @@ function searchLinkableVehicle(){
     return regDigits && regDigits.includes(qDigits);
   }).slice(0,5);
   if(matches.length===0){
-    resultsEl.innerHTML = `<div style="font-size:11.5px; color:var(--text-dim2)">No matching unlinked appraisal vehicles found</div>`;
+    resultsEl.innerHTML = `<div style="font-size:11.5px; color:var(--text-dim2)">No matching unlinked customer's vehicles found</div>`;
     return;
   }
   resultsEl.innerHTML = matches.map(v=>`
@@ -3856,6 +3855,7 @@ function ownStage(v){
   if(d.stage==='納車' || v.status==='delivered') return 'delivered';
   return here ? 'waiting' : notInUBStage(v);
 }
+function notArrivedTagLabel(v){ return notInUBStage(v)==='transit' ? '🚢 Shipping' : '🕒 Ordering'; }
 function stockStage(v){ return (v.kind!=='order' && v.arrived!==false) ? 'show' : notInUBStage(v); }
 function isAppraised(v){
   if(v.kind==='field') return true;
@@ -3956,7 +3956,7 @@ function vehicleCardHtml(v){
         ${hasImage?`<span class="mini-tag mini-tag-img">🖼 Photos</span>`:''}
         ${appraised?`<span class="mini-tag mini-tag-appr">✅ Appraised</span>`:''}
         ${showNotAppraised?`<span class="mini-tag" style="background:var(--amber-soft); color:var(--amber)">⏳ Not Appraised</span>`:''}
-        ${notArrived?`<span class="mini-tag" style="background:var(--amber-soft); color:var(--amber)">🚢 In Transit</span>`:''}
+        ${notArrived?`<span class="mini-tag" style="background:var(--amber-soft); color:var(--amber)">${notArrivedTagLabel(v)}</span>`:''}
       </div>`:''}
       <div class="row2">
         <span class="price">${fmtMoney(v.priceSale)}</span>
@@ -4341,7 +4341,7 @@ function openVehicleDetail(id){
             :isTradeIn?`<span class="badge" style="position:static; background:var(--teal-soft); color:var(--teal)">📋 Customer's Vehicle</span>`
             :isOrder?`<span class="badge" style="position:static; background:var(--violet-soft); color:var(--violet)">🔍 On Order</span>`
             :`<span class="badge ${badgeClass(v.status)}" style="position:static">${VSTATUS[v.status]}</span>`}
-          ${(!isTradeIn && !isOrder && v.arrived===false)?`<span class="badge" style="position:static; background:var(--amber-soft); color:var(--amber)">🚢 In Transit</span>`:''}
+          ${(!isTradeIn && !isOrder && v.arrived===false)?`<span class="badge" style="position:static; background:var(--amber-soft); color:var(--amber)">${notArrivedTagLabel(v)}</span>`:''}
           <button class="btn ghost sm" onclick="printQuote('${v.id}')">📄 Print Quote</button>
           <button class="btn ghost sm" onclick="openAuditFor('${v.id}')">🕘 Edit Log</button>
           <button class="btn ghost sm" onclick='openVehicleForm(${JSON.stringify(v).replace(/'/g,"&#39;")})'>✎ Edit</button>
@@ -4523,7 +4523,7 @@ function tradeInInfoPanel(v){
     <div class="panel">
       <h3>📋 About This Customer's Vehicle</h3>
       <div class="empty" style="padding:20px; text-align:left; color:var(--text-dim)">
-        This is not one of our stock vehicles — it is a record of an appraisal vehicle brought in by a customer.
+        This is not one of our stock vehicles — it is a record of a customer's vehicle that was brought in for appraisal.
         ${owner?`<div style="margin-top:8px">Owner: <strong style="color:var(--text)">${esc(owner.name)}</strong></div>`:''}
       </div>
       <div style="display:flex; gap:8px; margin-top:6px; flex-wrap:wrap">
@@ -4585,11 +4585,11 @@ function dealPanelHtml(v){
       </div>
     </div>
     <div class="panel">
-      <h3>📋 Appraisal Vehicle (customer's current vehicle)</h3>
+      <h3>📋 Customer's Vehicle (their current vehicle)</h3>
       ${deal.tradeInVehicleId ? tradeInMiniCard(deal.tradeInVehicleId) : `
         <div class="empty" style="padding:20px">
-          No appraisal vehicle has been registered for this deal yet
-          <div style="margin-top:14px"><button class="btn ghost sm" onclick="openTradeInForm('${deal.id}')">＋ Register Appraisal Vehicle</button></div>
+          No customer's vehicle has been registered for this deal yet
+          <div style="margin-top:14px"><button class="btn ghost sm" onclick="openTradeInForm('${deal.id}')">＋ Register Customer's Vehicle</button></div>
         </div>
       `}
     </div>
@@ -4611,7 +4611,7 @@ function tradeInMiniCard(vid){
 }
 function openTradeInForm(dealId){
   showModal(`
-    <div class="modal-head"><h3>📋 Register Appraisal Vehicle</h3><button class="close-x" onclick="closeModal()">✕</button></div>
+    <div class="modal-head"><h3>📋 Register Customer's Vehicle</h3><button class="close-x" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
       <details class="panel" style="background:var(--panel2); margin-bottom:16px; border-color:#48c2d644">
         <summary style="cursor:pointer; font-size:12.5px; color:var(--teal); font-weight:700;">🔗 Import Results from Appraisal Tool <span style="color:var(--text-dim2); font-weight:400">(optional — tap to expand)</span></summary>
@@ -5451,7 +5451,7 @@ function openChangeDealVehicleForm(dealId, returnTo){
     <div class="modal-head"><h3>🚗 Change Deal's Target Vehicle</h3><button class="close-x" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
       <div style="font-size:11.5px; color:var(--text-dim); margin-bottom:10px; line-height:1.6">
-        Only stock vehicles (for sale) can be selected as a deal's target. To change the appraisal vehicle, re-register it via the "📋 Appraisal Vehicle" section below instead.
+        Only stock vehicles (for sale) can be selected as a deal's target. To change the customer's vehicle, re-register it via the "📋 Customer's Vehicle" section below instead.
       </div>
       <div class="field"><label>Select Vehicle</label>
         <select id="f_changeveh">
@@ -5689,8 +5689,8 @@ function renderManualEn(){
       <div class="manual-callout"><span class="ic">🏷</span><div><b>The coloured tag on a vehicle (who this person is to the vehicle)</b><p>In front of the person's name on vehicle cards and customer cards, a coloured tag shows <b>how that person is connected to that vehicle</b>, and the card has a bar of the same colour on its left side: <b>🛒 Buyer</b> (green — signed the contract / took delivery), <b>💬 In talks</b> (blue — negotiating), <b>🏷 Consignor</b> (orange — the owner who has us sell the vehicle on consignment), <b>📋 Appraisal only</b> (purple — only had the vehicle appraised), <b>🏢 Company stock</b> (grey — a vehicle in the company's name). If you also see a <b>⭐ In-House</b> mark next to the name, that person has bought and taken delivery of a vehicle from us before (is our customer) — even if this time they only had a vehicle appraised.</p></div></div>
 
       <div class="manual-callout warn"><span class="ic">🔍</span><div><b>How On Order cards differ</b><p>«On Order» cards have a purple dashed frame and a strong background, and carry the label <b>«🔍 NO VEHICLE YET — TARGET SPEC ONLY»</b> — because it is not a real vehicle, only a target spec based on a customer's request. It is shown in a different colour on purpose, so it is not confused with other vehicles when you look at «All».</p></div></div>
-      <p style="font-size:12.5px; color:var(--text-dim); margin:10px 0 0">A vehicle that is on its way from Japan (bought but not arrived yet) also shows a small <b>«🚢 In Transit»</b> tag while it is in our stock. The default filter is «Stock».</p>
-      <div class="manual-callout"><span class="ic">🚢</span><div><b>Vehicles that have not arrived (in transit)</b><p>A vehicle that has not yet arrived in Ulaanbaatar is <b>not counted</b> in the «In Stock» number or in «Not Yet Appraised» on the dashboard. In the vehicle list, choose «Stock» (or «In-House (Managed) Customers» if it is sold), then «Shipping» or «Ordering». When an order comes in, you can press «Start Deal» in the vehicle details and assign it to a customer. When the vehicle arrives, switch on <b>«Arrived in Ulaanbaatar»</b> in the vehicle's edit window and record the inspection / appraisal done on arrival. It is temporarily registered under the name «Deed Motors» (🔑 Nominal owner).</p></div></div>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:10px 0 0">A stock vehicle that has not arrived yet also shows a small tag: <b>«🚢 Shipping»</b> (it has left Japan) or <b>«🕒 Ordering»</b> (not shipped yet). The default filter is «Stock».</p>
+      <div class="manual-callout"><span class="ic">🚢</span><div><b>Vehicles that have not arrived yet</b><p>A vehicle that has not yet arrived in Ulaanbaatar is <b>not counted</b> in the «In Stock» number or in «Not Yet Appraised» on the dashboard. In the vehicle list, choose «Stock» (or «In-House (Managed) Customers» if it is sold), then «Shipping» or «Ordering». When an order comes in, you can press «Start Deal» in the vehicle details and assign it to a customer. When the vehicle arrives, switch on <b>«Arrived in Ulaanbaatar»</b> in the vehicle's edit window and record the inspection / appraisal done on arrival. It is temporarily registered under the name «Deed Motors» (🔑 Nominal owner).</p></div></div>
     </div>
 
     <div class="panel manual-section" id="m-ch9">
@@ -5867,7 +5867,7 @@ function renderManualJa(){
       <ul style="font-size:13px; color:var(--text-dim); margin:0; padding-left:20px; line-height:1.8">
         <li>日のマスにある色つきの数字は、<b style="color:var(--text)">その日にはじめて期限になる</b>リマインドの数です。</li>
         <li>日をクリックすると、その日の<b style="color:var(--text)">全スタッフ</b>のリマインドが、スタッフごとに一覧で出ます。</li>
-        <li><b style="color:var(--text)">🚢 車両到着（ウランバートル）</b> — 日本から輸送中の車の<b style="color:var(--text)">到着予定日（ウランバートル）</b>を、車両の詳細に<b style="color:var(--text)">YYYY-MM-DD</b>の形式で入力すると、ウランバートルに着く日がカレンダーに出ます。また、到着の<b style="color:var(--text)">7日前と3日前にMaeda宛て</b>に自動でメールが届きます。</li>
+        <li><b style="color:var(--text)">🚢 車両到着（ウランバートル）</b> — 日本から搬送中の車の<b style="color:var(--text)">到着予定日（ウランバートル）</b>を、車両の詳細に<b style="color:var(--text)">YYYY-MM-DD</b>の形式で入力すると、ウランバートルに着く日がカレンダーに出ます。また、到着の<b style="color:var(--text)">7日前と3日前にMaeda宛て</b>に自動でメールが届きます。</li>
       </ul>
     </div>
 
@@ -5889,9 +5889,9 @@ function renderManualJa(){
       <p style="font-size:12.5px; color:var(--text-dim); margin:8px 0 12px">カード右上には、販売した車の段階（納車待ち／搬送中／オーダー中／販売済）が出て、「✅査定済／⏳未査定」で査定の有無が分かります。「納車待ち」にするには車の「ウランバートル到着済み」をオンに、「販売済」にするには商談を「納車」に進めてください。</p>
       <div class="manual-callout"><span class="ic">🏷</span><div><b>車に出る人の印（色つきの札）</b><p>車両のカードや顧客のカードで、人の名前の前に、その人が<b>その車とどういう関係か</b>を色つきの札で表示します。カードの左端にも同じ色の帯が付きます：<b>🛒 購入者</b>（緑 — 契約した／納車を受けた）、<b>💬 商談中</b>（青 — 交渉中）、<b>🏷 委託オーナー</b>（橙 — 当店に委託販売を任せているオーナー）、<b>📋 査定のみ</b>（紫 — 査定だけを受けた）、<b>🏢 会社名義の車</b>（灰 — 会社の名義の車）。さらに名前の横に<b>⭐ 自社客</b>の印があれば、その人は以前に当店で車を買って納車を受けた（当店のお客様）ということです — 今回は査定だけでも同じです。</p></div></div>
 
-      <div class="manual-callout warn"><span class="ic">🔍</span><div><b>「注文中」のカードの違い</b><p>「注文中」のカードは、紫の点線の枠と濃い背景で、<b>「🔍 現物なし — 希望スペックのみ」</b>の表示が付きます。実際の車ではなく、お客様の要望に基づく目標スペックだけだからです。「すべて」で見たときにほかの車と間違えないよう、わざと別の色にしています。</p></div></div>
-      <p style="font-size:12.5px; color:var(--text-dim); margin:10px 0 0">日本から輸送中（買ったがまだ届いていない）の在庫車には、小さな<b>「🚢 輸送中」</b>の印も付きます。最初の絞り込みは「在庫」になっています。</p>
-      <div class="manual-callout"><span class="ic">🚢</span><div><b>まだ届いていない（輸送中の）車</b><p>ウランバートルにまだ着いていない車は、「在庫」の台数とダッシュボードの「未査定」には<b>数えられません</b>。車両一覧では「在庫」（販売済みなら「自社客（管理客）」）を押してから「搬送中」または「オーダー中」を選ぶと表示されます。注文が入ったら、車両の詳細から「商談を開始」でお客様に割り当てられます。車が着いたら、車両の編集画面で<b>「ウランバートル到着済み」</b>をオンにして、到着時の点検・査定を記録します。名義は、仮に「Deed Motors」（🔑 名義上のオーナー）と登録されています。</p></div></div>
+      <div class="manual-callout warn"><span class="ic">🔍</span><div><b>「オーダー中」（現物なし）のカードの違い</b><p>現物のない「オーダー中」のカードは、紫の点線の枠と濃い背景で、<b>「🔍 現物なし — 希望スペックのみ」</b>の表示が付きます。実際の車ではなく、お客様の要望に基づく目標スペックだけだからです。「すべて」で見たときにほかの車と間違えないよう、わざと別の色にしています。</p></div></div>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:10px 0 0">まだ届いていない在庫車には、小さな印が付きます。<b>「🚢 搬送中」</b>は日本を出港した車、<b>「🕒 オーダー中」</b>は出港前の車です。最初の絞り込みは「在庫」になっています。</p>
+      <div class="manual-callout"><span class="ic">🚢</span><div><b>まだ届いていない車</b><p>ウランバートルにまだ着いていない車は、「在庫」の台数とダッシュボードの「未査定」には<b>数えられません</b>。車両一覧では「在庫」（販売済みなら「自社客（管理客）」）を押してから「搬送中」または「オーダー中」を選ぶと表示されます。注文が入ったら、車両の詳細から「商談を開始」でお客様に割り当てられます。車が着いたら、車両の編集画面で<b>「ウランバートル到着済み」</b>をオンにして、到着時の点検・査定を記録します。名義は、仮に「Deed Motors」（🔑 名義上のオーナー）と登録されています。</p></div></div>
     </div>
 
     <div class="panel manual-section" id="m-ch9">
@@ -5918,7 +5918,7 @@ function renderManualJa(){
       <ul style="font-size:13px; color:var(--text-dim); margin:0; padding-left:20px; line-height:1.9">
         <li><b style="color:var(--text)">🎂 もうすぐ誕生日</b> — ダッシュボードに、これから7日以内に誕生日を迎えるお客様を一覧で表示します。そこから「✉️ メッセージ」を押して、すぐにお祝いを送れます。</li>
         <li><b style="color:var(--text)">⚠️ 重複の可能性がある顧客</b> — 同じ電話番号の記録が複数あると、顧客管理のページの上部に黄色い枠の警告が出ます。統合が必要かどうかを確認してください。</li>
-        <li><b style="color:var(--text)">📋 連絡リスト（Excel）</b> — 顧客管理のページの上部のボタンで、<b style="color:var(--text)">営業担当用の架電リスト</b>をExcelでダウンロードできます。お客様の名前（DM番号）、電話番号、車両と輸送の状況、話した内容を書き込む欄が付いています。今画面に表示しているお客様（絞り込みで選んだもの）が対象で、全スタッフ分のシートと、スタッフごとのシートが別々に出ます。車が輸送中のお客様は、黄色で先頭に出ます。</li>
+        <li><b style="color:var(--text)">📋 連絡リスト（Excel）</b> — 顧客管理のページの上部のボタンで、<b style="color:var(--text)">営業担当用の架電リスト</b>をExcelでダウンロードできます。お客様の名前（DM番号）、電話番号、車両と輸送の状況、話した内容を書き込む欄が付いています。今画面に表示しているお客様（絞り込みで選んだもの）が対象で、全スタッフ分のシートと、スタッフごとのシートが別々に出ます。車がまだ届いていないお客様は、黄色で先頭に出ます。</li>
         <li><b style="color:var(--text)">📋 リマインドリスト（Excel）</b> — ダッシュボードの上部のボタンで、ダッシュボードに出ている<b style="color:var(--text)">すべてのリマインド</b>（車検、誕生日、クレーム、6種類の連絡リマインド）を、連絡リストと同じ形式のExcelでダウンロードできます。種類ごとに色が違い（クレームは赤）、A4横の印刷にそのまま使え、話した内容を書き込む欄があります。連絡したあとは、DMSで「＋ 記録を追加」を忘れずに押してください — そうするとリマインドが消えます。</li>
         <li><b style="color:var(--text)">⬇ CSV出力</b> — 顧客管理のページの上部のボタンで、全顧客の一覧を、Excelで開けるCSVファイルでダウンロードできます。</li>
       </ul>
@@ -6090,8 +6090,8 @@ function renderManualMn(){
       <p style="font-size:12.5px; color:var(--text-dim); margin:8px 0 12px">Картын баруун дээд буланд зарсан машины шат (Хүлээлгэн өгөхийг хүлээж буй / Тээвэрлэж буй / Захиалгад / Борлуулалт дууссан), «✅ Үнэлэгдсэн / ⏳ Үнэлээгүй» тэмдгээр үнэлгээг харуулна. «Хүлээлгэн өгөхийг хүлээж буй» болгохын тулд машины «Arrived in Ulaanbaatar»-г асаана; «Борлуулалт дууссан» болгохын тулд худалдааг «Delivery» шатанд шилжүүлнэ.</p>
       <div class="manual-callout"><span class="ic">🏷</span><div><b>Машин дээрх хүний тэмдэг (өнгөт шошго)</b><p>Машины карт болон харилцагчийн картан дээрх хүний нэрийн өмнө тухайн хүн <b>тэр машинтай ямар холбоотой</b> болохыг өнгөт шошгоор харуулна, картын зүүн талд мөн ижил өнгийн зураас байна: <b>🛒 Buyer</b> (ногоон — гэрээ хийсэн/хүлээлгэн өгсөн худалдан авагч), <b>💬 In talks</b> (цэнхэр — тохиролцож буй), <b>🏷 Consignor</b> (улбар шар — манайд зуучлуулж зарж буй эзэн), <b>📋 Appraisal only</b> (нил ягаан — зөвхөн үнэлгээ хийлгэсэн), <b>🏢 Company stock</b> (саарал — компанийн нэрийн машин). Мөн хүний нэрийн хажууд <b>⭐ In-House</b> тэмдэг байвал тэр хүн урьд нь манайхаас машин аваад хүлээн авсан (манай хэрэглэгч) гэсэн үг — зөвхөн үнэлгээ хийлгэсэн ч гэсэн.</p></div></div>
 
-<div class="manual-callout warn"><span class="ic">🔍</span><div><b>On Order картын ялгаа</b><p>«On Order» төрлийн карт нь ягаан зурвасжсан хүрээ, тод дэвсгэртэй бөгөөд <b>«🔍 NO VEHICLE YET — TARGET SPEC ONLY»</b> гэсэн тэмдэглэгээтэй харагдана — учир нь энэ бол бодит машин биш, зөвхөн харилцагчийн хүсэлт дээр үндэслэсэн зорилтот спек. «All»-ээр харахад бусад машинтай андуурахгүйн тулд ийм зорилготойгоор өөр өнгөөр ялгасан.</p></div></div>
-      <p style="font-size:12.5px; color:var(--text-dim); margin:10px 0 0">Мөн Японоос тээвэрлэгдэж буй (худалдан авсан ч хараахан ирээгүй) машин дээр <b>«🚢 In Transit»</b> гэсэн жижиг тэмдэг (манай нөөцөд байгаа үед) харагдана. Анхны шүүлтүүр «Бэлэн байгаа» дээр байхаар тохируулагдсан.</p>
+<div class="manual-callout warn"><span class="ic">🔍</span><div><b>«Захиалгад» (машин алга) картын ялгаа</b><p>Машингүй «Захиалгад» карт нь ягаан зурвасжсан хүрээ, тод дэвсгэртэй бөгөөд <b>«🔍 NO VEHICLE YET — TARGET SPEC ONLY»</b> гэсэн тэмдэглэгээтэй харагдана — учир нь энэ бол бодит машин биш, зөвхөн харилцагчийн хүсэлт дээр үндэслэсэн зорилтот спек. «All»-ээр харахад бусад машинтай андуурахгүйн тулд ийм зорилготойгоор өөр өнгөөр ялгасан.</p></div></div>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:10px 0 0">Хараахан ирээгүй нөөцийн машин дээр жижиг тэмдэг харагдана: <b>«🚢 Тээвэрлэж буй»</b> (Японоос гарсан) эсвэл <b>«🕒 Захиалгад»</b> (хараахан гараагүй). Анхны шүүлтүүр «Бэлэн байгаа» дээр байхаар тохируулагдсан.</p>
       <div class="manual-callout"><span class="ic">🚢</span><div><b>Ирээгүй (тээвэрлэгдэж буй) машин</b><p>Улаанбаатарт хараахан ирээгүй машин «In Stock»-ийн тоо болон «Not Yet Appraised»-д <b>тооцогдохгүй</b>. Машины жагсаалтад «Бэлэн байгаа» (зарагдсан бол «Манай хэрэглэгч») дараад «Тээвэрлэж буй» эсвэл «Захиалгад»-ыг сонгоно. Захиалга ирвэл машины дэлгэрэнгүйгээс «Start Deal» хийж хэрэглэгчид оноож болно. Машин ирмэгц машины засах цонхонд <b>«Arrived in Ulaanbaatar»</b>-г идэвхжүүлээд, ирсэн үеийн үзлэг/үнэлгээгээ бүртгэнэ. Нэр дээр нь түр «Deed Motors» (🔑 Nominal owner) гэж бичигдсэн байдаг.</p></div></div>
     </div>
 
@@ -6922,7 +6922,7 @@ function showVersionInfo(){
         <li><span class="dot"></span><div><b>Inventory</b>Individual management of display vehicles (make, year, price, status)</div></li>
         <li><span class="dot"></span><div><b>Appraisal</b>5-point gauge appraisal sheet, deduction tags, automatic score calculation</div></li>
         <li><span class="dot"></span><div><b>Deals</b>Integrated customer info on the vehicle page, plus a full kanban overview</div></li>
-        <li><span class="dot"></span><div><b>Appraisal Vehicles</b>Register and appraise walk-in customers' vehicles using the same form</div></li>
+        <li><span class="dot"></span><div><b>Customer's Vehicles</b>Register and appraise walk-in customers' vehicles using the same form</div></li>
         <li><span class="dot"></span><div><b>Customers</b>Lifetime data (first contact, touchpoints, vehicles purchased, ownership history)</div></li>
         <li><span class="dot"></span><div><b>Reminders</b>Automatic notifications for upcoming inspections</div></li>
         <li><span class="dot"></span><div><b>Integration</b>Import JSON results from the appraisal tool (deed-motors-scraper)</div></li>
