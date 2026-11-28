@@ -1362,8 +1362,6 @@ T('Customer\'s Vehicle (their current vehicle)','お客様の車（現在お乗�
 T('Customer\'s Vehicles','お客様の車','Үйлчлүүлэгчийн машин');
 })();
 
-(function(){ I18N.T('Tool data only, no photos','ツールデータのみ・画像なし','Зөвхөн хэрэгслийн дата, зураггүй'); })();
-
 </script>
 <!-- I18N:END -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -1697,7 +1695,7 @@ async function deleteStaffRow(id){
    open, or while a save is running. Otherwise a small notice waits, and the reload happens as soon as
    the person is done (or after 10 minutes without any activity).
 ============================================================ */
-const APP_BUILD = '20261128-185208';
+const APP_BUILD = '20261128-190851';
 const APPUPD = {pending:null, lastActivity:Date.now(), banner:null, started:false};
 function appUpdateSafe(){
   if(typeof saving!=='undefined' && saving) return false;
@@ -3859,17 +3857,20 @@ function ownStage(v){
 }
 function notArrivedTagLabel(v){ return notInUBStage(v)==='transit' ? '🚢 Shipping' : '🕒 Ordering'; }
 function stockStage(v){ return (v.kind!=='order' && v.arrived!==false) ? 'show' : notInUBStage(v); }
-// "Appraised" (owner's rule, 2026-11-28): data loaded from the appraisal tool AND photos — both are needed.
-// A Japanese auction grade (Sheet Sync), a hand-typed appraisal record or condition-check scores do not count.
+// "Appraised" (owner's rule, 2026-11-28): any ONE of — vehicle photos, an appraisal-tool / appraisal-sheet PDF, or a
+// record of the appraisal (appraisal entry in the history, or data loaded from the appraisal tool). Early appraisals
+// have no photos. A Japanese auction grade (Sheet Sync) or condition-check scores alone do not count.
 function hasToolData(v){
   if((v.notes||'').includes('Auto-imported from Appraisal Tool')) return true;
   try{ const d = JSON.parse(v.externalReportText||''); return !!(d && (d.source || d.score || d.finalAppraisal)); }
   catch(e){ return false; }
 }
 function hasPhotos(v){ return (v.files||[]).some(f=>isImageFile(f.name)); }
+function hasAppraisalPdf(v){ return (v.files||[]).some(f=>/\.pdf$/i.test(f.name||'') && /査定|チェックシート|apprais/i.test(f.name||'')); }
+function hasAppraisalRecord(v){ return (v.serviceHistory||[]).some(h=>h.category==='appraisal') || hasToolData(v); }
 function isAppraised(v){
   if(v.kind==='field') return true;   // owner's earlier rule: InvesCore field appraisals are all appraised
-  return hasToolData(v) && hasPhotos(v);
+  return hasPhotos(v) || hasAppraisalPdf(v) || hasAppraisalRecord(v);
 }
 const VEH_MAIN_CATS = [['stock','Stock'], ['own','In-House (Managed) Customers'], ['other','Other-Dealer Customers'], ['branch','Branch'], ['all','All']];
 const VEH_SUB_CATS = {
@@ -3959,11 +3960,10 @@ function vehicleCardHtml(v){
       <div class="name"><div style="font-size:12px; font-weight:600; color:var(--text-dim); line-height:1.3">${esc(v.maker)||'&nbsp;'}</div><div style="line-height:1.3">${esc(v.model)||'&nbsp;'}</div></div>
       <div class="meta" style="margin-bottom:6px">${v.year||'—'} ・ ${esc(v.color)} ・ ${(v.mileage||0).toLocaleString()}km</div>
       ${rel ? `<div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px">${relationTagHtml(rel)}${rel.key==='company'?'':inHouseStarHtml(relCid)}<span style="font-size:13px; font-weight:700; color:var(--text)">${esc(custName(relCid))}</span></div>` : ''}
-      ${(hasImage||appraised||showNotAppraised||notArrived||hasToolData(v)) ? `<div style="display:flex; gap:5px; margin:0 0 10px; flex-wrap:wrap;">
+      ${(hasImage||appraised||showNotAppraised||notArrived) ? `<div style="display:flex; gap:5px; margin:0 0 10px; flex-wrap:wrap;">
         ${hasImage?`<span class="mini-tag mini-tag-img">🖼 Photos</span>`:''}
         ${appraised?`<span class="mini-tag mini-tag-appr">✅ Appraised</span>`:''}
         ${showNotAppraised?`<span class="mini-tag" style="background:var(--amber-soft); color:var(--amber)">⏳ Not Appraised</span>`:''}
-        ${(!appraised && hasToolData(v))?`<span class="mini-tag" style="background:var(--amber-soft); color:var(--amber)">📷 Tool data only, no photos</span>`:''}
         ${notArrived?`<span class="mini-tag" style="background:var(--amber-soft); color:var(--amber)">${notArrivedTagLabel(v)}</span>`:''}
       </div>`:''}
       <div class="row2">
@@ -5694,7 +5694,7 @@ function renderManualEn(){
       <div class="manual-cat"><div class="ic">🏢</div><div><div class="name">Branch</div><div class="cond">Sent to, or sold by, the Umnugovi branch. Not counted in stock or profit.</div></div></div>
       <div class="manual-cat"><div class="ic">🧭</div><div><div class="name">InvesCore Field Appraisal (separate box)</div><div class="cond">Field appraisals for InvesCore. All of them are appraised. They are not part of the customer groups.</div></div></div>
       <p style="font-size:12.5px; color:var(--text-dim); margin:8px 0 12px">On the cards, «Sold» is now shown by the stage (Awaiting Delivery / Shipping / Ordering / Sale Complete), and ✅ Appraised / ⏳ Not Appraised shows the appraisal. To move a car to «Awaiting Delivery», switch on «Arrived in Ulaanbaatar»; to «Sale Complete», move its deal to «Delivery».</p>
-      <p style="font-size:12.5px; color:var(--text-dim); margin:0 0 12px"><b>«✅ Appraised»</b> needs both: data loaded from the appraisal tool, and photos. A Japanese auction grade, an appraisal record typed by hand, or condition-check scores do not count. A vehicle with tool data but no photos shows «📷 Tool data only, no photos». InvesCore field appraisals are shown as appraised.</p>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:0 0 12px"><b>«✅ Appraised»</b> means at least one of these is there: photos of the vehicle, a PDF from the appraisal tool or an appraisal sheet (file name containing «査定» or «チェックシート»), or a record of the appraisal (an «Appraisal» entry in the history, or data loaded from the appraisal tool). A Japanese auction grade or condition-check scores alone do not count. InvesCore field appraisals are shown as appraised.</p>
       <div class="manual-callout"><span class="ic">🏷</span><div><b>The coloured tag on a vehicle (who this person is to the vehicle)</b><p>In front of the person's name on vehicle cards and customer cards, a coloured tag shows <b>how that person is connected to that vehicle</b>, and the card has a bar of the same colour on its left side: <b>🛒 Buyer</b> (green — signed the contract / took delivery), <b>💬 In talks</b> (blue — negotiating), <b>🏷 Consignor</b> (orange — the owner who has us sell the vehicle on consignment), <b>📋 Appraisal only</b> (purple — only had the vehicle appraised), <b>🏢 Company stock</b> (grey — a vehicle in the company's name). If you also see a <b>⭐ In-House</b> mark next to the name, that person has bought and taken delivery of a vehicle from us before (is our customer) — even if this time they only had a vehicle appraised.</p></div></div>
 
       <div class="manual-callout warn"><span class="ic">🔍</span><div><b>How On Order cards differ</b><p>«On Order» cards have a purple dashed frame and a strong background, and carry the label <b>«🔍 NO VEHICLE YET — TARGET SPEC ONLY»</b> — because it is not a real vehicle, only a target spec based on a customer's request. It is shown in a different colour on purpose, so it is not confused with other vehicles when you look at «All».</p></div></div>
@@ -5896,7 +5896,7 @@ function renderManualJa(){
       <div class="manual-cat"><div class="ic">🏢</div><div><div class="name">支店扱い</div><div class="cond">ウムヌゴビ支店に回送、または支店で販売した車です。在庫と利益の集計には入りません。</div></div></div>
       <div class="manual-cat"><div class="ic">🧭</div><div><div class="name">InvesCore用出張査定車（別枠）</div><div class="cond">InvesCore向けの出張査定車です。すべて査定済です。お客様の区分には含みません。</div></div></div>
       <p style="font-size:12.5px; color:var(--text-dim); margin:8px 0 12px">カード右上には、販売した車の段階（納車待ち／搬送中／オーダー中／販売済）が出て、「✅査定済／⏳未査定」で査定の有無が分かります。「納車待ち」にするには車の「ウランバートル到着済み」をオンに、「販売済」にするには商談を「納車」に進めてください。</p>
-      <p style="font-size:12.5px; color:var(--text-dim); margin:0 0 12px"><b>「✅査定済」</b>になるのは、査定ツールから取り込んだデータと画像の両方がある車です。日本のオークション評価点、手入力の査定記録、状態チェックの点数だけでは査定済になりません。データはあるのに画像がない車には「📷 ツールデータのみ・画像なし」が出ます。InvesCore用出張査定車は査定済として表示します。</p>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:0 0 12px"><b>「✅査定済」</b>になるのは、次のどれか1つがある車です。車両の画像、査定ツールや査定シートのPDF（ファイル名に「査定」か「チェックシート」が入っているもの）、査定の経過記録（履歴の「査定」の記録、または査定ツールから取り込んだデータ）。日本のオークション評価点や、状態チェックの点数だけでは査定済になりません。InvesCore用出張査定車は査定済として表示します。</p>
       <div class="manual-callout"><span class="ic">🏷</span><div><b>車に出る人の印（色つきの札）</b><p>車両のカードや顧客のカードで、人の名前の前に、その人が<b>その車とどういう関係か</b>を色つきの札で表示します。カードの左端にも同じ色の帯が付きます：<b>🛒 購入者</b>（緑 — 契約した／納車を受けた）、<b>💬 商談中</b>（青 — 交渉中）、<b>🏷 委託オーナー</b>（橙 — 当店に委託販売を任せているオーナー）、<b>📋 査定のみ</b>（紫 — 査定だけを受けた）、<b>🏢 会社名義の車</b>（灰 — 会社の名義の車）。さらに名前の横に<b>⭐ 自社客</b>の印があれば、その人は以前に当店で車を買って納車を受けた（当店のお客様）ということです — 今回は査定だけでも同じです。</p></div></div>
 
       <div class="manual-callout warn"><span class="ic">🔍</span><div><b>「オーダー中」（現物なし）のカードの違い</b><p>現物のない「オーダー中」のカードは、紫の点線の枠と濃い背景で、<b>「🔍 現物なし — 希望スペックのみ」</b>の表示が付きます。実際の車ではなく、お客様の要望に基づく目標スペックだけだからです。「すべて」で見たときにほかの車と間違えないよう、わざと別の色にしています。</p></div></div>
@@ -6098,7 +6098,7 @@ function renderManualMn(){
       <div class="manual-cat"><div class="ic">🏢</div><div><div class="name">Салбарт</div><div class="cond">Өмнөговь салбарт шилжүүлсэн эсвэл салбарт зарагдсан машин. Нөөц, ашгийн тооцоонд орохгүй.</div></div></div>
       <div class="manual-cat"><div class="ic">🧭</div><div><div class="name">InvesCore томилолтын үнэлгээ (тусдаа хүрээ)</div><div class="cond">InvesCore-д зориулсан томилолтоор үнэлсэн машин. Бүгд үнэлэгдсэн. Үйлчлүүлэгчийн ангилалд орохгүй.</div></div></div>
       <p style="font-size:12.5px; color:var(--text-dim); margin:8px 0 12px">Картын баруун дээд буланд зарсан машины шат (Хүлээлгэн өгөхийг хүлээж буй / Тээвэрлэж буй / Захиалгад / Борлуулалт дууссан), «✅ Үнэлэгдсэн / ⏳ Үнэлээгүй» тэмдгээр үнэлгээг харуулна. «Хүлээлгэн өгөхийг хүлээж буй» болгохын тулд машины «Arrived in Ulaanbaatar»-г асаана; «Борлуулалт дууссан» болгохын тулд худалдааг «Delivery» шатанд шилжүүлнэ.</p>
-      <p style="font-size:12.5px; color:var(--text-dim); margin:0 0 12px"><b>«✅ Үнэлэгдсэн»</b> болохын тулд үнэлгээний хэрэгслээс оруулсан дата ба зураг хоёулаа байх ёстой. Японы дуудлага худалдааны үнэлгээний оноо, гараар бичсэн үнэлгээний тэмдэглэл, төлөвийн шалгалтын оноо тооцогдохгүй. Дата байгаа ч зураггүй машинд «📷 Зөвхөн хэрэгслийн дата, зураггүй» гэж гарна. InvesCore томилолтын үнэлгээг үнэлэгдсэн гэж харуулна.</p>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:0 0 12px"><b>«✅ Үнэлэгдсэн»</b> гэдэг нь дараахын ядаж нэг нь байна гэсэн үг: машины зураг; үнэлгээний хэрэгсэл эсвэл үнэлгээний хуудасны PDF (файлын нэрэнд «査定» эсвэл «チェックシート» орсон); үнэлгээний тэмдэглэл (түүх дэх «Үнэлгээ» бичлэг, эсвэл үнэлгээний хэрэгслээс оруулсан дата). Японы дуудлага худалдааны оноо эсвэл төлөвийн шалгалтын оноо дангаараа тооцогдохгүй. InvesCore томилолтын үнэлгээг үнэлэгдсэн гэж харуулна.</p>
       <div class="manual-callout"><span class="ic">🏷</span><div><b>Машин дээрх хүний тэмдэг (өнгөт шошго)</b><p>Машины карт болон харилцагчийн картан дээрх хүний нэрийн өмнө тухайн хүн <b>тэр машинтай ямар холбоотой</b> болохыг өнгөт шошгоор харуулна, картын зүүн талд мөн ижил өнгийн зураас байна: <b>🛒 Buyer</b> (ногоон — гэрээ хийсэн/хүлээлгэн өгсөн худалдан авагч), <b>💬 In talks</b> (цэнхэр — тохиролцож буй), <b>🏷 Consignor</b> (улбар шар — манайд зуучлуулж зарж буй эзэн), <b>📋 Appraisal only</b> (нил ягаан — зөвхөн үнэлгээ хийлгэсэн), <b>🏢 Company stock</b> (саарал — компанийн нэрийн машин). Мөн хүний нэрийн хажууд <b>⭐ In-House</b> тэмдэг байвал тэр хүн урьд нь манайхаас машин аваад хүлээн авсан (манай хэрэглэгч) гэсэн үг — зөвхөн үнэлгээ хийлгэсэн ч гэсэн.</p></div></div>
 
 <div class="manual-callout warn"><span class="ic">🔍</span><div><b>«Захиалгад» (машин алга) картын ялгаа</b><p>Машингүй «Захиалгад» карт нь ягаан зурвасжсан хүрээ, тод дэвсгэртэй бөгөөд <b>«🔍 NO VEHICLE YET — TARGET SPEC ONLY»</b> гэсэн тэмдэглэгээтэй харагдана — учир нь энэ бол бодит машин биш, зөвхөн харилцагчийн хүсэлт дээр үндэслэсэн зорилтот спек. «All»-ээр харахад бусад машинтай андуурахгүйн тулд ийм зорилготойгоор өөр өнгөөр ялгасан.</p></div></div>
